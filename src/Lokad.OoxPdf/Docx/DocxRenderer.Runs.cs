@@ -32,10 +32,8 @@ internal sealed partial class DocxRenderer
         }
     }
 
-    // RV01: runes with no glyph in the emitting face render as question mark so
-    // conversions never silently drop input text. The substitution is diagnosed once
-    // per family at preparation (FONT_MISSING_GLYPHS); the subset carries question
-    // mark exactly when a covered run needs it.
+    // Preparation reports missing glyphs once per family. The subset carries
+    // a question mark when the face provides one and a covered run needs it.
     private static string SubstituteUncoveredGlyphs(PdfEmbeddedFont embedded, string text)
     {
         bool clean = true;

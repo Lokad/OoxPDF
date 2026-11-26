@@ -9,7 +9,8 @@ internal static class FontDiagnostics
             "FONT_MISSING_GLYPHS",
             OoxPdfSeverity.Warning,
             sortedCodePoints.Count.ToString(CultureInfo.InvariantCulture) + " characters of " + family +
-                " have no glyph in any usable face (" + FormatCodePoints(sortedCodePoints) + ") and show as question mark.",
+                " have no glyph in any usable face (" + FormatCodePoints(sortedCodePoints) +
+                "). A question mark is used when the selected font provides one.",
             Feature: family,
             Fallback: "Question-mark substitution");
 

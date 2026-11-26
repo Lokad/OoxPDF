@@ -367,9 +367,8 @@ internal sealed partial class PptxRenderer
             Fallback: "Built-in fallback typeface"));
     }
 
-    // RV01: codepoints with no glyph in the emitting face are substituted with
-    // question mark at emission; the subset carries it exactly when needed, and the
-    // substitution is diagnosed once per family with the affected codepoints.
+    // Report uncovered code points once per family and include the face's
+    // question mark in the subset when available.
     private static int[] AddQuestionMarkForUncoveredCodepoints(IGrouping<FontRequest, TextFontUse> group, OpenTypeFont font, PresentationFontResolver fontResolver, Action<OoxPdfDiagnostic>? diagnosticSink, CancellationToken cancellationToken)
     {
         int[] codepoints = group.SelectMany(use => use.CodePoints).ToArray();
@@ -405,8 +404,6 @@ internal sealed partial class PptxRenderer
         return withQuestionMark;
     }
 
-    // RV01: codepoints with no glyph in any usable face are named once per family;
-    // substituted marks show as question mark.
     private static void ReportMissingGlyphSubstitution(string familyName, List<int> missing, PresentationFontResolver fontResolver, Action<OoxPdfDiagnostic>? diagnosticSink)
     {
         if (diagnosticSink is not null && fontResolver.ReportedMissingFontDiagnostics.Add("glyph:" + familyName))
@@ -847,10 +844,8 @@ internal sealed partial class PptxRenderer
             ushort previousGlyph = 0;
             foreach (Rune rune in run.Text.EnumerateRunes())
             {
-                // RV01: runes with no glyph in the emitting face render as question
-                // mark (diagnosed at preparation) with zero advance and no kerning,
-                // matching layout, which skips them; layout constructs keep their
-                // pass-through exactly as before.
+                // Use an available question mark with zero advance and no
+                // kerning, matching the layout of the uncovered character.
                 ushort glyph = embedded.Font.MapCodePoint(rune.Value);
                 bool substituted = false;
                 if (glyph == 0 && !PdfFallbackFont.IsNonRenderedControl(rune))

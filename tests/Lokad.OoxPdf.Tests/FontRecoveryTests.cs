@@ -110,10 +110,17 @@ internal static class FontRecoveryTests
     public static void InvalidCmapCoverageUsesDiagnosedSubstitutionInBothFormats()
     {
         foreach (OoxPdfInputKind kind in new[] { OoxPdfInputKind.Docx, OoxPdfInputKind.Pptx })
-        foreach (bool invalid in new[] { false, true })
+        foreach (var (invalid, hasQuestionMark, expectedText) in new[]
+        {
+            (false, true, "Visible text"),
+            (true, true, "?isible text"),
+            (true, false, "isible text")
+        })
         {
             byte[] bytes = FontTests.CreateCmapBoundaryFont(4,
-                invalid ? (ushort)TestFontBuilder.GlyphCount : (ushort)(TestFontBuilder.GlyphCount - 1));
+                invalid ? (ushort)TestFontBuilder.GlyphCount : (ushort)(TestFontBuilder.GlyphCount - 1),
+                omitQuestionMark: !hasQuestionMark);
+            TestAssert.Equal(hasQuestionMark, OpenTypeFont.Load(bytes).MapCodePoint('?') != 0);
             WithInput(kind, (path, _) =>
             {
                 var diagnostics = new DiagnosticCollector();
@@ -125,10 +132,14 @@ internal static class FontRecoveryTests
                 });
                 TestAssert.True(output.Length > 0 && output.CanWrite && input.CanRead, "Recovery publishes a PDF and retains caller streams.");
                 string paintedText = OoxMissingFontTests.ExtractCidMappedText(Encoding.Latin1.GetString(output.ToArray())).Trim();
-                TestAssert.Equal(invalid ? "?isible text" : "Visible text", paintedText);
+                TestAssert.Equal(expectedText, paintedText);
                 var missing = diagnostics.Diagnostics.Where(d => d.Id == "FONT_MISSING_GLYPHS").ToArray();
                 TestAssert.Equal(invalid ? 1 : 0, missing.Length);
-                if (invalid) TestAssert.Contains("U+0056", missing[0].Message);
+                if (invalid)
+                {
+                    TestAssert.Contains("U+0056", missing[0].Message);
+                    TestAssert.Contains("when the selected font provides one", missing[0].Message);
+                }
             });
         }
     }

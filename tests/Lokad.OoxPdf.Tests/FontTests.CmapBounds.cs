@@ -18,9 +18,9 @@ internal static partial class FontTests
         }
     }
 
-    // Mutate one existing segment/group; retain all other mappings, including
-    // question mark, so public conversion can exercise its ordinary fallback.
-    internal static byte[] CreateCmapBoundaryFont(ushort format, ushort glyph)
+    // Mutate an existing boundary segment or group. The format-4 recovery
+    // fixture can also remove the question-mark mapping.
+    internal static byte[] CreateCmapBoundaryFont(ushort format, ushort glyph, bool omitQuestionMark = false)
     {
         byte[] bytes = TestFontBuilder.CreateTestFont();
         int cmap = TestFontBuilder.GetTableRange(bytes, "cmap").Offset;
@@ -31,11 +31,13 @@ internal static partial class FontTests
             int segments = BinaryPrimitives.ReadUInt16BigEndian(bytes.AsSpan(subtable + 6)) / 2;
             for (int i = 0; i < segments; i++)
             {
-                if (BinaryPrimitives.ReadUInt16BigEndian(bytes.AsSpan(subtable + 14 + i * 2)) != 'V') continue;
-                int delta = (glyph - 'V') & 0xFFFF;
+                int codePoint = BinaryPrimitives.ReadUInt16BigEndian(bytes.AsSpan(subtable + 14 + i * 2));
+                if (codePoint != 'V' && !(omitQuestionMark && codePoint == '?')) continue;
+                int mappedGlyph = codePoint == 'V' ? glyph : 0;
+                int delta = (mappedGlyph - codePoint) & 0xFFFF;
                 BinaryPrimitives.WriteUInt16BigEndian(bytes.AsSpan(subtable + 16 + segments * 4 + i * 2), (ushort)delta);
-                return bytes;
             }
+            return bytes;
         }
         else if (format == 12)
         {
