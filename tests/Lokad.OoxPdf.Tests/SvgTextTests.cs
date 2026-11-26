@@ -604,6 +604,19 @@ internal static partial class SvgTextTests
         AssertEquivalentSvgPaint(bold, Paint(Picture("700.0")), "An integer-equivalent weight keeps the bold label.");
         AssertEquivalentSvgPaint(bold, Paint(Picture("bold", """font-weight="700.000" """)),
             "A span with the same numeric weight keeps the complete bold label.");
+        AssertEquivalentSvgPaint(bold, Paint(Picture("bolder")),
+            "A label with the default parent weight resolves bolder to 700.");
+
+        static string WithWeightOwners(string group, string text, string span) => Svg($"""
+            <g style="font-weight:{group}">
+              <text x="60" y="80" font-family="DejaVu Sans" font-size="24" font-weight="{text}" fill="#112233"><tspan style="font-weight:{span}">LABEL</tspan></text>
+            </g>
+            <rect x="200" y="100" width="20" height="10" fill="lime"/>
+            """);
+        AssertSvgPaintInBothFormats(WithWeightOwners("700", "700", "400"),
+            [WithWeightOwners("bolder", "inherit", "lighter"), WithWeightOwners("700", "inherit", "lighter"),
+             WithWeightOwners("300", "bolder", "inherit")],
+            pdf => TestAssert.Equal(5, LabelPaths(pdf)), "0 1 0 rg");
 
         foreach (string rejected in new[] { "700.", "700.5", "700%", "901", "NaN" })
         {

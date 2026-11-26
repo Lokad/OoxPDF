@@ -127,6 +127,7 @@ internal sealed partial class PptxRenderer
         string? initialAnchor = ResolveSvgTextAnchor(Inherited("text-anchor"), "start");
         if (initialAnchor is null) return false;
         double size = SvgInitialFontSize;
+        int weight = 400;
         SvgTextWhitespace whitespace = SvgTextWhitespace.XmlDefault;
         foreach (XElement owner in element.AncestorsAndSelf().Reverse())
         {
@@ -135,9 +136,10 @@ internal sealed partial class PptxRenderer
             if (declarations.ContainsKey("font")) return false;
             string? value = ReadSvgPresentationAttribute(owner, declarations, "font-size");
             if (!TryResolveSvgFontSize(value, size, out size)) return false;
+            weight = ResolveSvgTextWeight(ReadSvgPresentationAttribute(owner, declarations, "font-weight"), weight);
             whitespace = ResolveSvgTextWhitespace(owner, declarations, whitespace);
         }
-        if (!TryReadSvgTextMetrics(element, style, size, cancellationToken, out var rootMetrics) ||
+        if (!TryReadSvgTextMetrics(element, style, size, weight, cancellationToken, out var rootMetrics) ||
             !TryReadSvgTextPosition(element, default, viewWidth, viewHeight, size, startsLabel: true,
                 cancellationToken, out var initialPosition)) return false;
         if (!TryReadPlainSvgText(element, style, rootMetrics, paintServers, IsSvgVisibilityHidden(Inherited("visibility")), whitespace,
@@ -215,13 +217,12 @@ internal sealed partial class PptxRenderer
     }
 
     private static bool TryReadSvgTextMetrics(XElement element, IReadOnlyDictionary<string, string> style,
-        double size, CancellationToken cancellationToken, out SvgTextMetrics metrics)
+        double size, int weight, CancellationToken cancellationToken, out SvgTextMetrics metrics)
     {
         metrics = default;
-        if (!double.IsFinite(size) || size <= 0d) return false;
+        if (!double.IsFinite(size) || size <= 0d || weight == 0) return false;
         string slant = ResolveSvgTextFontValue(ReadSvgInheritedAttribute(element, style, "font-style"), "normal").ToLowerInvariant();
         if (slant is not ("normal" or "italic" or "oblique") ||
-            !TryReadSvgTextWeight(ReadSvgInheritedAttribute(element, style, "font-weight"), out int weight) ||
             !TryReadSvgTextKerning(element, style, out bool kerning)) return false;
         string list = ResolveSvgTextFontValue(ReadSvgInheritedAttribute(element, style, "font-family"), "serif");
         var (family, key) = ReadSvgFontFamilies(list, cancellationToken);
@@ -354,26 +355,25 @@ internal sealed partial class PptxRenderer
     private static string ResolveSvgTextFontValue(string? value, string initial) =>
         value is null || IsSvgInitialValue(value) ? initial : value.Trim();
 
-    private static bool TryReadSvgTextWeight(string? authoredValue, out int weight)
+    private static int ResolveSvgTextWeight(string? authoredValue, int inherited)
     {
+        if (string.IsNullOrWhiteSpace(authoredValue) || InheritsSvgPropertyValue(authoredValue)) return inherited;
         ReadOnlySpan<char> value = ResolveSvgTextFontValue(authoredValue, "normal");
-        if (value.Equals("normal", StringComparison.OrdinalIgnoreCase))
-        {
-            weight = 400;
-            return true;
-        }
-        if (value.Equals("bold", StringComparison.OrdinalIgnoreCase))
-        {
-            weight = 700;
-            return true;
-        }
-        weight = 0;
+        if (value.Equals("normal", StringComparison.OrdinalIgnoreCase)) return 400;
+        if (value.Equals("bold", StringComparison.OrdinalIgnoreCase)) return 700;
+
+        // Resolve relative weights against the computed parent weight. Zero
+        // represents an unsupported value and can be replaced by an absolute weight.
+        if (value.Equals("bolder", StringComparison.OrdinalIgnoreCase))
+            return inherited switch { 0 => 0, < 350 => 400, < 550 => 700, _ => 900 };
+        if (value.Equals("lighter", StringComparison.OrdinalIgnoreCase))
+            return inherited switch { 0 => 0, < 550 => 100, < 750 => 400, _ => 700 };
+
         int point = value.IndexOf('.');
         if ((point >= 0 && (point + 1 == value.Length || !char.IsAsciiDigit(value[point + 1]))) ||
             !decimal.TryParse(value, NumberStyles.Float, CultureInfo.InvariantCulture, out decimal numeric) ||
-            numeric is < 100m or > 900m || numeric != decimal.Truncate(numeric)) return false;
-        weight = (int)numeric;
-        return true;
+            numeric is < 100m or > 900m || numeric != decimal.Truncate(numeric)) return 0;
+        return (int)numeric;
     }
 
     private static bool TryResolveSvgFontSize(string? value, double inheritedSize, out double size)
@@ -589,10 +589,11 @@ internal sealed partial class PptxRenderer
                 if (opacity is not double localOpacity) return false;
                 var childOpacity = localOpacity == 1d ? ownerOpacity : (child, ownerOpacity.Alpha * localOpacity);
                 SvgTextPosition childPosition = ownerPosition;
+                int childWeight = ResolveSvgTextWeight(ReadSvgPresentationAttribute(child, style, "font-weight"), ownerMetrics.Weight);
                 string? childAnchor = ResolveSvgTextAnchor(ReadSvgPresentationAttribute(child, style, "text-anchor"), ownerAnchor);
                 if (childAnchor is null ||
                     !TryResolveSvgFontSize(ReadSvgPresentationAttribute(child, style, "font-size"), ownerMetrics.Size, out double childSize) ||
-                    !TryReadSvgTextMetrics(child, style, childSize, cancellationToken, out var childMetrics) ||
+                    !TryReadSvgTextMetrics(child, style, childSize, childWeight, cancellationToken, out var childMetrics) ||
                     (!isLink && !TryReadSvgTextPosition(child, ownerPosition, viewWidth, viewHeight, childSize,
                         commonMetrics is null, cancellationToken, out childPosition)) ||
                     !Append(child, style, childMetrics, childHidden, childOpacity,
