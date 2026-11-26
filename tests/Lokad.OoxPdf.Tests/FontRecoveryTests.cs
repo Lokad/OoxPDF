@@ -124,6 +124,8 @@ internal static class FontRecoveryTests
                     InputKind = kind, FontResolver = new BoundaryFontResolver(bytes), DiagnosticSink = diagnostics.Add
                 });
                 TestAssert.True(output.Length > 0 && output.CanWrite && input.CanRead, "Recovery publishes a PDF and retains caller streams.");
+                string paintedText = OoxMissingFontTests.ExtractCidMappedText(Encoding.Latin1.GetString(output.ToArray())).Trim();
+                TestAssert.Equal(invalid ? "?isible text" : "Visible text", paintedText);
                 var missing = diagnostics.Diagnostics.Where(d => d.Id == "FONT_MISSING_GLYPHS").ToArray();
                 TestAssert.Equal(invalid ? 1 : 0, missing.Length);
                 if (invalid) TestAssert.Contains("U+0056", missing[0].Message);

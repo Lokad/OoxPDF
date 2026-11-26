@@ -34,7 +34,10 @@ internal sealed partial class DocxRenderer
         IDocxTextMeasurer? innerMeasurer = hasFont
             ? await DocxFontPlanTextMeasurer.CreateAsync(plan, fallback?.Resolution, cancellationToken, fontResolver, fontCache, resolveSourceAdvances: true).ConfigureAwait(false)
             : null;
-        await ReportMissingGlyphsAsync(plan, runResources, fallbackChains, fontCache, diagnosticSink, cancellationToken).ConfigureAwait(false);
+        if (diagnosticSink is not null)
+        {
+            ReportMissingGlyphs(plan, runResources, fallbackChains, fontCache, diagnosticSink, cancellationToken);
+        }
         Dictionary<DocxTextRun, PdfFallbackFontResource> fallbackFaces = PrepareMissingFontFallback(plan, runResources, diagnosticSink, cancellationToken);
         List<PdfFallbackFontResource> fallbackFontResources = fallbackFaces.Values
             .DistinctBy(face => face.Font.ResourceKey, StringComparer.Ordinal)
@@ -178,12 +181,12 @@ internal sealed partial class DocxRenderer
     // RV01: codepoints no usable face covers are substituted with question mark at
     // emission; report them once per family (union across runs, sorted, capped) so the
     // substitution is diagnosed, never silent.
-    private static async ValueTask ReportMissingGlyphsAsync(
+    private static void ReportMissingGlyphs(
         DocxFontPlan plan,
         Dictionary<DocxTextRun, DocxRunFontResource> runResources,
         IReadOnlyDictionary<DocxTextRun, IReadOnlyList<DocxFallbackFontEntry>> fallbackChains,
         Dictionary<(string StableId, int FaceIndex), OpenTypeFont?> fontCache,
-        Action<OoxPdfDiagnostic>? diagnosticSink,
+        Action<OoxPdfDiagnostic> diagnosticSink,
         CancellationToken cancellationToken)
     {
         var missingByFamily = new Dictionary<string, SortedSet<int>>(StringComparer.Ordinal);
@@ -196,20 +199,15 @@ internal sealed partial class DocxRenderer
                 continue;
             }
 
-            // Runs with a per-character chain are covered face by face; only runes
-            // missed by every candidate count. Layout constructs never reach glyphs.
-            IReadOnlyList<OpenTypeFont> coverageFonts = fallbackChains.TryGetValue(resolved.Run, out IReadOnlyList<DocxFallbackFontEntry>? chain)
-                ? chain.Select(entry => entry.Font).ToArray()
-                : (await LoadFontAsync(resource.Resolution, fontCache, cancellationToken).ConfigureAwait(false) is { } primaryFont ? new[] { primaryFont } : Array.Empty<OpenTypeFont>());
-            if (coverageFonts.Count == 0)
-            {
-                continue;
-            }
+            // Each resource was created from a face already in the cache.
+            OpenTypeFont primary = fontCache[(resource.Resolution.Source.StableId, resource.Resolution.FontFaceIndex)]!;
+            fallbackChains.TryGetValue(resolved.Run, out IReadOnlyList<DocxFallbackFontEntry>? chain);
 
             foreach (Rune rune in resolved.Run.Text.EnumerateRunes())
             {
                 cancellationToken.ThrowIfCancellationRequested();
-                if (!PdfFallbackFont.IsNonRenderedControl(rune) && coverageFonts.All(candidate => candidate.MapCodePoint(rune.Value) == 0))
+                if (!PdfFallbackFont.IsNonRenderedControl(rune) &&
+                    (chain is null ? primary.MapCodePoint(rune.Value) == 0 : chain.All(candidate => candidate.Font.MapCodePoint(rune.Value) == 0)))
                 {
                     if (!missingByFamily.TryGetValue(resource.Resolution.FamilyName, out SortedSet<int>? codepoints))
                     {
@@ -222,25 +220,10 @@ internal sealed partial class DocxRenderer
             }
         }
 
-        const int maxListedCodepoints = 12;
         foreach ((string family, SortedSet<int> codepoints) in missingByFamily)
         {
             cancellationToken.ThrowIfCancellationRequested();
-            string listed = string.Join(", ", codepoints.Take(maxListedCodepoints).Select(code => "U+" + code.ToString("X4")));
-            if (codepoints.Count > maxListedCodepoints)
-            {
-                listed += ", and " + (codepoints.Count - maxListedCodepoints).ToString(CultureInfo.InvariantCulture) + " more";
-            }
-
-            diagnosticSink?.Invoke(new OoxPdfDiagnostic(
-                "FONT_MISSING_GLYPHS",
-                OoxPdfSeverity.Warning,
-                codepoints.Count.ToString(CultureInfo.InvariantCulture) + " characters of " + family + " have no glyph in any usable face (" + listed + ") and show as question mark.",
-                PartName: null,
-                SlideIndex: null,
-                PageIndex: null,
-                Feature: family,
-                Fallback: "Question-mark substitution"));
+            diagnosticSink(FontDiagnostics.MissingGlyphs(family, codepoints));
         }
     }
 

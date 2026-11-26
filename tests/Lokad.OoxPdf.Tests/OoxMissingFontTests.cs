@@ -377,7 +377,7 @@ internal static class OoxMissingFontTests
         return builder.ToString();
     }
 
-    private static string ExtractCidMappedText(string pdf)
+    internal static string ExtractCidMappedText(string pdf)
     {
         var unicodes = ReadCidTextMap(pdf);
         return string.Concat(Regex.Matches(pdf, @"BT(.*?)ET", RegexOptions.Singleline)

@@ -409,25 +409,10 @@ internal sealed partial class PptxRenderer
     // substituted marks show as question mark.
     private static void ReportMissingGlyphSubstitution(string familyName, List<int> missing, PresentationFontResolver fontResolver, Action<OoxPdfDiagnostic>? diagnosticSink)
     {
-        missing.Sort();
-        if (fontResolver.ReportedMissingFontDiagnostics.Add("glyph:" + familyName))
+        if (diagnosticSink is not null && fontResolver.ReportedMissingFontDiagnostics.Add("glyph:" + familyName))
         {
-            const int maxListedCodepoints = 12;
-            string listed = string.Join(", ", missing.Take(maxListedCodepoints).Select(code => "U+" + code.ToString("X4")));
-            if (missing.Count > maxListedCodepoints)
-            {
-                listed += ", and " + (missing.Count - maxListedCodepoints).ToString(CultureInfo.InvariantCulture) + " more";
-            }
-
-            diagnosticSink?.Invoke(new OoxPdfDiagnostic(
-                "FONT_MISSING_GLYPHS",
-                OoxPdfSeverity.Warning,
-                missing.Count.ToString(CultureInfo.InvariantCulture) + " characters of " + familyName + " have no glyph in any usable face (" + listed + ") and show as question mark.",
-                PartName: null,
-                SlideIndex: null,
-                PageIndex: null,
-                Feature: familyName,
-                Fallback: "Question-mark substitution"));
+            missing.Sort();
+            diagnosticSink(FontDiagnostics.MissingGlyphs(familyName, missing));
         }
     }
 
