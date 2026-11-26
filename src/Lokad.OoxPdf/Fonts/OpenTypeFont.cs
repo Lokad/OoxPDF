@@ -495,19 +495,7 @@ internal sealed partial class OpenTypeFont
     private bool TryReadGlyphOutline(ushort glyphId, int depth, ref int remainingPoints, out OpenTypeGlyphOutline outline)
     {
         outline = default;
-        if (depth > 16 ||
-            glyphId >= GlyphCount ||
-            !tables.TryGetValue("head", out TableRecord head) ||
-            !tables.TryGetValue("loca", out TableRecord loca) ||
-            !tables.TryGetValue("glyf", out TableRecord glyf) ||
-            head.Length < 52)
-        {
-            return false;
-        }
-
-        short indexToLocFormat = I16(bytes, head.Offset + 50);
-        if (!TryGetGlyphTableRange(glyphId, indexToLocFormat, loca, glyf, out int glyphOffset, out int glyphLength) ||
-            glyphLength < 10)
+        if (depth > 16 || !TryGetGlyphTableRange(glyphId, out int glyphOffset, out int glyphLength) || glyphLength < 10)
         {
             return false;
         }
@@ -528,56 +516,13 @@ internal sealed partial class OpenTypeFont
         return TryReadSimpleGlyphOutline(glyphOffset + 10, glyphEnd, contourCount, glyphBounds, ref remainingPoints, out outline);
     }
 
-    private bool TryGetGlyphTableRange(
-        ushort glyphId,
-        short indexToLocFormat,
-        TableRecord loca,
-        TableRecord glyf,
-        out int glyphOffset,
-        out int glyphLength)
+    private bool TryGetGlyphTableRange(ushort glyphId, out int offset, out int length)
     {
-        glyphOffset = 0;
-        glyphLength = 0;
-
-        if (indexToLocFormat == 0)
-        {
-            int locaOffset = loca.Offset + glyphId * 2;
-            if (locaOffset + 4 > loca.Offset + loca.Length)
-            {
-                return false;
-            }
-
-            glyphOffset = glyf.Offset + U16(bytes, locaOffset) * 2;
-            int nextOffset = glyf.Offset + U16(bytes, locaOffset + 2) * 2;
-            glyphLength = nextOffset - glyphOffset;
-        }
-        else if (indexToLocFormat == 1)
-        {
-            int locaOffset = loca.Offset + glyphId * 4;
-            if (locaOffset + 8 > loca.Offset + loca.Length)
-            {
-                return false;
-            }
-
-            uint relativeOffset = U32(bytes, locaOffset);
-            uint nextRelativeOffset = U32(bytes, locaOffset + 4);
-            if (relativeOffset > int.MaxValue || nextRelativeOffset > int.MaxValue)
-            {
-                return false;
-            }
-
-            glyphOffset = glyf.Offset + (int)relativeOffset;
-            int nextOffset = glyf.Offset + (int)nextRelativeOffset;
-            glyphLength = nextOffset - glyphOffset;
-        }
-        else
-        {
-            return false;
-        }
-
-        return glyphLength > 0 &&
-            glyphOffset >= glyf.Offset &&
-            glyphOffset + glyphLength <= glyf.Offset + glyf.Length;
+        offset = 0;
+        length = 0;
+        return tables.TryGetValue("head", out TableRecord head) && head.Length >= 52 &&
+            tables.TryGetValue("loca", out TableRecord loca) && tables.TryGetValue("glyf", out TableRecord glyf) &&
+            TryGetGlyphData(bytes, glyphId, GlyphCount, I16(bytes, head.Offset + 50), glyf, loca, out offset, out length);
     }
 
     private bool TryReadSimpleGlyphOutline(

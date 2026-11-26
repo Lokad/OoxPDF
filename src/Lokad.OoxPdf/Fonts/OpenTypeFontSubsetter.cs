@@ -255,7 +255,7 @@ internal static class OpenTypeFontSubsetter
             foreach (ushort glyph in originalGlyphs)
             {
                 cancellationToken.ThrowIfCancellationRequested();
-                if (!TryGetGlyphData(source.Span, glyph, originalGlyphCount, indexToLocFormat, glyf, loca, out _, out int glyphLength))
+                if (!OpenTypeFont.TryGetGlyphData(source.Span, glyph, originalGlyphCount, indexToLocFormat, glyf, loca, out _, out int glyphLength))
                     throw new InvalidDataException("Glyph range is invalid.");
                 length = checked(((length + 3) & ~3) + glyphLength);
             }
@@ -272,7 +272,7 @@ internal static class OpenTypeFontSubsetter
                 cancellationToken.ThrowIfCancellationRequested();
                 writeOffset = OpenTypeFont.Align4(writeOffset);
                 OpenTypeFont.W32(subsetLoca, i * 4, (uint)writeOffset);
-                if (!TryGetGlyphData(source.Span, originalGlyphs[i], originalGlyphCount, indexToLocFormat, glyf, loca, out int glyphOffset, out int glyphLength))
+                if (!OpenTypeFont.TryGetGlyphData(source.Span, originalGlyphs[i], originalGlyphCount, indexToLocFormat, glyf, loca, out int glyphOffset, out int glyphLength))
                 {
                     throw new InvalidDataException("Glyph range is invalid.");
                 }
@@ -494,7 +494,7 @@ internal static class OpenTypeFontSubsetter
         out ushort[] components)
     {
         components = [];
-        if (!TryGetGlyphData(source, glyph, originalGlyphCount, indexToLocFormat, glyf, loca, out int glyphOffset, out int glyphLength))
+        if (!OpenTypeFont.TryGetGlyphData(source, glyph, originalGlyphCount, indexToLocFormat, glyf, loca, out int glyphOffset, out int glyphLength))
         {
             return false;
         }
@@ -611,65 +611,6 @@ internal static class OpenTypeFontSubsetter
         }
 
         return cursor <= glyphData.Length;
-    }
-
-    private static bool TryGetGlyphData(
-        ReadOnlySpan<byte> source,
-        ushort glyph,
-        ushort originalGlyphCount,
-        short indexToLocFormat,
-        TableRecord glyf,
-        TableRecord loca,
-        out int glyphOffset,
-        out int glyphLength)
-    {
-        glyphOffset = 0;
-        glyphLength = 0;
-        if (glyph >= originalGlyphCount)
-        {
-            return false;
-        }
-
-        int start;
-        int end;
-        if (indexToLocFormat == 0)
-        {
-            int entry = loca.Offset + glyph * 2;
-            if (entry + 4 > loca.Offset + loca.Length)
-            {
-                return false;
-            }
-
-            start = OpenTypeFont.U16(source, entry) * 2;
-            end = OpenTypeFont.U16(source, entry + 2) * 2;
-        }
-        else
-        {
-            int entry = loca.Offset + glyph * 4;
-            if (entry + 8 > loca.Offset + loca.Length)
-            {
-                return false;
-            }
-
-            uint start32 = OpenTypeFont.U32(source, entry);
-            uint end32 = OpenTypeFont.U32(source, entry + 4);
-            if (start32 > int.MaxValue || end32 > int.MaxValue)
-            {
-                return false;
-            }
-
-            start = (int)start32;
-            end = (int)end32;
-        }
-
-        if (end < start || glyf.Offset + end > glyf.Offset + glyf.Length)
-        {
-            return false;
-        }
-
-        glyphOffset = glyf.Offset + start;
-        glyphLength = end - start;
-        return true;
     }
 
     private static byte[] CopyTable(ReadOnlySpan<byte> source, TableRecord table)

@@ -57,6 +57,63 @@ internal static class FontFormatTests
         TestAssert.Equal("TestFont", subset.FamilyName);
     }
 
+    public static void SyntheticLocaFormatsRetainEmptyGlyphMappings()
+    {
+        byte[] original = TestFontBuilder.CreateTestFont();
+        OpenTypeFont basis = OpenTypeFont.Load(original);
+        TestAssert.True(basis.TryGetTable("head", out var head), "The fixture needs a font header.");
+        TestAssert.True(basis.TryGetTable("glyf", out var glyf), "The fixture needs glyph data.");
+        TestAssert.True(basis.TryGetTable("loca", out var loca), "The fixture needs glyph offsets.");
+        ushort space = basis.MapCodePoint(' ');
+        ushort letter = basis.MapCodePoint('A');
+        TestAssert.True(space != 0 && letter != 0, "The fixture needs a space and a letter.");
+
+        int spaceStart = (int)OpenTypeFont.U32(original, loca.Offset + space * 4);
+        int spaceEnd = (int)OpenTypeFont.U32(original, loca.Offset + (space + 1) * 4);
+        var sourceGlyphs = original.AsSpan(glyf.Offset, glyf.Length);
+        byte[] glyphs = [.. sourceGlyphs[..spaceStart], .. sourceGlyphs[spaceEnd..]];
+        byte[] source = TestFontBuilder.ReplaceTable(original, "glyf", glyphs);
+
+        foreach (ushort format in new ushort[] { 0, 1 })
+        {
+            int entrySize = format == 0 ? 2 : 4;
+            var locations = new byte[(basis.GlyphCount + 1) * entrySize];
+            for (int index = 0; index <= basis.GlyphCount; index++)
+            {
+                uint offset = OpenTypeFont.U32(original, loca.Offset + index * 4);
+                if (index > space) offset -= (uint)(spaceEnd - spaceStart);
+                if (format == 0) OpenTypeFont.W16(locations, index * entrySize, (ushort)(offset / 2));
+                else OpenTypeFont.W32(locations, index * entrySize, offset);
+            }
+
+            byte[] header = original.AsSpan(head.Offset, head.Length).ToArray();
+            OpenTypeFont.W16(header, 50, format);
+            byte[] withHeader = TestFontBuilder.ReplaceTable(source, "head", header);
+            OpenTypeFont font = OpenTypeFont.Load(TestFontBuilder.ReplaceTable(withHeader, "loca", locations));
+            TestAssert.True(font.TryGetGlyphBounds(letter, out var bounds), "The letter must retain its glyph header.");
+            TestAssert.Equal(new OpenTypeFont.FontBounds(0, 0, 500, 700), bounds);
+            TestAssert.True(!font.TryGetGlyphBounds(space, out _) && !font.TryReadGlyphOutline(space, out _),
+                "An empty space has advance and no outline.");
+
+            PdfEmbeddedFont embedded = PdfEmbeddedFont.Create(font, [' ', 'A'], CancellationToken.None);
+            TestAssert.True(embedded.UsesSubsetFontProgram, "Subsetting must keep the empty glyph.");
+            OpenTypeFont subset = OpenTypeFont.Load(embedded.FontProgramBytes.ToArray());
+            ushort subsetSpace = subset.MapCodePoint(' ');
+            TestAssert.True(subsetSpace != 0, "The empty space needs a subset mapping.");
+            TestAssert.Equal(basis.GetAdvanceWidth(space), subset.GetAdvanceWidth(subsetSpace));
+            TestAssert.True(!subset.TryReadGlyphOutline(subsetSpace, out _), "The subset space stays empty.");
+
+            int lastEntry = (letter + 1) * entrySize;
+            if (format == 0) OpenTypeFont.W16(locations, lastEntry, (ushort)(glyphs.Length / 2 + 1));
+            else OpenTypeFont.W32(locations, lastEntry, (uint)(glyphs.Length + 2));
+            OpenTypeFont invalid = OpenTypeFont.Load(TestFontBuilder.ReplaceTable(withHeader, "loca", locations));
+            TestAssert.True(!invalid.TryGetGlyphBounds(letter, out _) && !invalid.TryReadGlyphOutline(letter, out _),
+                "The next glyph offset must stay within the glyph table.");
+            TestAssert.True(!OpenTypeFontSubsetter.TryCreate(invalid, new Dictionary<ushort, int> { [letter] = 'A' },
+                CancellationToken.None, out _, out _), "Subsetting must reject the same out-of-table range.");
+        }
+    }
+
     public static void SyntheticSubsetTagIsDeterministicAndDistinct()
     {
         OpenTypeFont font = TestFontBuilder.LoadTestFont();

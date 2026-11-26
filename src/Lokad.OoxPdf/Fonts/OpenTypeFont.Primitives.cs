@@ -46,6 +46,29 @@ internal sealed partial class OpenTypeFont
         return I16(bytes, offset) / 16384d;
     }
 
+    internal static bool TryGetGlyphData(ReadOnlySpan<byte> source, ushort glyph, ushort glyphCount, short format,
+        TableRecord glyf, TableRecord loca, out int offset, out int length)
+    {
+        offset = 0;
+        length = 0;
+        if (glyph >= glyphCount || format is not 0 and not 1) return false;
+
+        int entrySize = format == 0 ? 2 : 4;
+        int relativeEntry = glyph * entrySize;
+        if (relativeEntry > loca.Length - 2 * entrySize) return false;
+
+        int entry = loca.Offset + relativeEntry;
+        uint start = format == 0 ? 2u * U16(source, entry) : U32(source, entry);
+        uint end = format == 0 ? 2u * U16(source, entry + entrySize) : U32(source, entry + entrySize);
+        // Validate the offsets against the table's length before forming absolute positions.
+        // Empty glyphs are valid storage. Outline readers still require a glyph header.
+        if (start > end || end > (uint)glyf.Length) return false;
+
+        offset = glyf.Offset + (int)start;
+        length = (int)(end - start);
+        return true;
+    }
+
     internal static int Align4(int value)
     {
         return (value + 3) & ~3;

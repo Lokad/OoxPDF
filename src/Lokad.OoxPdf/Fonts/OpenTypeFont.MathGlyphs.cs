@@ -21,10 +21,7 @@ internal sealed partial class OpenTypeFont
     public bool TryGetGlyphBounds(ushort glyph, out FontBounds bounds)
     {
         bounds = default;
-        if (glyph >= GlyphCount || !tables.TryGetValue("head", out TableRecord head) ||
-            !tables.TryGetValue("loca", out TableRecord loca) || !tables.TryGetValue("glyf", out TableRecord glyf) ||
-            !TryGetGlyphTableRange(glyph, I16(bytes, head.Offset + 50), loca, glyf, out int offset, out int length) ||
-            length < 10 || offset < 0 || offset > bytes.Length - length)
+        if (!TryGetGlyphTableRange(glyph, out int offset, out int length) || length < 10)
         { return false; }
         // The glyph header contains its ink bounds. Do not expand outline points
         // or compound descendants just to measure a mathematical box.

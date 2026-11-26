@@ -15430,6 +15430,7 @@
     "RejectsShortHeadTable",
     "SyntheticFontLoadsWithExpectedIdentity",
     "SyntheticSubsetRoundTripKeepsCmapAndWidths",
+    "=SyntheticLocaFormatsRetainEmptyGlyphMappings",
     "CffKindFontRefusesCidFontType2Embedding",
     "OpenTypeFontLoadObservesCancelledToken",
     "FontProgramLoaderPropagatesParseCancellation",
