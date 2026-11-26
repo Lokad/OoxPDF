@@ -73,4 +73,29 @@ internal static partial class PptxLegendRowsTests
             }
         }
     }
+
+    public static void PptxFittingSeriesLegendReusesOrdinaryGapWhenPreferredSpacingOverflows()
+    {
+        string[] names = Enumerable.Range(1, 6).Select(i => $"North West Region {i}").ToArray();
+        double[] fittedSeries = ReadRow(576, categoryLegend: false);
+        double[] fittedCategories = ReadRow(576, categoryLegend: true);
+        double[] roomierSeries = ReadRow(620, categoryLegend: false);
+
+        TestAssert.True(fittedSeries.Zip(fittedCategories).All(pair => Math.Abs(pair.First - pair.Second) < .002d),
+            "A naturally fitting series row uses ordinary gaps and remains centered when preferred spacing exceeds its width.");
+        TestAssert.True(roomierSeries[1] - roomierSeries[0] > fittedSeries[1] - fittedSeries[0] + 1d,
+            "The same series keep their preferred spacing where it fits.");
+
+        double[] ReadRow(int width, bool categoryLegend)
+        {
+            var page = Render(width, 7, names.Length, overlay: true, kind: "column",
+                categoryLegend: categoryLegend, categoryNames: names).Page;
+            var shows = DocxCommentsTests.ReadEmbeddedGlyphTextShows(page, usePageCoordinates: true,
+                fontResourceFilter: name => name.StartsWith("CL", StringComparison.Ordinal)).ToArray();
+            TestAssert.True(shows.Select(show => show.Text).SequenceEqual(names),
+                "Every complete name is emitted in source order.");
+            TestAssert.Equal(1, shows.Select(show => show.Y).Distinct().Count());
+            return shows.Select(show => show.X).ToArray();
+        }
+    }
 }

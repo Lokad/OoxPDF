@@ -6405,7 +6405,8 @@
     "PptxCffSubstitutionMatchesTrueTypeRendering",
     "CffChartUnresolvableRunesSubstituteQuestionMark",
     "PptxWrappedFillLegendsShareColumnsAndPreserveSourceOrder",
-    "PptxNaturallyFittingFillLegendKeepsUnequalNamesOnOneRow"
+    "PptxNaturallyFittingFillLegendKeepsUnequalNamesOnOneRow",
+    "=PptxFittingSeriesLegendReusesOrdinaryGapWhenPreferredSpacingOverflows"
   ],
   "pptx-legend-defaults": [
     "PptxVaryingBarCategoryLegendsWrapAndReservePlotSpace",

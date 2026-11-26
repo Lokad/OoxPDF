@@ -172,17 +172,25 @@ internal sealed partial class PptxRenderer
                 double packedWidth = widths.Sum() - padding;
                 if (entries.Count > 1 && packedWidth > availableWidth)
                 {
-                    // Keep preferred spacing while it fits. When it does not,
-                    // share the remaining whitespace between the measured keys
-                    // and text, so a naturally fitting row cannot lose names.
-                    double reduction = (packedWidth - availableWidth) / (entries.Count - 1);
+                    // Use ordinary horizontal spacing when preferred spacing
+                    // exceeds the automatic row. Distribute any remaining
+                    // shortage across gaps without changing row admission.
+                    int gapCount = entries.Count - 1;
+                    double overflow = packedWidth - availableWidth;
+                    double reduction = overflow / gapCount;
+                    if (!authoredFrame)
+                    {
+                        double range = ComputeHorizontalLegendAdvanceRange(entries, style, measure);
+                        double ordinaryPadding = ComputeHorizontalLegendInterEntryGap(style.FontSize, range, bottomLegend: true);
+                        reduction = Math.Max(reduction, padding - Math.Max(0d, ordinaryPadding));
+                    }
                     padding -= reduction;
                     for (int i = 0; i < widths.Length; i++)
                     {
                         context.CancellationToken.ThrowIfCancellationRequested();
                         widths[i] -= reduction;
                     }
-                    packedWidth = availableWidth;
+                    packedWidth = availableWidth - Math.Max(0d, reduction * gapCount - overflow);
                 }
                 rows.Add((0, entries.Count, Math.Max(0d, packedWidth)));
             }
