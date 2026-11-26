@@ -30,5 +30,24 @@ $report = & (Join-Path $PSScriptRoot 'MeasureWorkspaceFootprint.ps1') -Path $inp
 if ($report.Bytes -ne 14 -or $report.LogicalBytes -ne 19 -or $report.SharedHardLinkBytes -ne 5) { throw 'File lengths, separate copies or hard links were counted incorrectly' }
 if ($report.Files -ne 5 -or $report.Directories -ne 3 -or $report.SkippedLinks -ne 1 -or $report.Errors.Count) { throw 'Input/link/long-path traversal differs' }
 $stored = Get-Content $path -Raw | ConvertFrom-Json
-if ($stored.Bytes -ne $report.Bytes -or $stored.Root -ne $inputs) { throw 'Persisted footprint report differs' }
-Write-Output 'Argument refusal, file lengths, separate copies, hard-link aliases, directory loops and long paths passed.'
+if ($stored.Bytes -ne $report.Bytes -or $stored.StoredBytes -ne $report.StoredBytes -or $stored.Root -ne $inputs) { throw 'Persisted footprint report differs' }
+if ($report.StoredBytes -gt $report.Bytes -or ($report.Groups.StoredBytes | Measure-Object -Sum).Sum -ne $report.StoredBytes) { throw 'Stored-byte totals differ' }
+
+if ($IsWindows -and [IO.DriveInfo]::new([IO.Path]::GetPathRoot($inputs)).DriveFormat -eq 'NTFS') {
+    $compressedInputs = Join-Path $OutputDirectory compressed
+    New-Item -ItemType Directory -Path $compressedInputs | Out-Null
+    $compressedInputs = (Resolve-Path -LiteralPath $compressedInputs).Path
+    $file = Join-Path $compressedInputs repeated.txt
+    [IO.File]::WriteAllText($file, ('x' * 262144))
+    & (Join-Path $env:SystemRoot System32/compact.exe) /C /Q $file | Out-Null
+    if ($LASTEXITCODE -ne 0) { throw 'NTFS compression of the test input failed' }
+    $single = & (Join-Path $PSScriptRoot 'MeasureWorkspaceFootprint.ps1') -Path $compressedInputs
+    New-Item -ItemType HardLink -Path (Join-Path $compressedInputs alias.txt) -Target $file | Out-Null
+    $compressedReport = & (Join-Path $PSScriptRoot 'MeasureWorkspaceFootprint.ps1') -Path $compressedInputs
+    if ($compressedReport.Errors.Count -or $compressedReport.Files -ne 2 -or $compressedReport.Bytes -ne 262144 -or
+        $compressedReport.LogicalBytes -ne 524288 -or $compressedReport.StoredBytes -gt 131072 -or
+        $compressedReport.StoredBytes -ne $single.StoredBytes) {
+        throw 'Compressed bytes or hard-link aliases were counted incorrectly'
+    }
+}
+Write-Output 'Argument refusal, stored and logical lengths, separate copies, hard-link aliases, directory loops and long paths passed.'
