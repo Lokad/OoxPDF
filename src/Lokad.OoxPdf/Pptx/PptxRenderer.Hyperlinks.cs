@@ -34,23 +34,36 @@ internal sealed partial class PptxRenderer
         double yTop = OoxUnits.EmuToPoints(mapped.Y);
         double width = OoxUnits.EmuToPoints(mapped.Width);
         double height = OoxUnits.EmuToPoints(mapped.Height);
+        double y = context.Document.SlideHeightPoints - yTop - height;
+        var frame = new PdfRectangle(x, y, width, height);
         if (width <= 0d || height <= 0d)
         {
-            return;
+            if (width < 0d || height < 0d || width == height ||
+                node.Shape is not { Preset: "line" or "straightConnector1", HasCustomGeometry: false,
+                    Line: { HasLine: true, Width: > 0d, Alpha: > 0d } line })
+            {
+                return;
+            }
+
+            // An axis-aligned line can have a zero-area source frame. Its
+            // painted stroke still provides a clickable area before rotation.
+            double halfStroke = line.Width / 2d;
+            double endCap = line.Cap is 1 or 2 ? halfStroke : 0d;
+            double padX = width == 0d ? halfStroke : endCap;
+            double padY = height == 0d ? halfStroke : endCap;
+            frame = new PdfRectangle(x - padX, y - padY, width + 2d * padX, height + 2d * padY);
         }
 
-        double y = context.Document.SlideHeightPoints - yTop - height;
         // Chart/table frame painters retain an unrotated frame fallback. Keep
         // navigation on their actual paint; only shape-based owners use this matrix.
         if (node.Kind is PptxSceneNodeKind.Shape or PptxSceneNodeKind.Connector or PptxSceneNodeKind.Picture or PptxSceneNodeKind.Group &&
             (Math.Abs(mapped.RotationDegrees) > 0.001d || mapped.FlipHorizontal || mapped.FlipVertical))
         {
-            PdfRectangle frame = TransformedRectangleBounds(new PdfRectangle(x, y, width, height),
-                ShapeTransformMatrix(x, y, width, height, mapped));
-            (x, y, width, height) = (frame.X, frame.Y, frame.Width, frame.Height);
+            frame = TransformedRectangleBounds(frame, ShapeTransformMatrix(x, y, width, height, mapped));
         }
 
-        if (!TryIntersectWithSlideBounds(x, y, width, height, context.Document, out x, out y, out width, out height))
+        if (!TryIntersectWithSlideBounds(frame.X, frame.Y, frame.Width, frame.Height, context.Document,
+            out x, out y, out width, out height))
         {
             return;
         }

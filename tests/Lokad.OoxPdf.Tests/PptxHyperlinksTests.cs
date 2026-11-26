@@ -292,29 +292,57 @@ internal static class PptxHyperlinksTests
                   <Relationship Id="rIdCxnLink" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/hyperlink" Target="https://example.invalid/connector" TargetMode="External"/>
                 </Relationships>
                 """,
-            ["ppt/slides/slide1.xml"] = """
+            ["ppt/slides/slide1.xml"] = $$"""
                 <?xml version="1.0" encoding="UTF-8"?>
                 <p:sld xmlns:p="http://schemas.openxmlformats.org/presentationml/2006/main" xmlns:a="http://schemas.openxmlformats.org/drawingml/2006/main" xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships">
-                  <p:cSld><p:spTree><p:cxnSp>
-                    <p:nvCxnSpPr><p:cNvPr id="8" name="LinkedConnector"><a:hlinkClick r:id="rIdCxnLink"/></p:cNvPr><p:nvPr/></p:nvCxnSpPr>
-                    <p:spPr>
-                      <a:xfrm><a:off x="914400" y="914400"/><a:ext cx="1828800" cy="914400"/></a:xfrm>
-                      <a:prstGeom prst="line"/>
-                      <a:ln w="12700"><a:solidFill><a:srgbClr val="000000"/></a:solidFill></a:ln>
-                    </p:spPr>
-                  </p:cxnSp></p:spTree></p:cSld>
+                  <p:cSld><p:spTree>
+                    {{Connector(8, 72, 72, 144, 72)}}
+                    {{Connector(9, 72, 160, 144, 0)}}
+                    {{Connector(10, 290, 108, 0, 108)}}
+                    {{Connector(11, 400, 180, 80, 0, rotation: 90)}}
+                    {{Connector(12, 0, 250, 0, 90)}}
+                    {{Connector(13, 60, 90, 60, 0, cap: "rnd")}}
+                    {{Connector(14, 72, 240, 144, 0, visible: false)}}
+                    {{Connector(15, -100, 310, 50, 0)}}
+                  </p:spTree></p:cSld>
                 </p:sld>
                 """
         });
 
         (IReadOnlyList<PdfPage> pages, _) = RenderSlidePages(input);
 
-        PdfLinkAnnotation annotation = pages.Single().Annotations.Single();
-        TestAssert.Equal("https://example.invalid/connector", annotation.Uri);
-        TestAssert.Equal(72d, annotation.X);
-        TestAssert.Equal(396d, annotation.Y);
-        TestAssert.Equal(144d, annotation.Width);
-        TestAssert.Equal(72d, annotation.Height);
+        IReadOnlyList<PdfLinkAnnotation> annotations = pages.Single().Annotations;
+        PdfRectangle[] expected =
+        [
+            new(72d, 396d, 144d, 72d), new(72d, 379d, 144d, 2d), new(289d, 324d, 2d, 108d),
+            new(439d, 320d, 2d, 80d), new(0d, 200d, 1d, 90d), new(59d, 449d, 62d, 2d)
+        ];
+        TestAssert.Equal(expected.Length, annotations.Count);
+        for (int index = 0; index < expected.Length; index++)
+        {
+            var link = annotations[index];
+            var bounds = expected[index];
+            TestAssert.Equal("https://example.invalid/connector", link.Uri);
+            TestAssert.True(Math.Abs(bounds.X - link.X) < .001d && Math.Abs(bounds.Y - link.Y) < .001d &&
+                Math.Abs(bounds.Width - link.Width) < .001d && Math.Abs(bounds.Height - link.Height) < .001d,
+                $"Connector {index + 8} has the expected clickable rectangle.");
+        }
+
+        static string Connector(int id, int x, int y, int width, int height,
+            int rotation = 0, string cap = "flat", bool visible = true)
+        {
+            string fill = visible ? """<a:solidFill><a:srgbClr val="000000"/></a:solidFill>""" : "<a:noFill/>";
+            return $$"""
+                <p:cxnSp>
+                  <p:nvCxnSpPr><p:cNvPr id="{{id}}" name="LinkedConnector{{id}}"><a:hlinkClick r:id="rIdCxnLink"/></p:cNvPr><p:cNvCxnSpPr/><p:nvPr/></p:nvCxnSpPr>
+                  <p:spPr>
+                    <a:xfrm rot="{{rotation * 60000}}"><a:off x="{{x * 12700}}" y="{{y * 12700}}"/><a:ext cx="{{width * 12700}}" cy="{{height * 12700}}"/></a:xfrm>
+                    <a:prstGeom prst="line"><a:avLst/></a:prstGeom>
+                    <a:ln w="25400" cap="{{cap}}">{{fill}}</a:ln>
+                  </p:spPr>
+                </p:cxnSp>
+                """;
+        }
     }
 
     public static void PptxPictureHyperlinkEmitsUriAnnotation()
