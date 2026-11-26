@@ -1893,15 +1893,17 @@ internal static partial class PptxChartLegendsTests
 
     public static void PptxSyntheticChartLegendEntryOmitsPairKerning()
     {
-        using var package = PptxTests.CreateSingleChartPackageStream("""
+        const string caption = "WAVE";
+        using var input = PptxTests.CreateSingleChartPackageStream($$"""
             <?xml version="1.0" encoding="UTF-8"?>
             <c:chartSpace xmlns:c="http://schemas.openxmlformats.org/drawingml/2006/chart" xmlns:a="http://schemas.openxmlformats.org/drawingml/2006/main">
               <c:chart>
                 <c:plotArea>
                   <c:barChart>
                     <c:barDir val="col"/>
+                    <c:varyColors val="0"/>
                     <c:ser>
-                      <c:tx><c:strRef><c:strCache><c:pt idx="0"><c:v>WAVE</c:v></c:pt></c:strCache></c:strRef></c:tx>
+                      <c:tx><c:strRef><c:strCache><c:pt idx="0"><c:v>{{caption}}</c:v></c:pt></c:strCache></c:strRef></c:tx>
                       <c:cat><c:strLit><c:pt idx="0"><c:v>A</c:v></c:pt><c:pt idx="1"><c:v>B</c:v></c:pt></c:strLit></c:cat>
                       <c:val><c:numLit><c:pt idx="0"><c:v>2</c:v></c:pt><c:pt idx="1"><c:v>4</c:v></c:pt></c:numLit></c:val>
                     </c:ser>
@@ -1914,40 +1916,27 @@ internal static partial class PptxChartLegendsTests
               </c:chart>
             </c:chartSpace>
             """);
-        string input = TestFixtures.NewTemporaryPath(".pptx");
-        using (var file = File.Create(input)) package.CopyTo(file);
-        string output = TestFixtures.NewTemporaryPath(".pdf");
-        OoxPdfConverter.Convert(input, output);
-        string pdf = File.ReadAllText(output, Encoding.ASCII);
-        double maxCoalesced = 0d;
-        string[] parts = pdf.Split(new string[] { "TJ" }, System.StringSplitOptions.None);
-        foreach (string part in parts)
+        using var package = OoxPackage.Open(input, default);
+        PdfPage page = new PptxRenderer(new PortableRenderingTests.PinnedResolver())
+            .RenderPagesAsync(new PptxReader().Read(package, default), package, null, default)
+            .ToBlockingEnumerable().Single();
+        var glyphs = PortableRenderingTests.ReadPaintedSourceLabel(page, caption, fontPrefix: "CL");
+        TestAssert.Equal(caption.Length, glyphs.Count);
+        OpenTypeFont font = page.Fonts.Single(f => f.ResourceName.StartsWith("CL", StringComparison.Ordinal)).Font.Font;
+        ushort[] ids = caption.Select(character => font.MapCodePoint(character)).ToArray();
+        bool fontHasDistinctPair = false;
+        for (int index = 0; index < ids.Length - 1; index++)
         {
-            int open = part.LastIndexOf("[");
-            if (open < 0)
-            {
-                continue;
-            }
-            string body = part.Substring(open + 1).TrimEnd();
-            if (!body.EndsWith("]"))
-            {
-                continue;
-            }
-            foreach (string token in body.Split())
-            {
-                if (token.StartsWith("<") || token.EndsWith(">"))
-                {
-                    continue;
-                }
-                double candidate;
-                if (double.TryParse(token, System.Globalization.NumberStyles.Float, System.Globalization.CultureInfo.InvariantCulture, out candidate) && System.Math.Abs(candidate) > maxCoalesced)
-                {
-                    maxCoalesced = System.Math.Abs(candidate);
-                }
-            }
+            double scale = glyphs[index].Size / font.UnitsPerEm;
+            double expected = font.GetAdvanceWidth(ids[index]) * scale;
+            double actual = glyphs[index + 1].Origin.X - glyphs[index].Origin.X;
+            TestAssert.True(Math.Abs(actual - expected) < .06d, "The visible legend uses the unkerned glyph advance.");
+            fontHasDistinctPair |= Math.Abs(font.GetKerning(ids[index], ids[index + 1]) * scale) > .25d;
         }
-        TestAssert.True(!(maxCoalesced > 6d), "Expected legend entry text without pair-kerning adjustments, largest TJ number: " + maxCoalesced.ToString(System.Globalization.CultureInfo.InvariantCulture));
-    }    public static void PptxStrokeLegendRightXAddsClipAllowance()
+        TestAssert.True(fontHasDistinctPair, "The selected font must distinguish kerned and unkerned paint.");
+    }
+
+    public static void PptxStrokeLegendRightXAddsClipAllowance()
     {
         System.Reflection.MethodInfo resolveX = typeof(PptxRenderer).GetMethod(
             "ResolveStrokeLegendRightX",
