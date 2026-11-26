@@ -1351,7 +1351,9 @@ internal static partial class SvgTextTests
         const string gradient = """<defs><linearGradient id="ink;key"><stop stop-color="#112233"/></linearGradient></defs>""";
         AssertSvgPaintInBothFormats(Svg(visible),
             [Svg(gradient + visible.Replace("#112233", "url('#ink;key')", StringComparison.Ordinal)),
-             Svg(gradient + visible.Replace("#112233", "url(#ink;key)", StringComparison.Ordinal))],
+             Svg(gradient + visible.Replace("#112233", "url(#ink;key)", StringComparison.Ordinal)),
+             Svg(gradient + visible.Replace("#112233", """url(#ink\;key)""", StringComparison.Ordinal)),
+             Svg(gradient + visible.Replace("#112233", """url('#ink\3B key')""", StringComparison.Ordinal))],
             pdf => TestAssert.Equal(5, LabelPaths(pdf)));
     }
 

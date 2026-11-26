@@ -512,7 +512,9 @@ internal static partial class SvgTextTests
 
         string expected = Picture("url(#red)", "url(#café)", "#template", "url(#missing)", "lime");
         string actual = Picture("url('#r%65d')", "url(#caf%C3%A9)", "#tem%70late", "url(#mi%73sing)", "url(#tag%2561) black");
-        AssertSvgPaintInBothFormats(expected, actual, "1 0 0 rg", "0 0 1 RG", "1 1 0 rg", "0 1 0 rg", LabelColor);
+        string cssEscaped = Picture("""url(#\72 ed)""", """url('#caf\e9 ')""", "#template", """url(#mi\73 sing)""",
+            """url(\23 tag\25 2561) black""");
+        AssertSvgPaintInBothFormats(expected, [actual, cssEscaped], null, "1 0 0 rg", "0 0 1 RG", "1 1 0 rg", "0 1 0 rg", LabelColor);
     }
 
     public static void SvgDecreasingStopsKeepNativePaintAndOpacityInBothFormats()

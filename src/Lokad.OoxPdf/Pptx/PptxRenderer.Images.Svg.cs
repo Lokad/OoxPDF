@@ -1796,7 +1796,7 @@ internal sealed partial class PptxRenderer
         double opacity = ReadSvgOpacityValue(strokeOpacity) * elementOpacity;
         if (!TryReadSvgStrokeWidth(style, path, percentageBasis, out double width))
         {
-            failure = SvgLocalPaintServerRegex().IsMatch(strokePaint)
+            failure = ReadSvgLocalPaintServerId(strokePaint, out _) is not null
                 ? SvgStrokeFailure.UnresolvedGradient : SvgStrokeFailure.UnparsableWidth;
             return default;
         }
@@ -1936,9 +1936,83 @@ internal sealed partial class PptxRenderer
         }
     }
 
-    [GeneratedRegex("""^\s*url\(\s*(?:"#(?<id>[^"\s\\]+)"|'#(?<id>[^'\s\\]+)'|#(?<id>[^()\s"'\\]+))\s*\)""",
-        RegexOptions.IgnoreCase | RegexOptions.CultureInvariant)]
-    private static partial Regex SvgLocalPaintServerRegex();
+    private static string? ReadSvgLocalPaintServerId(string paint, out int referenceLength)
+    {
+        referenceLength = 0;
+        ReadOnlySpan<char> text = paint.AsSpan().TrimStart();
+        if (!text.StartsWith("url(", StringComparison.OrdinalIgnoreCase)) return null;
+        text = text[4..].TrimStart();
+        if (text.IsEmpty) return null;
+
+        char quote = text[0] is '"' or '\'' ? text[0] : '\0';
+        if (quote != '\0') text = text[1..];
+        if (text.IsEmpty || text[0] is not ('#' or '\\')) return null;
+
+        StringBuilder? decoded = null;
+        int start = 0;
+        int offset = 0;
+        while (offset < text.Length)
+        {
+            char token = text[offset];
+            if (quote != '\0' ? token == quote : token == ')' || char.IsWhiteSpace(token)) break;
+            if (char.IsWhiteSpace(token) || (quote == '\0' && token is '(' or '"' or '\'')) return null;
+            if (token != '\\')
+            {
+                offset++;
+                continue;
+            }
+
+            (decoded ??= new StringBuilder()).Append(text[start..offset]);
+            offset++;
+            if (!TryAppendSvgCssEscape(decoded, text, ref offset, quoted: quote != '\0')) return null;
+            start = offset;
+        }
+
+        ReadOnlySpan<char> tail = text[offset..];
+        if (quote != '\0')
+        {
+            if (tail.IsEmpty || tail[0] != quote) return null;
+            tail = tail[1..];
+        }
+        tail = tail.TrimStart();
+        if (tail.IsEmpty || tail[0] != ')') return null;
+
+        // CSS escapes are part of the URL token. Admit only a decoded fragment,
+        // then resolve URI percent escapes once, using the same rule as href.
+        ReadOnlySpan<char> fragment = decoded is null ? text[..offset] :
+            decoded.Append(text[start..offset]).ToString().AsSpan();
+        if (fragment.Length < 2 || fragment[0] != '#') return null;
+        referenceLength = paint.Length - tail.Length + 1;
+        return DecodeSvgFragmentId(fragment[1..].ToString());
+    }
+
+    private static bool TryAppendSvgCssEscape(StringBuilder value, ReadOnlySpan<char> text, ref int offset, bool quoted)
+    {
+        if (offset == text.Length) return false;
+        char next = text[offset];
+        if (next is '\r' or '\n' or '\f')
+        {
+            if (!quoted) return false;
+            offset += next == '\r' && offset + 1 < text.Length && text[offset + 1] == '\n' ? 2 : 1;
+            return true;
+        }
+
+        int start = offset;
+        while (offset < text.Length && offset - start < 6 && char.IsAsciiHexDigit(text[offset])) offset++;
+        if (offset == start)
+        {
+            value.Append(text[offset++]);
+            return true;
+        }
+
+        int codePoint = int.Parse(text[start..offset], NumberStyles.HexNumber, CultureInfo.InvariantCulture);
+        value.Append(codePoint != 0 && Rune.IsValid(codePoint) ? char.ConvertFromUtf32(codePoint) : "\uFFFD");
+        if (offset < text.Length && text[offset] is ' ' or '\t' or '\r' or '\n' or '\f')
+        {
+            offset += text[offset] == '\r' && offset + 1 < text.Length && text[offset + 1] == '\n' ? 2 : 1;
+        }
+        return true;
+    }
 
     // Decode the identifier after admitting a fragment-only reference.
     private static string DecodeSvgFragmentId(string id) => id.Contains('%') ? Uri.UnescapeDataString(id) : id;
@@ -1946,13 +2020,10 @@ internal sealed partial class PptxRenderer
     private static string ResolveSvgPaintFallback(XElement element, IReadOnlyDictionary<string, string> style,
         string paint, SvgPaintServers paintServers, out string? gradientId)
     {
-        gradientId = null;
-        if (!paint.AsSpan().TrimStart().StartsWith("url(", StringComparison.OrdinalIgnoreCase)) return paint;
-        Match reference = SvgLocalPaintServerRegex().Match(paint);
-        gradientId = reference.Success ? DecodeSvgFragmentId(reference.Groups["id"].Value) : null;
+        gradientId = ReadSvgLocalPaintServerId(paint, out int referenceLength);
         if (gradientId is null) return paint;
 
-        ReadOnlySpan<char> suffix = paint.AsSpan(reference.Length);
+        ReadOnlySpan<char> suffix = paint.AsSpan(referenceLength);
         if (suffix.IsEmpty || !char.IsWhiteSpace(suffix[0])) return paint;
 
         // An absent or wrong-type target admits the authored fallback. A
