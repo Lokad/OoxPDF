@@ -578,6 +578,9 @@ internal static partial class SvgTextTests
         const string noStrokeNorth = """NO<tspan stroke="none">RT</tspan>H""";
         const string noStrokeSouth = """&#160;SO<tspan stroke="red" style="stroke-opacity:0% !important;stroke-opacity:.3">UT</tspan>H""";
         const string zeroWidthNorth = """NO<tspan stroke="red"><tspan stroke="blue">RT</tspan></tspan>H""";
+        const string resetStrokeNorth = """<tspan stroke="none">NORTH</tspan>""";
+        const string nestedResetNorth = """<tspan stroke="red"><tspan stroke-width="0">NORTH</tspan></tspan>""";
+        const string inactiveStrokeStyle = """NO<tspan style="paint-order:stroke fill;stroke-linecap:round;stroke-dasharray:2 1">RT</tspan>H""";
         string control = Picture("NORTH", plainSouth);
         AssertSvgPaintInBothFormats(control,
             [Picture(northSpan, southSpan), Picture(sameSizeNorth, sameSizeSouth),
@@ -587,7 +590,9 @@ internal static partial class SvgTextTests
                 Picture(neutralSpacingNorth, neutralSpacingSouth, """style="letter-spacing:0mm;word-spacing:0em;baseline-shift:0pt" """),
                 Picture(neutralTypographyNorth, plainSouth),
                 Picture(neutralDirectionNorth, neutralWritingSouth), Picture(neutralBaselineNorth, plainSouth),
-                Picture(noStrokeNorth, noStrokeSouth), Picture(zeroWidthNorth, plainSouth, """stroke-width="0" """)], pdf =>
+                Picture(noStrokeNorth, noStrokeSouth), Picture(zeroWidthNorth, plainSouth, """stroke-width="0" """),
+                Picture(resetStrokeNorth, plainSouth, """stroke="red" """),
+                Picture(nestedResetNorth, plainSouth), Picture(inactiveStrokeStyle, plainSouth)], pdf =>
         {
             TestAssert.Equal(5, LabelPaths(pdf));
             TestAssert.Equal(5, LabelPaths(pdf, "0.067 0.267 0.6 rg"));
@@ -610,6 +615,7 @@ internal static partial class SvgTextTests
             ("""fill-opacity="initial" """, """fill-opacity=".5" """),
             ("""fill-opacity="NaN" """, ""),
             ("""stroke="red" """, ""),
+            ("""stroke="none" """, """stroke="red" """),
             ("""stroke-opacity="1" """, """stroke="red" stroke-opacity="0" """),
             ("""opacity="inherit" """, """opacity=".5" """),
             ("""opacity=".5" """, ""),

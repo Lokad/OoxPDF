@@ -120,7 +120,8 @@ Plain spans and links also retain glyph paint with explicit `inherit` or `unset`
 for font family, size, style, weight, color, fill and fill opacity.
 They can restate the same font family list, slant, weight, resolved size, solid fill or fill opacity.
 Local color declarations preserve labels when the resolved fill stays the same and the stroke stays nonpainting.
-Nonpainting stroke declarations also preserve the glyph fill.
+Nonpainting strokes preserve the glyph fill, including when a span resets
+an inherited stroke or declares stroke styling without painting a stroke.
 Plain spans can also use default spacing, font variant, font stretch, text decoration,
 horizontal left-to-right writing and alphabetic baseline settings.
 Complex SVG text, filters, masks/blends and
