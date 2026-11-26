@@ -445,6 +445,8 @@ internal static partial class DocxTextTests
         TestAssert.True(childStyle.BasedOnStyleId == "Base" && childStyle.HasParagraphProperties && childStyle.HasRunProperties, "The DOCX style catalog should retain private-safe paragraph style topology after resolved properties are applied.");
         DocxStructureSnapshot structure = DocxStructureSnapshot.FromDocument(document);
         TestAssert.Equal(2, structure.StyleCatalog.ParagraphStyles.Count);
+        TestAssert.Equal(false, structure.StyleCatalog.HasRunDefaults);
+        TestAssert.Equal(false, structure.StyleCatalog.HasParagraphDefaults);
         DocxStructureBlockSnapshot block = structure.Blocks.Single(block => block.Kind == "Paragraph");
         TestAssert.True(block.ParagraphStyleFound == true, "Structure snapshots should expose private-safe paragraph style resolution.");
         TestAssert.Equal(2, block.ParagraphStyleDepth ?? 0);
@@ -747,7 +749,10 @@ internal static partial class DocxTextTests
         using FileStream stream = File.OpenRead(input);
         OoxPackage package = OoxPackage.Open(stream, CancellationToken.None);
         DocxDocument document = new DocxReader().Read(package, null, CancellationToken.None, OoxPdfDocxMarkupMode.Final, includeStyleCatalog: true);
-        DocxStyleDefinitionSummary characterStyle = document.StyleCatalog.CharacterStyles.Single();
+        DocxStyleCatalog catalog = DocxStructureSnapshot.FromDocument(document).StyleCatalog;
+        TestAssert.Equal(true, catalog.HasRunDefaults);
+        TestAssert.Equal(false, catalog.HasParagraphDefaults);
+        DocxStyleDefinitionSummary characterStyle = catalog.CharacterStyles.Single();
         TestAssert.Equal("Emphasis", characterStyle.StyleId);
         TestAssert.True(characterStyle.HasRunProperties, "The inspector catalog retains authored character style details.");
 

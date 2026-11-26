@@ -13,7 +13,7 @@ internal static partial class DocxInlineCompositionTests
         using var golden = ReadRunDefaultGolden();
         foreach (var row in golden.RootElement.GetProperty("Rows").EnumerateArray())
         {
-            var document = ReadRunDefaultSource(row, includeStyleCatalog: true);
+            var document = ReadRunDefaultSource(row);
             var runs = DocxBlockTraversal.EnumerateSourceParagraphs(document).SelectMany(paragraph => paragraph.Runs)
                 .Where(run => run.Text.Contains("Public ", StringComparison.Ordinal)).ToArray();
             TestAssert.Equal(6, runs.Select(run => run.Text.Trim()).Distinct().Count());
@@ -24,7 +24,6 @@ internal static partial class DocxInlineCompositionTests
                 TestAssert.Equal(run.Text.Contains("explicit", StringComparison.Ordinal) ? 15d : expected, run.FontSize);
                 TestAssert.Equal(owner, run.StyleResolution.HasDocumentDefaultRunProperties);
             }
-            TestAssert.Equal(owner, document.StyleCatalog.HasRunDefaults);
             foreach (var paragraph in DocxBlockTraversal.EnumerateSourceParagraphs(document))
                 TestAssert.Equal(expected, paragraph.ParagraphMarkFontSize);
         }
@@ -89,10 +88,10 @@ internal static partial class DocxInlineCompositionTests
     private static OoxPdfDocxMarkupMode RunDefaultMode(JsonElement row) =>
         row.GetProperty("Mode").GetString() == "final-preserve" ? OoxPdfDocxMarkupMode.Final : OoxPdfDocxMarkupMode.AllMarkup;
 
-    private static DocxDocument ReadRunDefaultSource(JsonElement row, bool includeStyleCatalog = false)
+    private static DocxDocument ReadRunDefaultSource(JsonElement row)
     {
         string input = Path.Combine(RunDefaultCaseFolder(), row.GetProperty("Id").GetString()! + ".docx");
         TestAssert.Equal(row.GetProperty("InputSha256").GetString(), Convert.ToHexString(SHA256.HashData(File.ReadAllBytes(input))));
-        return DocxTests.ReadDocx(input, RunDefaultMode(row), includeStyleCatalog);
+        return DocxTests.ReadDocx(input, RunDefaultMode(row));
     }
 }
