@@ -145,8 +145,9 @@ plain text descendants leave the label's geometry intact. Those descendants
 keep their paint with `tabindex` or `pointer-events`. Embedded SVG link
 actions retain an unsupported-content diagnostic. SVG labels keep their natural
 spacing for a standalone `lengthAdjust` attribute. All-zero rotations preserve
-label paint. A zero span offset replaces the label's offset on the same axis
-when its span owns the first addressable character. Explicit `textLength`
+label paint. The closest span with coordinates for the first addressable
+character supplies each initial absolute coordinate and relative offset.
+Explicit `textLength`
 requests keep the diagnosed fallback. Numeric opacity on SVG roots, groups
 and link wrappers composes their children as a group for both presentation
 attributes and inline style. Numeric and percentage opacity values clamp to the
@@ -165,7 +166,8 @@ Basic shape geometry, stroke widths, dash lengths and dash offsets accept viewpo
 These lengths and fixed viewport dimensions also accept absolute CSS units.
 Supported SVG labels accept viewport percentages, em and absolute units in
 single-value x, y, dx and dy attributes. A dx or dy list can supply one initial
-offset followed by zeros. Later nonzero offsets retain the diagnosed fallback.
+offset followed by zeros. Later absolute positions or nonzero relative offsets
+retain the diagnosed fallback.
 Absolute units also work in font size.
 Plain spans retain the label when their explicit kerning settings preserve its
 kerning behavior. Mixed kerning within a label remains unsupported.

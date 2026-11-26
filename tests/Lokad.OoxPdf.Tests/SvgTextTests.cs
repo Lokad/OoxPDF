@@ -332,7 +332,7 @@ internal static partial class SvgTextTests
         var diagnostics = new List<OoxPdfDiagnostic>();
         var graphics = Paint(Svg("<rect width=\"400\" height=\"160\" fill=\"#cce5ff\"/>" +
             "<g opacity=\"0.5\"><text x=\"20\" y=\"80\" fill=\"#112233\">I</text></g>" +
-            "<text><tspan dx=\"10\">unsupported positioned text</tspan></text><text fill=\"url(#missing)\">unsupported gradient</text>"), diagnostics);
+            "<text>Before <tspan dx=\"10\">unsupported positioned text</tspan></text><text fill=\"url(#missing)\">unsupported gradient</text>"), diagnostics);
         TestAssert.Equal(1, graphics.Groups.Count);
         TestAssert.Equal(1, LabelPaths(graphics.Groups[0].Group.Content));
         TestAssert.True(!graphics.Groups[0].Group.Content.Contains(" BT", StringComparison.Ordinal) &&
@@ -961,6 +961,45 @@ internal static partial class SvgTextTests
             Picture(shiftX + preserved, " " + resetX), FullLabel, "0 1 0 rg");
     }
 
+    public static void SvgInitialSpanCoordinatesMatchRootPositions()
+    {
+        static string Picture(string position, string label) => Svg($"""
+            <text {position} font-size="24" text-anchor="middle" fill="#112233">{label}</text>
+            <rect x="200" y="88" width="20" height="10" fill="lime"/>
+            """);
+
+        const string resolved = """x="120" y="48" dx="12" dy="4" """;
+        const string plain = """<tspan><tspan>NO</tspan></tspan>RTH""";
+        const string ignored = """ <tspan display="none" x="100">IGNORED</tspan> """;
+        static void FullLabel(string paint) => TestAssert.Equal(5, LabelPaths(paint));
+        AssertSvgPaintInBothFormats(Picture(resolved, plain),
+            [
+                Picture("""x="104" y="45" dx="12" dy="4" """,
+                    """<tspan x="120" y="48"><tspan>NO</tspan></tspan>RTH"""),
+                Picture("""x="120" y="48" dx="3" dy="7" """,
+                    """<tspan><tspan dx="0.5em, 0" dy="4">NO</tspan></tspan>RTH"""),
+                Picture("""x="104" y="45" dx="3" dy="7" """,
+                    """<tspan x="110" y="36pt" dx="12"><tspan x="120" dy="4">NO</tspan></tspan>RTH"""),
+                Picture("", ignored + """<tspan display="none" style="display:inline" x="120" y="48" dx="12" dy="4"><tspan>NO</tspan></tspan>RTH""")
+            ], FullLabel, "0 1 0 rg");
+
+        foreach (string label in new[]
+        {
+            """N<tspan x="120">ORTH</tspan>""",
+            """<tspan visibility="hidden">N</tspan><tspan dx="12">ORTH</tspan>""",
+            """<tspan x="120 140">NO</tspan>RTH"""
+        })
+        {
+            var diagnostics = new List<OoxPdfDiagnostic>();
+            string paint = Paint(Picture(resolved, label), diagnostics).ToString();
+            TestAssert.DoesNotContain(LabelColor, paint);
+            TestAssert.Contains("0 1 0 rg", paint);
+            TestAssert.True(diagnostics.Any(d => d.Id == "SVG_UNSUPPORTED_CONTENT" && d.Fallback == "Partial" &&
+                d.Message == "SVG picture omits 1 unsupported text element."),
+                "Positioning beyond the initial character retains its diagnosed fallback.");
+        }
+    }
+
     public static void SvgInlineLinkTextKeepsPaintAndDiagnosesActions()
     {
         string Picture(string north, string south) => Svg($"""
@@ -1256,7 +1295,7 @@ internal static partial class SvgTextTests
             "<text x=\"10 20\">array positions</text><text dx=\"10% 20%\">percentage positions</text>" +
             "<text y=\"1e308in\">overflowing length</text>" +
             "<text transform=\"matrix(1e308 0 0 1e308 1e308 0)\">overflow</text>" +
-            "<text><tspan display=\"none\" style=\"display:inline\" x=\"40\">visible positioned span</tspan></text>" +
+            "<text><tspan display=\"none\" style=\"display:inline\" x=\"40 60\">visible positioned span</tspan></text>" +
             "<text x=\"20\" y=\"80\" fill=\"#112233\">I</text>"), diagnostics);
         TestAssert.Contains("0.8 0.898 1 rg", graphics.ToString());
         TestAssert.Equal(1, LabelPaths(graphics.ToString()));

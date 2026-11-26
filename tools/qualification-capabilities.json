@@ -20657,6 +20657,7 @@
     "=SvgZeroPositioningKeepsLabelsWithNaturalGeometry",
     "=SvgRootRelativeOffsetsKeepLabelsWithZeroTails",
     "=SvgSpanOffsetsFollowTheFirstAddressableCharacter",
+    "=SvgInitialSpanCoordinatesMatchRootPositions",
     "=SvgTextChildrenIgnoreTransformDeclarations",
     "=SvgInlineLinkTextKeepsPaintAndDiagnosesActions",
     "SvgLabelsPrepareFontsOnlyForVisiblePictureUses",

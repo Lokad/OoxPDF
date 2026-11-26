@@ -73,6 +73,8 @@ internal sealed partial class PptxRenderer
 
     private readonly record struct SvgTextPaint(RgbColor? Color, double Alpha);
 
+    private readonly record struct SvgTextPosition(double X, double Y, double Dx, double Dy);
+
     private readonly record struct SvgTextMetrics(string FamilyList, string Slant, int Weight, double Size, bool Kerning)
     {
         public bool Matches(SvgTextMetrics other) =>
@@ -123,16 +125,14 @@ internal sealed partial class PptxRenderer
             whitespace = ResolveSvgTextWhitespace(owner, declarations, whitespace);
         }
         if (!TryReadSvgTextMetrics(element, style, size, out var rootMetrics) ||
-            !TryReadPosition("x", viewWidth, out double x) ||
-            !TryReadPosition("y", viewHeight, out double y) ||
-            !TryReadPosition("dx", viewWidth, out double dx) ||
-            !TryReadPosition("dy", viewHeight, out double dy)) return false;
+            !TryReadSvgTextPosition(element, default, viewWidth, viewHeight, size, startsLabel: true,
+                cancellationToken, out var initialPosition)) return false;
         if (!TryReadPlainSvgText(element, style, rootMetrics, paintServers, IsSvgVisibilityHidden(Inherited("visibility")), whitespace,
-                initialAnchor, cancellationToken, out string valueText, out bool[]? hiddenCharacters, out string anchor,
-                out var firstZeroOffset,
-                out SvgTextPaint paint, out SvgTextMetrics metrics)) return false;
-        if (!firstZeroOffset.X) x += dx;
-        if (!firstZeroOffset.Y) y += dy;
+                initialAnchor, initialPosition, viewWidth, viewHeight, cancellationToken,
+                out string valueText, out bool[]? hiddenCharacters, out string anchor,
+                out var position, out SvgTextPaint paint, out SvgTextMetrics metrics)) return false;
+        double x = position.X + position.Dx;
+        double y = position.Y + position.Dy;
         if (!double.IsFinite(x) || !double.IsFinite(y)) return false;
         if (OoxComplexScript.DetectNeeds(valueText) != OoxComplexScriptKind.None ||
             valueText.EnumerateRunes().Any(r => Rune.IsControl(r))) return false;
@@ -143,23 +143,32 @@ internal sealed partial class PptxRenderer
         label = new(valueText, hiddenCharacters, new FontRequest(family, metrics.Weight >= 600, metrics.Slant != "normal"),
             metrics.Size, x, y, anchor, paint.Color, opacity, metrics.Kerning);
         return true;
+    }
 
-        bool TryReadPosition(string name, double percentageBasis, out double value)
+    private static bool TryReadSvgTextPosition(XElement owner, SvgTextPosition inherited,
+        double viewWidth, double viewHeight, double size, bool startsLabel,
+        CancellationToken cancellationToken, out SvgTextPosition position)
+    {
+        position = inherited;
+        if (!TryRead("x", viewWidth, inherited.X, relative: false, out double x) ||
+            !TryRead("y", viewHeight, inherited.Y, relative: false, out double y) ||
+            !TryRead("dx", viewWidth, inherited.Dx, relative: true, out double dx) ||
+            !TryRead("dy", viewHeight, inherited.Dy, relative: true, out double dy)) return false;
+        position = new(x, y, dx, dy);
+        return true;
+
+        bool TryRead(string name, double percentageBasis, double previous, bool relative, out double value)
         {
-            ReadOnlySpan<char> text = ((string?)element.Attribute(name) ?? "0").AsSpan().Trim();
-            if (name is "dx" or "dy")
-            {
-                // Only the first value can shift the whole label. Later zero
-                // values leave each character's natural position intact.
-                if (!TryReadSvgTextPositionToken(text, out text, out ReadOnlySpan<char> remaining) ||
-                    (!remaining.IsEmpty && !IsZeroSvgTextPositionList(remaining, allowLengths: true, cancellationToken)))
-                {
-                    value = 0d;
-                    return false;
-                }
-            }
+            value = previous;
+            if (owner.Attribute(name) is not { } attribute) return true;
+            ReadOnlySpan<char> text = attribute.Value.AsSpan().Trim();
+            // A later absolute position starts another chunk. Only later
+            // relative zeros preserve the existing single-chunk geometry.
+            if (!startsLabel) return relative && IsZeroSvgTextPositionList(text, allowLengths: true, cancellationToken);
+            if (relative && (!TryReadSvgTextPositionToken(text, out text, out ReadOnlySpan<char> remaining) ||
+                (!remaining.IsEmpty && !IsZeroSvgTextPositionList(remaining, allowLengths: true, cancellationToken)))) return false;
             return text.EndsWith("%", StringComparison.Ordinal)
-                ? TryReadSvgViewportLength(element, text, percentageBasis, out value)
+                ? TryReadSvgViewportLength(owner, text, percentageBasis, out value)
                 : TryReadSvgLength(text, out value, relativeSize: size);
         }
     }
@@ -376,13 +385,14 @@ internal sealed partial class PptxRenderer
     // share one effective fill.
     private static bool TryReadPlainSvgText(XElement element, IReadOnlyDictionary<string, string> elementStyle, SvgTextMetrics rootMetrics,
         SvgPaintServers paintServers, bool hidden, SvgTextWhitespace whitespace, string initialAnchor,
+        SvgTextPosition initialPosition, double viewWidth, double viewHeight,
         CancellationToken cancellationToken, out string text, out bool[]? hiddenCharacters, out string anchor,
-        out (bool X, bool Y) firstZeroOffset, out SvgTextPaint paint, out SvgTextMetrics metrics)
+        out SvgTextPosition firstPosition, out SvgTextPaint paint, out SvgTextMetrics metrics)
     {
         text = string.Empty;
         hiddenCharacters = null;
         anchor = initialAnchor;
-        firstZeroOffset = default;
+        firstPosition = initialPosition;
         paint = default;
         metrics = rootMetrics;
         SvgTextPaint? commonPaint = null;
@@ -391,18 +401,18 @@ internal sealed partial class PptxRenderer
         List<bool>? visibility = null;
         (bool Hidden, string Anchor, SvgTextMetrics Metrics)? pendingSpace = null;
         string? chunkAnchor = null;
-        (bool X, bool Y) firstOffsets = default;
+        SvgTextPosition chunkPosition = initialPosition;
         XName xmlLanguageName = XNamespace.Xml + "lang";
         XName languageName = "lang";
         string? labelLanguage = null;
         XName spanName = element.Name.Namespace + "tspan";
         XName linkName = element.Name.Namespace + "a";
-        if (!Append(element, elementStyle, rootMetrics, hidden, ownerTransparent: false, whitespace, initialAnchor, default)) return false;
+        if (!Append(element, elementStyle, rootMetrics, hidden, ownerTransparent: false, whitespace, initialAnchor, initialPosition)) return false;
 
         text = characters.ToString();
         hiddenCharacters = visibility?.ToArray();
         anchor = chunkAnchor ?? initialAnchor;
-        firstZeroOffset = firstOffsets;
+        firstPosition = chunkPosition;
         paint = commonPaint.GetValueOrDefault();
         metrics = commonMetrics.GetValueOrDefault(rootMetrics);
         return true;
@@ -411,7 +421,7 @@ internal sealed partial class PptxRenderer
             (string?)owner.Attribute(xmlLanguageName) ?? (string?)owner.Attribute(languageName);
 
         bool Append(XElement owner, IReadOnlyDictionary<string, string> ownerStyle, SvgTextMetrics ownerMetrics,
-            bool ownerHidden, bool ownerTransparent, SvgTextWhitespace space, string ownerAnchor, (bool X, bool Y) zeroOffset)
+            bool ownerHidden, bool ownerTransparent, SvgTextWhitespace space, string ownerAnchor, SvgTextPosition ownerPosition)
         {
             bool preserveSpace = space is SvgTextWhitespace.XmlPreserve or SvgTextWhitespace.CssPreserve;
             bool hideOutlines = ownerHidden || ownerTransparent;
@@ -451,10 +461,10 @@ internal sealed partial class PptxRenderer
                         }
                         if (pendingSpace is { } pending)
                         {
-                            if (!AppendCharacter(' ', pending.Hidden, pending.Anchor, pending.Metrics, zeroOffset)) return false;
+                            if (!AppendCharacter(' ', pending.Hidden, pending.Anchor, pending.Metrics, ownerPosition)) return false;
                             pendingSpace = null;
                         }
-                        if (!AppendCharacter(character, characterHidden, ownerAnchor, ownerMetrics, zeroOffset)) return false;
+                        if (!AppendCharacter(character, characterHidden, ownerAnchor, ownerMetrics, ownerPosition)) return false;
                     }
                     continue;
                 }
@@ -474,14 +484,15 @@ internal sealed partial class PptxRenderer
                 double? opacity = authoredOpacity is null ? 1d : ParseSvgOpacity(authoredOpacity);
                 if (opacity is not double localOpacity || localOpacity is > 0d and < 1d) return false;
                 bool childTransparent = ownerTransparent || localOpacity == 0d;
-                var childZeroOffset = isLink ? zeroOffset :
-                    (zeroOffset.X || child.Attribute("dx") is not null, zeroOffset.Y || child.Attribute("dy") is not null);
+                SvgTextPosition childPosition = ownerPosition;
                 string? childAnchor = ResolveSvgTextAnchor(ReadSvgPresentationAttribute(child, style, "text-anchor"), ownerAnchor);
                 if (childAnchor is null ||
                     !TryResolveSvgFontSize(ReadSvgPresentationAttribute(child, style, "font-size"), ownerMetrics.Size, out double childSize) ||
                     !TryReadSvgTextMetrics(child, style, childSize, out var childMetrics) ||
+                    (!isLink && !TryReadSvgTextPosition(child, ownerPosition, viewWidth, viewHeight, childSize,
+                        commonMetrics is null, cancellationToken, out childPosition)) ||
                     !Append(child, style, childMetrics, childHidden, childTransparent,
-                        ResolveSvgTextWhitespace(child, style, space), childAnchor, childZeroOffset)) return false;
+                        ResolveSvgTextWhitespace(child, style, space), childAnchor, childPosition)) return false;
             }
             return true;
         }
@@ -531,8 +542,9 @@ internal sealed partial class PptxRenderer
                     return true;
                 // Unknown namespaced attributes carry no SVG presentation.
                 if (ns != XNamespace.None) return ns != XNamespace.Xml && !isXLink;
+                if (name is "x" or "y") return !isLink;
                 if (name is "dx" or "dy")
-                    return IsZeroSvgTextPositionList(attribute.Value, allowLengths: true, cancellationToken);
+                    return !isLink || IsZeroSvgTextPositionList(attribute.Value, allowLengths: true, cancellationToken);
                 if (name == "rotate") return IsZeroSvgTextPositionList(attribute.Value, allowLengths: false, cancellationToken);
                 return name is "id" or "class" or "role" or "style" or "tabindex" or "lengthAdjust" ||
                     name.StartsWith("aria-", StringComparison.Ordinal) ||
@@ -556,7 +568,8 @@ internal sealed partial class PptxRenderer
             };
         }
 
-        bool AppendCharacter(char character, bool characterHidden, string ownerAnchor, SvgTextMetrics ownerMetrics, (bool X, bool Y) offsets)
+        bool AppendCharacter(char character, bool characterHidden, string ownerAnchor, SvgTextMetrics ownerMetrics,
+            SvgTextPosition ownerPosition)
         {
             if (!OoxTextBreakRules.IsNonPrintingBreakControl(character))
             {
@@ -565,9 +578,7 @@ internal sealed partial class PptxRenderer
                 {
                     commonMetrics = ownerMetrics;
                     chunkAnchor = ownerAnchor;
-                    // A root scalar applies to the first addressable character. Any
-                    // zero offset on that character's span path owns its own axis.
-                    firstOffsets = offsets;
+                    chunkPosition = ownerPosition;
                 }
             }
             if (characterHidden && visibility is null) visibility = [.. Enumerable.Repeat(false, characters.Length)];
