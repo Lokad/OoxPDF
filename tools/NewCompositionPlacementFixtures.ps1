@@ -20,7 +20,11 @@ function Write-XmlPart($Zip, [string] $Name, [xml] $Document) {
     try { $Document.Save($writer) } finally { $writer.Dispose() }
 }
 $manifestPath = Join-Path $OutputDirectory 'probes.json'
-$rows = if (Test-Path -LiteralPath $manifestPath) { @(Get-Content $manifestPath -Raw | ConvertFrom-Json) } else { @() }
+$rows = @(
+    if (Test-Path -LiteralPath $manifestPath) {
+        Get-Content -LiteralPath $manifestPath -Raw | ConvertFrom-Json
+    }
+)
 foreach ($placement in @('body','cell','header','footer','body-review','cell-review','header-review','footer-review')) {
     $owner = $placement -replace '-review$',''
     $review = $placement.EndsWith('-review',[StringComparison]::Ordinal)
