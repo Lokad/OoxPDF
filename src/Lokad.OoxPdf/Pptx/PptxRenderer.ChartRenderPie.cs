@@ -33,7 +33,6 @@ internal sealed partial class PptxRenderer
             .Select(point => new ChartIndexedPieSlice(
                 point.Index,
                 (point.Value ?? 0d),
-                point,
                 workbookPoints.TryGetValue(point.Index, out ChartIndexedNumberPoint workbookPoint) ? workbookPoint : null))
             .ToArray();
     }

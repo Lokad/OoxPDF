@@ -1143,9 +1143,11 @@ internal static class PptxChartRenderingTests
         object[] pieSlices = (((System.Collections.IEnumerable?)buildPieSlices.Invoke(null, pieArguments)) ?? throw new InvalidOperationException("Expected indexed pie slices.")).Cast<object>().ToArray();
         TestAssert.Equal(1, (int)pieArguments[1]!);
         TestAssert.True(pieSlices.Length == 1, "Expected stale positive cache value to remain an active pie slice.");
-        object slicePoint = pieSlices[0].GetType().GetProperty("Point")?.GetValue(pieSlices[0]) ?? throw new InvalidOperationException("Expected pie slice to preserve its active point record.");
-        object sliceWorkbookPoint = pieSlices[0].GetType().GetProperty("WorkbookPoint")?.GetValue(pieSlices[0]) ?? throw new InvalidOperationException("Expected pie slice to preserve matching workbook sidecar point.");
-        TestAssert.True((double?)slicePoint.GetType().GetProperty("Value")?.GetValue(slicePoint) == 99d, "Expected pie slice active point to preserve the rendered cache value.");
+        object slice = pieSlices[0];
+        Type sliceType = slice.GetType();
+        TestAssert.Equal<int?>(0, (int?)sliceType.GetProperty("Index")?.GetValue(slice));
+        TestAssert.Equal<double?>(99d, (double?)sliceType.GetProperty("Value")?.GetValue(slice));
+        object sliceWorkbookPoint = sliceType.GetProperty("WorkbookPoint")?.GetValue(slice) ?? throw new InvalidOperationException("Expected pie slice to preserve matching workbook sidecar point.");
         TestAssert.True((double?)sliceWorkbookPoint.GetType().GetProperty("Value")?.GetValue(sliceWorkbookPoint) == 8.2d, "Expected pie slice workbook sidecar point to preserve the workbook source value.");
         System.Reflection.MethodInfo buildRadarSeries = typeof(PptxRenderer).GetMethod(
             "BuildRadarSeries",

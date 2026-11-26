@@ -40,7 +40,6 @@ internal sealed partial class PptxRenderer
     private readonly record struct ChartIndexedPieSlice(
         int Index,
         double Value,
-        ChartIndexedNumberPoint Point,
         ChartIndexedNumberPoint? WorkbookPoint);
 
     // R16: internal so the per-frame shared series-vector memo carries the vector type.
