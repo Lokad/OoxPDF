@@ -344,6 +344,45 @@ internal static partial class SvgTextTests
         Write(Page(graphics));
     }
 
+    public static void SvgLabelsShareFractionalOpacityAcrossOnePaintScope()
+    {
+        static string Text(string content, string attributes = "") =>
+            $"""<text x="120" y="80" text-anchor="middle" fill="#112233" {attributes}>{content}</text>""";
+        static string Picture(string content) => Svg(content + """<rect x="155" y="90" width="20" height="10" fill="lime"/>""");
+        static string Group(string content, string opacity) => $"""<g opacity="{opacity}">{content}</g>""";
+
+        const string label = "AX<tspan>IS</tspan> LABEL";
+        const string half = """<tspan style="opacity:50% !important;opacity:1">AX<tspan>IS</tspan> LABEL</tspan>""";
+        AssertSvgPaintInBothFormats(Picture(Group(Text(label), ".5")), Picture(Text(half)),
+            pdf => TestAssert.Equal(9, LabelPaths(pdf)), "/ca 0.5 /CA 0.5", "0 1 0 rg");
+        const string translucentFill = "fill-opacity=\".75\"";
+        AssertSvgPaintInBothFormats(Picture(Group(Text(label, translucentFill), ".25")),
+            [Picture(Text($"""<tspan opacity=".5">{half}</tspan>""", translucentFill)),
+             Picture(Text(half, translucentFill + " opacity=\".5\""))],
+            pdf => TestAssert.Equal(9, LabelPaths(pdf)), "/ca 0.25 /CA 0.25", "/ca 0.75 /CA 1");
+
+        const string hiddenPrefix = """<tspan opacity="0">AX</tspan>""";
+        AssertSvgPaintInBothFormats(Picture(Group(Text(hiddenPrefix + "IS LABEL"), ".5")),
+            Picture(Text(hiddenPrefix + """<tspan opacity=".5">IS LABEL</tspan>""")),
+            pdf => TestAssert.Equal(7, LabelPaths(pdf)), "/ca 0.5 /CA 0.5", "0 1 0 rg");
+
+        foreach (string split in new[]
+        {
+            """<tspan opacity=".5">AX</tspan>IS LABEL""",
+            """<tspan opacity=".5">AX</tspan><tspan opacity=".5">IS LABEL</tspan>""",
+            """<tspan opacity="invalid">AXIS LABEL</tspan>"""
+        })
+        {
+            var diagnostics = new List<OoxPdfDiagnostic>();
+            PdfGraphicsBuilder graphics = Paint(Picture(Text(split)), diagnostics);
+            TestAssert.Equal(0, graphics.Groups.Count);
+            TestAssert.DoesNotContain(LabelColor, graphics.ToString());
+            TestAssert.Contains("0 1 0 rg", graphics.ToString());
+            TestAssert.True(diagnostics.Any(d => d.Message == "SVG picture omits 1 unsupported text element."),
+                "Split or invalid opacity keeps the unsupported label diagnostic.");
+        }
+    }
+
     public static void SvgLabelsPreserveWhitespaceAndDoNotRevealHiddenText()
     {
         string Text(string value, string extra = "") => Svg("<text x=\"20\" y=\"80\" fill=\"#112233\" " + extra + ">" + value + "</text>");

@@ -236,7 +236,8 @@ internal sealed partial class PptxRenderer
             {
                 if (!hasStylesheet && TryReadSvgPathTransform(element, out SvgTransform textTransform) &&
                     TryPaintSvgText(graphics, element, paintServers, textFonts, textTransform, viewWidth, viewHeight, sourceMinX, sourceMinY,
-                        imageX, imageY, imageWidth, imageHeight, scaleX, scaleY, AdmitSamples, cancellationToken))
+                        imageX, imageY, imageWidth, imageHeight, scaleX, scaleY, isolation.Count < PdfTransparencyGroup.MaxDepth,
+                        AdmitSamples, cancellationToken))
                     paintedText.Add(element);
                 continue;
             }

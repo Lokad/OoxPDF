@@ -154,6 +154,8 @@ and link wrappers composes their children as a group for both presentation
 attributes and inline style. Numeric and percentage opacity values clamp to the
 fully transparent and fully opaque endpoints.
 Explicit `inherit` on a shape, label or container uses its parent's opacity.
+Plain spans can share one fractional opacity scope across all visible glyphs
+of a label. Independently translucent fragments keep the diagnosed fallback.
 SVG paint accepts numeric `rgb()` and `rgba()` colors and three-, four-, six-,
 and eight-digit hex colors. Color alpha combines with separate opacity properties.
 The `transparent` keyword is also supported.
