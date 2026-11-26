@@ -474,7 +474,27 @@ internal static class OoxMissingFontTests
                 "Every fallback glyph must fit on the printed page.");
         }
     }
-    private static string WriteCommentBalloonDocx(string body = "Balloon words here")
+    public static void EmbeddedBalloonTextSubstitutesMissingGlyphs()
+    {
+        var resolver = new FixedBytesResolver(TestFontBuilder.CreateTestFont());
+        const string missing = "\U0001F9EA";
+        string input = WriteCommentBalloonDocx("Start" + missing + "End", "Agent" + missing + "Name");
+        var (preserved, preserveDiagnostics) = ConvertDocxMarkup(input, resolver);
+        var (review, reviewDiagnostics) = ConvertDocxWordCompatibleMarkup(input, resolver);
+
+        TestAssert.Contains("Start?End", ExtractCidMappedText(preserved));
+        TestAssert.Contains("Start?End", ExtractCidMappedText(review));
+        TestAssert.Contains("Agent?Name", ExtractCidMappedText(preserved));
+        TestAssert.Contains("U+1F9EA", preserveDiagnostics.Single(d => d.Id == "DOCX_BALLOON_TITLE_MISSING_GLYPHS").Message);
+        TestAssert.True(reviewDiagnostics.All(d => d.Id != "DOCX_BALLOON_TITLE_MISSING_GLYPHS"),
+            "The hidden author name does not contribute a missing title glyph.");
+        foreach (var diagnostics in new[] { preserveDiagnostics, reviewDiagnostics })
+        {
+            TestAssert.Contains("U+1F9EA", diagnostics.Single(d => d.Id == "FONT_MISSING_GLYPHS").Message);
+        }
+    }
+
+    private static string WriteCommentBalloonDocx(string body = "Balloon words here", string author = "Reviewer")
     {
         return TestFixtures.WriteTempPackage(".docx", new Dictionary<string, byte[]>()
         {
@@ -505,7 +525,8 @@ internal static class OoxMissingFontTests
             ["word/comments.xml"] = TestFixtures.Utf8(
                 "<?xml version=\"1.0\" encoding=\"UTF-8\"?>"
                 + "<w:comments xmlns:w=\"http://schemas.openxmlformats.org/wordprocessingml/2006/main\">"
-                + "<w:comment w:id=\"1\" w:author=\"Reviewer\" w:initials=\"RV\" w:date=\"2026-06-01T00:00:00Z\">"
+                + "<w:comment w:id=\"1\" w:author=\"" + System.Security.SecurityElement.Escape(author)
+                + "\" w:initials=\"RV\" w:date=\"2026-06-01T00:00:00Z\">"
                 + "<w:p><w:r><w:t>" + System.Security.SecurityElement.Escape(body) + "</w:t></w:r></w:p>"
                 + "</w:comment></w:comments>"),
         });

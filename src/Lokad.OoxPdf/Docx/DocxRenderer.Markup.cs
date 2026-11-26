@@ -65,7 +65,8 @@ internal sealed partial class DocxRenderer
         DocxFontResources fontResources,
         DocxMarkupContext markupContext,
         IFontResolver fontResolver,
-        CancellationToken cancellationToken)
+        CancellationToken cancellationToken,
+        Action<OoxPdfDiagnostic>? diagnosticSink = null)
     {
         // Balloon titles and bodies are synthetic strings (comment metadata, revision labels),
         // so run-collected font subsets can miss their glyphs and EncodeGlyphHex would silently
@@ -95,6 +96,7 @@ internal sealed partial class DocxRenderer
         var titleCodepoints = new HashSet<int>();
         var bodyCodepoints = new HashSet<int>();
         var revisionCodepoints = new HashSet<int>();
+        SortedSet<int>? missingTitleCodepoints = diagnosticSink is null ? null : new();
         DocxRunFontResource bodyCoverageResource = ResolveMarkupBodyFontResource(fontResources) ?? labelResource;
         for (int pageIndex = 0; pageIndex < layout.Pages.Count; pageIndex++)
         {
@@ -135,6 +137,20 @@ internal sealed partial class DocxRenderer
                     }
                 }
 
+                if (missingTitleCodepoints is not null)
+                {
+                    bool usesWordTitle = ShouldRenderWordCompatibleBalloonText(placement, markupContext);
+                    string title = usesWordTitle ? placement.WordCompatibleTitle! : placement.Title;
+                    OpenTypeFont titleFont = (usesWordTitle ? markupContext.BalloonTitleFace?.Font : null) ?? labelResource.Embedded.Font;
+                    foreach (Rune rune in title.EnumerateRunes())
+                    {
+                        if (!PdfFallbackFont.IsNonRenderedControl(rune) && titleFont.MapCodePoint(rune.Value) == 0)
+                        {
+                            missingTitleCodepoints.Add(rune.Value);
+                        }
+                    }
+                }
+
                 if (placement.WordCompatibleBodyResource is null &&
                     ShouldRenderWordCompatibleBalloonText(placement, markupContext) &&
                     !string.IsNullOrWhiteSpace(placement.WordCompatibleBody))
@@ -151,6 +167,10 @@ internal sealed partial class DocxRenderer
 
         titleCodepoints.UnionWith(revisionCodepoints);
         bodyCodepoints.UnionWith(revisionCodepoints);
+        if (missingTitleCodepoints is { Count: > 0 })
+        {
+            diagnosticSink!(FontDiagnostics.MissingBalloonTitleGlyphs(missingTitleCodepoints));
+        }
         DocxRunFontResource? titleResource = EnsureMarkupBalloonTitleResource(fontResources, markupContext, titleCodepoints, cancellationToken);
         DocxRunFontResource? revisionBody = await PrepareRevisionBalloonBodyResourceAsync(
             fontResources, markupContext, fontResolver, revisionCodepoints, cancellationToken).ConfigureAwait(false);
@@ -203,14 +223,27 @@ internal sealed partial class DocxRenderer
     {
         OpenTypeFont font = source.Embedded.Font;
         bool needsExtraCoverage = false;
+        bool needsQuestionMark = false;
         foreach (int codePoint in codepoints)
         {
             cancellationToken.ThrowIfCancellationRequested();
             ushort glyph = font.MapCodePoint(codePoint);
-            if (glyph != 0 && !source.Embedded.TryGetEncodedCid(glyph, out _))
+            if (glyph == 0)
             {
-                needsExtraCoverage = true;
-                break;
+                needsQuestionMark |= !PdfFallbackFont.IsNonRenderedControl(new Rune(codePoint));
+            }
+            else
+            {
+                needsExtraCoverage |= !source.Embedded.TryGetEncodedCid(glyph, out _);
+            }
+        }
+        if (needsQuestionMark && !codepoints.Contains('?'))
+        {
+            ushort questionMark = font.MapCodePoint('?');
+            if (questionMark != 0)
+            {
+                codepoints = new HashSet<int>(codepoints) { '?' };
+                needsExtraCoverage |= !source.Embedded.TryGetEncodedCid(questionMark, out _);
             }
         }
 
@@ -265,6 +298,10 @@ internal sealed partial class DocxRenderer
             if (titleFont.MapCodePoint(codePoint) != 0)
             {
                 glyphs.Add(codePoint);
+            }
+            else if (!PdfFallbackFont.IsNonRenderedControl(new Rune(codePoint)) && titleFont.MapCodePoint('?') != 0)
+            {
+                glyphs.Add('?');
             }
         }
 
@@ -410,6 +447,10 @@ internal sealed partial class DocxRenderer
         {
             if ((runeIndex++ & 255) == 0) { cancellationToken.ThrowIfCancellationRequested(); }
             ushort glyph = resource.Embedded.Font.MapCodePoint(rune.Value);
+            if (glyph == 0 && !PdfFallbackFont.IsNonRenderedControl(rune))
+            {
+                glyph = resource.Embedded.Font.MapCodePoint('?');
+            }
             if (glyph == 0 || !resource.Embedded.TryGetEncodedCid(glyph, out _)) { return null; }
         }
         return resource;
@@ -1121,8 +1162,8 @@ internal sealed partial class DocxRenderer
                 labelEmbedded is not null &&
                 bodyEmbedded is not null)
             {
-                string title = candidate.WordCompatibleTitle ?? candidate.Title;
-                string body = candidate.WordCompatibleBody ?? string.Empty;
+                string title = SubstituteUncoveredGlyphs(labelEmbedded, candidate.WordCompatibleTitle ?? candidate.Title);
+                string body = SubstituteUncoveredGlyphs(bodyEmbedded, candidate.WordCompatibleBody ?? string.Empty);
                 double fontSize = 9d * markupContext.WordCompatiblePrintScale;
                 TryResolveWordCompatibleBalloonTextInsets(labelEmbedded, bodyEmbedded,
                     markupContext.WordCompatiblePrintScale, candidate.WordCompatibleBodyLineHeightEm, candidate.WordCompatibleBodyParts,
@@ -1525,6 +1566,11 @@ internal sealed partial class DocxRenderer
         string body = fallbackWordCompatibleText
             ? placement.WordCompatibleBody ?? string.Empty
             : placement.Body;
+        if (labelResource is not null)
+        {
+            title = SubstituteUncoveredGlyphs(labelResource.Embedded, title);
+            body = SubstituteUncoveredGlyphs(labelResource.Embedded, body);
+        }
 
         DrawBalloonText(graphics, labelResource, title, placement.X + 3d, placement.Y + placement.Height - 7d, 5.5d, placement.TitleRgb.Red, placement.TitleRgb.Green, placement.TitleRgb.Blue, fallbackFace);
         if (fallbackWordCompatibleText && fallbackFace is not null && labelResource is null && !string.IsNullOrWhiteSpace(body))
@@ -1622,8 +1668,8 @@ internal sealed partial class DocxRenderer
         double wordCompatiblePrintScale,
         CancellationToken cancellationToken)
     {
-        string title = placement.WordCompatibleTitle ?? placement.Title;
-        string body = placement.WordCompatibleBody ?? string.Empty;
+        string title = SubstituteUncoveredGlyphs(labelResource.Embedded, placement.WordCompatibleTitle ?? placement.Title);
+        string body = SubstituteUncoveredGlyphs(bodyResource.Embedded, placement.WordCompatibleBody ?? string.Empty);
         double fontSize = 9d * wordCompatiblePrintScale;
         double textX = placement.X + ResolveWordCompatibleBalloonTextInsetX(wordCompatiblePrintScale);
         TryResolveWordCompatibleBalloonTextInsets(labelResource.Embedded, bodyResource.Embedded,

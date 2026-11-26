@@ -976,7 +976,7 @@ internal sealed partial class DocxRenderer
         bool separatePlainHeaderOrigins = CanSeparatePlainHeaderOrigins(layout);
         (DocxRunFontResource? balloonTextResource, DocxRunFontResource? balloonTitleResource, DocxRunFontResource? balloonBodyResource,
             DocxRunFontResource? revisionBodyResource) = await EnsureMarkupBalloonTextResourcesAsync(
-                layout, fontResources, markupContext, fontResolver, cancellationToken).ConfigureAwait(false);
+                layout, fontResources, markupContext, fontResolver, cancellationToken, diagnosticSink).ConfigureAwait(false);
         markupContext = markupContext with { RevisionBalloonBodyResource = revisionBodyResource };
         double textEmissionFontScale = ResolveTextEmissionFontScale(markupContext);
         double textEmissionBaselineOffset = ResolveTextEmissionBaselineOffset(markupContext);

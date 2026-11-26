@@ -5,6 +5,24 @@ namespace Lokad.OoxPdf.Diagnostics;
 internal static class FontDiagnostics
 {
     public static OoxPdfDiagnostic MissingGlyphs(string family, IReadOnlyCollection<int> sortedCodePoints)
+        => new(
+            "FONT_MISSING_GLYPHS",
+            OoxPdfSeverity.Warning,
+            sortedCodePoints.Count.ToString(CultureInfo.InvariantCulture) + " characters of " + family +
+                " have no glyph in any usable face (" + FormatCodePoints(sortedCodePoints) + ") and show as question mark.",
+            Feature: family,
+            Fallback: "Question-mark substitution");
+
+    public static OoxPdfDiagnostic MissingBalloonTitleGlyphs(IReadOnlyCollection<int> sortedCodePoints)
+        => new(
+            "DOCX_BALLOON_TITLE_MISSING_GLYPHS",
+            OoxPdfSeverity.Warning,
+            "A DOCX review balloon title contains characters absent from its selected font (" +
+                FormatCodePoints(sortedCodePoints) + "). Unavailable glyphs use a question mark when the font has one.",
+            Feature: "DOCX review balloon title",
+            Fallback: "Question-mark substitution");
+
+    private static string FormatCodePoints(IReadOnlyCollection<int> sortedCodePoints)
     {
         const int maxListedCodePoints = 12;
         string listed = string.Join(", ", sortedCodePoints.Take(maxListedCodePoints)
@@ -14,12 +32,6 @@ internal static class FontDiagnostics
             listed += ", and " + (sortedCodePoints.Count - maxListedCodePoints).ToString(CultureInfo.InvariantCulture) + " more";
         }
 
-        return new OoxPdfDiagnostic(
-            "FONT_MISSING_GLYPHS",
-            OoxPdfSeverity.Warning,
-            sortedCodePoints.Count.ToString(CultureInfo.InvariantCulture) + " characters of " + family +
-                " have no glyph in any usable face (" + listed + ") and show as question mark.",
-            Feature: family,
-            Fallback: "Question-mark substitution");
+        return listed;
     }
 }
