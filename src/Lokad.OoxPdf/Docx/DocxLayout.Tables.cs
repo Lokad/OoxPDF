@@ -1376,11 +1376,7 @@ internal sealed partial class DocxLayoutEngine
 
             if (!table.HasExplicitGrid)
             {
-                int inferredColumnCount = columnCount == 0 ? GetMaxGridColumnCount(table) : columnCount;
-                if (inferredColumnCount > 0)
-                {
-                    return Enumerable.Repeat(preferredTableWidth / inferredColumnCount, inferredColumnCount).ToArray();
-                }
+                return Enumerable.Repeat(preferredTableWidth / columnCount, columnCount).ToArray();
             }
 
             return gridPoints;
@@ -1419,10 +1415,8 @@ internal sealed partial class DocxLayoutEngine
             return null;
         }
 
-        int columnCount = table.ColumnWidthsPoints.Count != 0
-            ? table.ColumnWidthsPoints.Count
-            : GetMaxGridColumnCount(table);
-        if (columnCount <= 0 || table.Rows.Count == 0)
+        int columnCount = table.ColumnWidthsPoints.Count;
+        if (table.Rows.Count == 0)
         {
             return null;
         }

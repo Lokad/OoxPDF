@@ -639,34 +639,17 @@ internal static class DocxTablesLayoutTests
         TestAssert.True(row.Cells[0].Width > row.Cells[1].Width, "Preferred cell widths should survive auto layout. Width0=" + row.Cells[0].Width.ToString(CultureInfo.InvariantCulture) + " Width1=" + row.Cells[1].Width.ToString(CultureInfo.InvariantCulture));
     }
 
-    public static void DocxTableLayoutStageDistributesMissingGridWithSpansAcrossLogicalColumns()
+    public static void DocxTableLayoutStageDistributesMissingGridWithSpansAcrossLogicalColumns() =>
+        AssertMissingGridColumnGeometry([72d, 72d, 72d]);
+
+    public static void DocxTableLayoutStageInfersEmptyMissingGridFromRowSpans() =>
+        AssertMissingGridColumnGeometry([]);
+
+    private static void AssertMissingGridColumnGeometry(IReadOnlyList<double> columns)
     {
         var table = new DocxTable(
             null,
-            [72d, 72d, 72d],
-            [new DocxTableRow([
-                new DocxTableCell([DocxTests.CreateDocxLayoutParagraph("wide")], null, null, null, null, [], DocxTableCellMargins.Empty) with {GridSpan = 2,GridSpanValue = "2" },
-                new DocxTableCell([DocxTests.CreateDocxLayoutParagraph("tail")], null, null, null, null, [], DocxTableCellMargins.Empty)
-            ], 20d)]) with {HasExplicitGrid = false };
-        DocxDocument document = DocxTests.CreateLayoutTestDocument([new DocxTableElement(table)]);
-
-        DocxTableRowLayout row = new DocxLayoutEngine(OoxPdfDocxMarkupGeometryMode.PreserveDocumentLayout)
-            .Create(document, embedded: null, cancellationToken: CancellationToken.None)
-            .Pages[0]
-            .Items
-            .OfType<DocxTableRowLayout>()
-            .Single();
-
-        TestAssert.Equal(120d, row.Cells[0].Width);
-        TestAssert.Equal(130d, row.Cells[1].X);
-        TestAssert.Equal(60d, row.Cells[1].Width);
-    }
-
-    public static void DocxTableLayoutStageInfersEmptyMissingGridFromRowSpans()
-    {
-        var table = new DocxTable(
-            null,
-            [],
+            columns,
             [new DocxTableRow([
                 new DocxTableCell([DocxTests.CreateDocxLayoutParagraph("wide")], null, null, null, null, [], DocxTableCellMargins.Empty) with {GridSpan = 2,GridSpanValue = "2" },
                 new DocxTableCell([DocxTests.CreateDocxLayoutParagraph("tail")], null, null, null, null, [], DocxTableCellMargins.Empty)
