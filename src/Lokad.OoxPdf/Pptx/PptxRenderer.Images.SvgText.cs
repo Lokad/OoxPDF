@@ -278,7 +278,13 @@ internal sealed partial class PptxRenderer
             weight = 700;
             return true;
         }
-        return int.TryParse(value, NumberStyles.None, CultureInfo.InvariantCulture, out weight) && weight is >= 100 and <= 900;
+        weight = 0;
+        int point = value.IndexOf('.');
+        if ((point >= 0 && (point + 1 == value.Length || !char.IsAsciiDigit(value[point + 1]))) ||
+            !decimal.TryParse(value, NumberStyles.Float, CultureInfo.InvariantCulture, out decimal numeric) ||
+            numeric is < 100m or > 900m || numeric != decimal.Truncate(numeric)) return false;
+        weight = (int)numeric;
+        return true;
     }
 
     private static bool TryResolveSvgFontSize(string? value, double inheritedSize, out double size)

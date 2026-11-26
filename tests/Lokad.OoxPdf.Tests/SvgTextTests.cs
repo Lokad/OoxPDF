@@ -587,6 +587,31 @@ internal static partial class SvgTextTests
         }
     }
 
+    public static void SvgLabelsKeepEquivalentNumericFontWeights()
+    {
+        static string Picture(string weight, string span = "") => Svg($"""
+            <text x="60" y="80" font-family="DejaVu Sans" font-size="24" font-weight="{weight}" fill="#112233">LA<tspan {span}>B</tspan>EL</text>
+            <rect x="200" y="100" width="20" height="10" fill="lime"/>
+            """);
+
+        AssertSvgPaintInBothFormats(Picture("normal"),
+            [Picture("400.0"), Picture("normal", """style="font-weight:400.000" """), Picture("4.0e+2")],
+            pdf => TestAssert.Equal(5, LabelPaths(pdf)), "0 1 0 rg");
+        AssertSvgPaintInBothFormats(Picture("bold"),
+            [Picture("700.0"), Picture("bold", """font-weight="700.000" """)],
+            pdf => TestAssert.Equal(5, LabelPaths(pdf)), "0 1 0 rg");
+
+        foreach (string rejected in new[] { "700.", "700.5", "700%", "901", "NaN" })
+        {
+            var diagnostics = new List<OoxPdfDiagnostic>();
+            string paint = Paint(Picture(rejected), diagnostics).ToString();
+            TestAssert.DoesNotContain(LabelColor, paint);
+            TestAssert.Contains("0 1 0 rg", paint);
+            TestAssert.True(diagnostics.Any(diagnostic => diagnostic.Message.Contains("unsupported text element", StringComparison.Ordinal)),
+                $"Unsupported weight '{rejected}' should keep the omission diagnostic.");
+        }
+    }
+
     public static void SvgTextChildrenKeepInheritedFontAndFill()
     {
         string Picture(string north, string south, string northAttributes = "") => Svg($"""
