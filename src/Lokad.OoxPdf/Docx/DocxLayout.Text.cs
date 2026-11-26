@@ -632,7 +632,7 @@ internal sealed partial class DocxLayoutEngine
             DocxTabStopKind kind = stop.Kind;
             if (!IsPositioningTabStop(kind)) continue;
             if (position is not null || kind != DocxTabStopKind.Decimal ||
-                stop.PositionPoints is not { } points || !SupportsTabLeader(stop.LeaderValue)) return null;
+                stop.PositionPoints is not { } points || !HasNoTabLeader(stop.LeaderValue)) return null;
             double scaled = points * scale;
             if (!double.IsFinite(scaled) || scaled <= .001d) return null;
             position = scaled;
@@ -646,7 +646,7 @@ internal sealed partial class DocxLayoutEngine
         return position;
     }
 
-    private static bool SupportsTabLeader(string? leader) =>
+    private static bool HasNoTabLeader(string? leader) =>
         leader is null || string.Equals(leader, "none", StringComparison.OrdinalIgnoreCase);
 
     private static bool IsPositioningTabStop(DocxTabStopKind kind) =>

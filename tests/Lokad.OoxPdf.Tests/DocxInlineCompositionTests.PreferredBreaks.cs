@@ -203,6 +203,32 @@ internal static partial class DocxInlineCompositionTests
         }
     }
 
+    public static void DocxTabLeadersPreserveComposedFields()
+    {
+        var resolver = new PortableRenderingTests.PinnedResolver();
+        foreach (var mode in new[] { OoxPdfDocxMarkupMode.Final, OoxPdfDocxMarkupMode.AllMarkup })
+        {
+            var renderer = new DocxRenderer(resolver, mode, CachedMathGeometry(mode));
+            foreach (var (alignment, body, leaders) in new[]
+            {
+                ("left", true, new[] { "dot" }),
+                ("center", false, new[] { "hyphen" }),
+                ("right", true, new[] { "underscore" }),
+                ("decimal", false, new[] { "heavy", "middleDot" })
+            })
+            {
+                PdfPage control = PaintPictureTabField(renderer, mode, alignment, ["12.34"], body);
+                foreach (string leader in leaders)
+                {
+                    PdfPage actual = PaintPictureTabField(renderer, mode, alignment, ["12.34"], body, leader: leader);
+                    TestAssert.Equal(control.Content, actual.Content);
+                    TestAssert.Equal(ReadPictureFractionRule(control), ReadPictureFractionRule(actual));
+                    TestAssert.Equal(ReadPaintedPictureFrame(control), ReadPaintedPictureFrame(actual));
+                }
+            }
+        }
+    }
+
     public static void DocxImplicitDecimalCellTabsMatchExplicitFieldPlacement()
     {
         var resolver = new PortableRenderingTests.PinnedResolver();
@@ -318,13 +344,14 @@ internal static partial class DocxInlineCompositionTests
     }
 
     private static PdfPage PaintPictureTabField(DocxRenderer renderer, OoxPdfDocxMarkupMode mode,
-        string alignment, IReadOnlyList<string> number, bool body = false, bool composed = true)
+        string alignment, IReadOnlyList<string> number, bool body = false, bool composed = true, string? leader = null)
     {
         var document = ReadMutation("docx-run-picture-visible", mode, false, false, (xml, w, m) =>
         {
             var (paragraph, drawing) = CreateExactPictureCell(xml, w, 3600, 1320, 320, "After table.");
-            paragraph.Element(w + "pPr")!.AddFirst(new XElement(w + "tabs", new XElement(w + "tab",
-                new XAttribute(w + "val", alignment), new XAttribute(w + "pos", "2640"))));
+            var tab = new XElement(w + "tab", new XAttribute(w + "val", alignment), new XAttribute(w + "pos", "2640"));
+            tab.SetAttributeValue(w + "leader", leader);
+            paragraph.Element(w + "pPr")!.AddFirst(new XElement(w + "tabs", tab));
             if (composed) AddPictureFractionLabel(paragraph, drawing, w, m);
             paragraph.Add(PictureCellRun(w, new XElement(w + "tab")));
             foreach (string part in number)

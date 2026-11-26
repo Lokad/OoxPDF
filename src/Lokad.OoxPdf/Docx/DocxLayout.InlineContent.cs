@@ -892,7 +892,10 @@ internal sealed partial class DocxLayoutEngine
 
         static bool SupportsOrderedTabStop(DocxResolvedTabStop stop) =>
             (stop.Kind is DocxTabStopKind.Left or DocxTabStopKind.Center or DocxTabStopKind.Right or DocxTabStopKind.Decimal) &&
-            SupportsTabLeader(stop.LeaderValue);
+            // Use the ordinary positioning rule for known leaders. Their
+            // decoration is not painted, and their fields still occupy space.
+            (HasNoTabLeader(stop.LeaderValue) ||
+                stop.LeaderValue is "dot" or "hyphen" or "underscore" or "heavy" or "middleDot");
 
         bool TryPlaceTab(DocxResolvedTabStop stop, int fieldIndex, double lineAdvance, double available, out double start)
         {
