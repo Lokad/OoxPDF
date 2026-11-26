@@ -28,7 +28,9 @@ internal sealed partial class DocxRenderer
             plan.PdfFontSize, forcePositioningArray: true, kerningEnabled: plan.PairKerningEnabled, nominalAdvanceFontSize: plan.NominalAdvanceFontSize);
         if (positioningArray is not null)
         {
-            graphics.DrawGlyphPositionedText(resource.Name, plan.PdfFontSize, x, baselineY, color.Red, color.Green, color.Blue, positioningArray, syntheticItalic, plan.PdfCharacterSpacing, textRenderingMode: 0, strokeRed: 0, strokeGreen: 0, strokeBlue: 0, strokeWidth: 0d);
+            graphics.DrawGlyphText(resource.Name, plan.PdfFontSize, x, baselineY, color.Red, color.Green,
+                color.Blue, positioningArray, syntheticItalic, plan.PdfCharacterSpacing, textRenderingMode: 0,
+                strokeRed: 0, strokeGreen: 0, strokeBlue: 0, strokeWidth: 0d, isPositioned: true);
         }
     }
 

@@ -1043,47 +1043,28 @@ internal sealed partial class PptxRenderer
         }
 
         TextRun run = glyphRun.Source;
-        double pdfFontSize = glyphRun.PdfFontSize;
-        if (glyphRun.PositioningArray is null)
-        {
-            graphics.DrawGlyphText(
-                glyphRun.ResourceName,
-                pdfFontSize,
-                glyphRun.X,
-                glyphRun.BaselineY,
-                run.Color.Red,
-                run.Color.Green,
-                run.Color.Blue,
-                glyphRun.GlyphHex,
-                glyphRun.SyntheticItalic,
-                characterSpacing: glyphRun.PdfCharacterSpacing,
-                textRenderingMode: TextRenderingMode(glyphRun),
-                strokeRed: TextStrokeColor(glyphRun).Red,
-                strokeGreen: TextStrokeColor(glyphRun).Green,
-                strokeBlue: TextStrokeColor(glyphRun).Blue,
-                strokeWidth: TextStrokeWidth(glyphRun),
-                textRotationQuarterTurns: glyphRun.Source.GlyphRotationQuarterTurns);
-        }
-        else
-        {
-            graphics.DrawGlyphPositionedText(
-                glyphRun.ResourceName,
-                pdfFontSize,
-                glyphRun.X,
-                glyphRun.BaselineY,
-                run.Color.Red,
-                run.Color.Green,
-                run.Color.Blue,
-                glyphRun.PositioningArray,
-                glyphRun.SyntheticItalic,
-                characterSpacing: glyphRun.PdfCharacterSpacing,
-                textRenderingMode: TextRenderingMode(glyphRun),
-                strokeRed: TextStrokeColor(glyphRun).Red,
-                strokeGreen: TextStrokeColor(glyphRun).Green,
-                strokeBlue: TextStrokeColor(glyphRun).Blue,
-                strokeWidth: TextStrokeWidth(glyphRun),
-                textRotationQuarterTurns: glyphRun.Source.GlyphRotationQuarterTurns);
-        }
+        int renderingMode = TextRenderingMode(glyphRun);
+        RgbColor strokeColor = renderingMode == 0 ? default : run.Outline?.Color ?? run.Color;
+        double strokeWidth = renderingMode == 0 ? 0d
+            : run.Outline?.Width ?? PptxTextMetricRules.SyntheticBoldStrokeWidth(run.FontSize);
+        graphics.DrawGlyphText(
+            glyphRun.ResourceName,
+            glyphRun.PdfFontSize,
+            glyphRun.X,
+            glyphRun.BaselineY,
+            run.Color.Red,
+            run.Color.Green,
+            run.Color.Blue,
+            glyphRun.PositioningArray ?? glyphRun.GlyphHex,
+            glyphRun.SyntheticItalic,
+            characterSpacing: glyphRun.PdfCharacterSpacing,
+            textRenderingMode: renderingMode,
+            strokeRed: strokeColor.Red,
+            strokeGreen: strokeColor.Green,
+            strokeBlue: strokeColor.Blue,
+            strokeWidth: strokeWidth,
+            textRotationQuarterTurns: run.GlyphRotationQuarterTurns,
+            isPositioned: glyphRun.PositioningArray is not null);
 
         void DrawGlyphOutlinePath()
         {
@@ -1167,18 +1148,6 @@ internal sealed partial class PptxRenderer
         }
 
         return run.Alpha <= PptxTextMetricRules.TextStateTolerance ? 1 : 2;
-    }
-
-    private static RgbColor TextStrokeColor(TextGlyphRun glyphRun)
-    {
-        TextRun run = glyphRun.Source;
-        return run.Outline?.Color ?? run.Color;
-    }
-
-    private static double TextStrokeWidth(TextGlyphRun glyphRun)
-    {
-        TextRun run = glyphRun.Source;
-        return run.Outline?.Width ?? PptxTextMetricRules.SyntheticBoldStrokeWidth(run.FontSize);
     }
 
     private static double MeasureRenderedText(PdfEmbeddedFont embedded, string text, double fontSize, double characterSpacing, bool kerningEnabled)

@@ -109,14 +109,9 @@ internal sealed partial class DocxRenderer
             forcePositioningArray: false,
             kerningEnabled: true);
         if (operand is null) return;
-        if (isPositioned)
-        {
-            graphics.DrawGlyphPositionedText(resource.Name, fontSize, x, baselineY, red, green, blue, operand, italic: false, characterSpacing: 0d, textRenderingMode: 0, strokeRed: 0, strokeGreen: 0, strokeBlue: 0, strokeWidth: 0d);
-        }
-        else
-        {
-            graphics.DrawGlyphText(resource.Name, fontSize, x, baselineY, red, green, blue, operand, italic: false, characterSpacing: 0d, textRenderingMode: 0, strokeRed: 0, strokeGreen: 0, strokeBlue: 0, strokeWidth: 0d);
-        }
+        graphics.DrawGlyphText(resource.Name, fontSize, x, baselineY, red, green, blue, operand,
+            italic: false, characterSpacing: 0d, textRenderingMode: 0, strokeRed: 0, strokeGreen: 0,
+            strokeBlue: 0, strokeWidth: 0d, isPositioned: isPositioned);
     }
 
     private static double GetSegmentFontSize(DocxTextSegmentLayout segment, double lineFontSize)

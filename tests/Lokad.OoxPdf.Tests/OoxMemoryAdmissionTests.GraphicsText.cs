@@ -120,7 +120,8 @@ internal static partial class OoxMemoryAdmissionTests
     private static void DrawAdmissionText(PdfGraphicsBuilder graphics, string kind, string hex)
     {
         if (kind == "glyph") graphics.DrawGlyphText("F0", 12, 1, 2, 0, 0, 0, hex, false, 0, 0, 0, 0, 0, 0);
-        else if (kind == "positioned") graphics.DrawGlyphPositionedText("F0", 12, 1, 2, 0, 0, 0, "[<" + hex + ">]", false, 0, 0, 0, 0, 0, 0, textRotationQuarterTurns: 1);
+        else if (kind == "positioned") graphics.DrawGlyphText("F0", 12, 1, 2, 0, 0, 0, "[<" + hex + ">]",
+            false, 0, 0, 0, 0, 0, 0, textRotationQuarterTurns: 1, isPositioned: true);
         else if (kind == "fallback") graphics.DrawFallbackText("F0", 12, 0, 0, 0, [new PdfFallbackGlyph(1, 2, 65)]);
         else { graphics.BeginActualText(0x1F642); graphics.EndActualText(); }
     }

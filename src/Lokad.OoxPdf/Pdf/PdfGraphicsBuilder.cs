@@ -438,48 +438,6 @@ internal sealed class PdfGraphicsBuilder
         builder.AppendLine("S");
     }
 
-    public void DrawGlyphText(
-        string fontResourceName,
-        double fontSize,
-        double x,
-        double y,
-        byte red,
-        byte green,
-        byte blue,
-        string glyphHex,
-        bool italic,
-        double characterSpacing,
-        int textRenderingMode,
-        byte strokeRed,
-        byte strokeGreen,
-        byte strokeBlue,
-        double strokeWidth,
-        int textRotationQuarterTurns = 0)
-    {
-        DrawGlyphTextOperator(fontResourceName, fontSize, x, y, red, green, blue, '<' + glyphHex + "> Tj", italic, characterSpacing, textRenderingMode, strokeRed, strokeGreen, strokeBlue, strokeWidth, textRotationQuarterTurns);
-    }
-
-    public void DrawGlyphPositionedText(
-        string fontResourceName,
-        double fontSize,
-        double x,
-        double y,
-        byte red,
-        byte green,
-        byte blue,
-        string glyphPositioningArray,
-        bool italic,
-        double characterSpacing,
-        int textRenderingMode,
-        byte strokeRed,
-        byte strokeGreen,
-        byte strokeBlue,
-        double strokeWidth,
-        int textRotationQuarterTurns = 0)
-    {
-        DrawGlyphTextOperator(fontResourceName, fontSize, x, y, red, green, blue, glyphPositioningArray + " TJ", italic, characterSpacing, textRenderingMode, strokeRed, strokeGreen, strokeBlue, strokeWidth, textRotationQuarterTurns);
-    }
-
     // RV01: diagnosed fallback text. Every rune is positioned absolutely with
     // the fallback advances, so emitted positions match fallback measurement
     // exactly without knowing viewer font advances. Character spacing is baked
@@ -520,7 +478,7 @@ internal sealed class PdfGraphicsBuilder
         builder.AppendLine("ET");
     }
 
-    private void DrawGlyphTextOperator(
+    public void DrawGlyphText(
         string fontResourceName,
         double fontSize,
         double x,
@@ -528,7 +486,7 @@ internal sealed class PdfGraphicsBuilder
         byte red,
         byte green,
         byte blue,
-        string textOperator,
+        string glyphOperand,
         bool italic,
         double characterSpacing,
         int textRenderingMode,
@@ -536,8 +494,10 @@ internal sealed class PdfGraphicsBuilder
         byte strokeGreen,
         byte strokeBlue,
         double strokeWidth,
-        int textRotationQuarterTurns = 0)
+        int textRotationQuarterTurns = 0,
+        bool isPositioned = false)
     {
+        string textOperator = isPositioned ? glyphOperand + " TJ" : '<' + glyphOperand + "> Tj";
         string name = PdfEmbeddedFont.SanitizeName(fontResourceName);
         string size = PdfDocumentWriter.FormatNumber(fontSize);
         string spacing = Math.Abs(characterSpacing) > 0.001d ? PdfDocumentWriter.FormatNumber(characterSpacing) : "0";
