@@ -572,49 +572,56 @@ internal static class OoxResourceGuaranteeTests
         TestAssert.Contains("probe-mid-write-boom", thrown.Message);
         TestAssert.True(inner.Length <= 100, "Only the allowed prefix may exist.");
     }
-    public static void PdfContentBudgetTripsBeforeSpillingDocx()
+    public static void PdfContentBudgetTripsBeforeSpillingDocx() =>
+        AssertContentBudgetPrecedesSpill("docx-basic-paragraphs.docx", OoxPdfInputKind.Docx);
+
+    public static void PdfContentBudgetTripsBeforeSpillingPptx() =>
+        AssertContentBudgetPrecedesSpill("pptx-ladder-02-plain-text.pptx", OoxPdfInputKind.Pptx);
+
+    private static void AssertContentBudgetPrecedesSpill(string caseName, OoxPdfInputKind kind)
     {
-        // RV11: per-page content admission lands before the page is handed to
-        // the writer, so a zero content cap throws before any spill or encoding.
-        string input = TestFixtures.PublicCasePath("docx-basic-paragraphs.docx");
-        var diagnostics = new List<OoxPdfDiagnostic>();
-        string output = Path.ChangeExtension(Path.GetTempFileName(), ".pdf");
-        OoxPdfLimitExceededException thrown = TestAssert.Throws<OoxPdfLimitExceededException>(() => OoxPdfConverter.Convert(input, output, new OoxPdfOptions
-        { TemporaryStorage = new OoxPdfFileTemporaryStorage(Path.GetTempPath()),
-            InputKind = OoxPdfInputKind.Docx,
-            ReportResourceUsage = true,
-            DiagnosticSink = diagnostics.Add,
+        string input = TestFixtures.PublicCasePath(caseName);
+        string output = Path.Combine(Path.GetTempPath(), $"{Guid.NewGuid():N}.pdf");
+        var storage = new RefusingSpillStorage();
+        var fontResolver = new TestFaceFontResolver();
+
+        OoxPdfOptions Options(long contentLimit) => new()
+        {
+            TemporaryStorage = storage,
+            InputKind = kind,
+            FontResolver = fontResolver,
             ConversionLimits = new OoxConversionLimits
             {
-                MaxPdfContentBytesPerConversion = 0,
+                MaxPdfContentBytesPerConversion = contentLimit,
                 MaxResidentPageContentBytesPerConversion = 0,
             },
-        }));
+        };
+
+        OoxPdfLimitExceededException thrown = TestAssert.Throws<OoxPdfLimitExceededException>(
+            () => OoxPdfConverter.Convert(input, output, Options(0)));
+        TestAssert.Equal(OoxPdfLimitKind.DocumentBound, thrown.Kind);
         TestAssert.Contains("content byte budget", thrown.Message);
-        TestAssert.True(!diagnostics.Any(d => d.Id == "PDF_PAGE_CONTENT_SPILLED"), "Content admission must trip before spill work.");
+        TestAssert.Equal(0, storage.CreateCalls);
         TestAssert.True(!File.Exists(output), "Budget failure must not publish a partial PDF.");
+
+        long defaultLimit = new OoxConversionLimits().MaxPdfContentBytesPerConversion;
+        IOException refusal = TestAssert.Throws<IOException>(
+            () => OoxPdfConverter.Convert(input, output, Options(defaultLimit)));
+        TestAssert.Equal(1, storage.CreateCalls);
+        TestAssert.True(ReferenceEquals(storage.Failure, refusal), "An admitted page must reach the storage provider.");
+        TestAssert.True(!File.Exists(output), "Storage refusal must not publish a partial PDF.");
     }
 
-    public static void PdfContentBudgetTripsBeforeSpillingPptx()
+    private sealed class RefusingSpillStorage : IOoxPdfTemporaryStorage
     {
-        // RV11: same ordering on the PPTX path.
-        string input = TestFixtures.PublicCasePath("pptx-ladder-02-plain-text.pptx");
-        var diagnostics = new List<OoxPdfDiagnostic>();
-        string output = Path.ChangeExtension(Path.GetTempFileName(), ".pdf");
-        OoxPdfLimitExceededException thrown = TestAssert.Throws<OoxPdfLimitExceededException>(() => OoxPdfConverter.Convert(input, output, new OoxPdfOptions
-        { TemporaryStorage = new OoxPdfFileTemporaryStorage(Path.GetTempPath()),
-            InputKind = OoxPdfInputKind.Pptx,
-            ReportResourceUsage = true,
-            DiagnosticSink = diagnostics.Add,
-            ConversionLimits = new OoxConversionLimits
-            {
-                MaxPdfContentBytesPerConversion = 0,
-                MaxResidentPageContentBytesPerConversion = 0,
-            },
-        }));
-        TestAssert.Contains("content byte budget", thrown.Message);
-        TestAssert.True(!diagnostics.Any(d => d.Id == "PDF_PAGE_CONTENT_SPILLED"), "Content admission must trip before spill work.");
-        TestAssert.True(!File.Exists(output), "Budget failure must not publish a partial PDF.");
+        public IOException Failure { get; } = new("Page content spill requested.");
+        public int CreateCalls { get; private set; }
+
+        public ValueTask<Stream> CreateAsync(IMemoryBudget? memoryBudget, CancellationToken cancellationToken)
+        {
+            CreateCalls++;
+            return ValueTask.FromException<Stream>(Failure);
+        }
     }
 
     public static void TinyWindowMatchesDefaultBytesOnFileAndStream()
