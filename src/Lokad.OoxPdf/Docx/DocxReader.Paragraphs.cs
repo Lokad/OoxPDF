@@ -671,10 +671,17 @@ internal sealed partial class DocxReader
                 int resultTextOffset = 0, resultDrawingOrder = 0;
                 int pendingRun = fieldTextRunIndex, pendingImage = fieldImageIndex, pendingBox = fieldBoxIndex;
                 bool hasVmlStory = false;
+                XName bookmarkEndName = WordprocessingNamespace + "bookmarkEnd";
+                // Replacing the cached text preserves its visible cell boundaries.
                 foreach (var storedScope in EnumerateRevisionScopedChildren(field.Elements(), markupMode, cancellationToken,
-                    [WordprocessingNamespace + "r"], revision, inlineContent: true, includeNestedFieldResults: true))
+                    [WordprocessingNamespace + "r", bookmarkEndName], revision, inlineContent: true, includeNestedFieldResults: true))
                 {
                     cancellationToken.ThrowIfCancellationRequested();
+                    if (storedScope.Element.Name == bookmarkEndName)
+                    {
+                        RecordCellBookmarkEnd(storedScope.Element);
+                        continue;
+                    }
                     XElement resultRun = storedScope.Element;
                     var resultStyle = ResolveRunProperties(resultRun.Element(WordprocessingNamespace + "rPr"),
                         paragraphStyleId, ReadCharacterStyleId(resultRun), styles, tableCellStyle?.Run, out var resultResolution);

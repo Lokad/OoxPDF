@@ -1730,6 +1730,22 @@ internal static class DocxSectionNavigationTests
                         "Moving an end marker into the equation preserves all page paint.");
                     TestAssert.Equal(0, closed[0].Annotations.Count);
                 }
+
+                PdfPage[] fieldOpen = RenderColumn("field-after-target", spanned, mode);
+                TestAssert.True(fieldOpen[0].Annotations.Single().Destination is { PageIndex: 1, Left: > 100d },
+                    "The open range reaches the target cell beside the computed field.");
+                TestAssert.Contains("FIRST CELL2", Text(fieldOpen[1]));
+                TestAssert.Contains("TARGET PARAGRAPH", Text(fieldOpen[1]));
+                foreach (string variant in new[] { "field-after-result", "field-inside-result", "field-inside-control" })
+                {
+                    PdfPage[] closed = RenderColumn(variant, spanned, mode);
+                    TestAssert.True(fieldOpen.Select(page => page.Content).SequenceEqual(closed.Select(page => page.Content)),
+                        "Moving an end marker into the field preserves the computed page number and surrounding text.");
+                    TestAssert.Equal(0, closed[0].Annotations.Count);
+                }
+                PdfPage[] locked = RenderColumn("field-locked", spanned, mode);
+                TestAssert.Contains("FIRST CELL9999", Text(locked[1]));
+                TestAssert.Equal(0, locked[0].Annotations.Count);
             }
         }
 
@@ -1838,6 +1854,27 @@ internal static class DocxSectionNavigationTests
                             "math-in-numerator" => numerator,
                             "math-after-target" => second.Element(W + "p")!,
                             _ => paragraph
+                        };
+                        endOwner.Add(end);
+                    }
+                    else if (variant.StartsWith("field-", StringComparison.Ordinal))
+                    {
+                        XElement paragraph = first.Element(W + "p")!;
+                        var field = new XElement(W + "fldSimple", new XAttribute(W + "instr", " PAGE "),
+                            new XElement(W + "r", new XElement(W + "t", "9999")));
+                        var control = new XElement(W + "sdtContent");
+                        if (variant == "field-inside-control")
+                            field.Add(new XElement(W + "sdt", control));
+                        if (variant == "field-locked")
+                            field.SetAttributeValue(W + "fldLock", "1");
+                        paragraph.AddFirst(start);
+                        paragraph.Add(field);
+                        XElement endOwner = variant switch
+                        {
+                            "field-after-result" => paragraph,
+                            "field-after-target" => second.Element(W + "p")!,
+                            "field-inside-control" => control,
+                            _ => field
                         };
                         endOwner.Add(end);
                     }
