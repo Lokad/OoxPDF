@@ -1,8 +1,10 @@
 using System.Buffers.Binary;
+using System.Globalization;
 using System.Net;
 using System.Reflection;
 using Lokad.OoxPdf.Diagnostics;
 using System.Text;
+using System.Text.RegularExpressions;
 using System.Security.Cryptography;
 using Lokad.OoxPdf;
 using Lokad.OoxPdf.Docx;
@@ -412,59 +414,51 @@ internal static partial class OoxLimitsTests
 
     public static void ConversionResourceSummaryReportedWhenEnabled()
     {
-        // Q01: hosts get cumulative counters through an informational diagnostic;
-        // disabled by default and deterministic across runs.
-        string input = DocxWithInlinePng();
-        var first = new List<OoxPdfDiagnostic>();
-        var second = new List<OoxPdfDiagnostic>();
-        string firstPdf = Path.ChangeExtension(Path.GetTempFileName(), ".pdf");
-        string secondPdf = Path.ChangeExtension(Path.GetTempFileName(), ".pdf");
-
-        OoxPdfConverter.Convert(input, firstPdf, new OoxPdfOptions
-        {
-            InputKind = OoxPdfInputKind.Docx,
-            ReportResourceUsage = true,
-            DiagnosticSink = first.Add,
-        });
-        OoxPdfConverter.Convert(input, secondPdf, new OoxPdfOptions
-        {
-            InputKind = OoxPdfInputKind.Docx,
-            ReportResourceUsage = true,
-            DiagnosticSink = second.Add,
-        });
-
-        OoxPdfDiagnostic summary = first.Single(d => d.Id == "CONVERSION_RESOURCE_SUMMARY");
-        TestAssert.Equal(OoxPdfSeverity.Info, summary.Severity);
-        TestAssert.Equal(second.Single(d => d.Id == "CONVERSION_RESOURCE_SUMMARY").Message, summary.Message);
-        TestAssert.Contains("pages=1", summary.Message);
-        TestAssert.Contains("pdfPages=1", summary.Message);
-
-        var quiet = new List<OoxPdfDiagnostic>();
-        string quietPdf = Path.ChangeExtension(Path.GetTempFileName(), ".pdf");
-        OoxPdfConverter.Convert(input, quietPdf, new OoxPdfOptions { InputKind = OoxPdfInputKind.Docx, DiagnosticSink = quiet.Add });
-        TestAssert.True(quiet.All(d => d.Id != "CONVERSION_RESOURCE_SUMMARY"), "Summary must stay off by default.");
-    }
-
-    public static void SerializedFontImageBytesReportedOnFilePath()
-    {
-        // R19: the completed typed snapshot reports serialized font/image bytes on
-        // the file path alongside every other charged domain.
-        // RV01: deterministic embeddable test face runs this on every host.
         string input = DocxWithInlinePng();
         var diagnostics = new List<OoxPdfDiagnostic>();
-        string output = Path.ChangeExtension(Path.GetTempFileName(), ".pdf");
-        OoxPdfConverter.Convert(input, output, new OoxPdfOptions
+        var options = new OoxPdfOptions
         {
             InputKind = OoxPdfInputKind.Docx,
             FontResolver = new TestFaceFontResolver(),
+            FixedCreationDate = DateTimeOffset.UnixEpoch,
             ReportResourceUsage = true,
             DiagnosticSink = diagnostics.Add,
-        });
+        };
+        string firstPdf = TestFixtures.NewTemporaryPath(".pdf");
+        OoxPdfConverter.Convert(input, firstPdf, options);
         OoxPdfDiagnostic summary = diagnostics.Single(d => d.Id == "CONVERSION_RESOURCE_SUMMARY");
+        var totals = ReadSinglePageResourceSummary(summary);
+        TestAssert.True(totals.Content > 0 && totals.Font > 0 && totals.Image > 0,
+            "File totals include the page content, embedded font and inline picture.");
+        TestAssert.Equal(new FileInfo(firstPdf).Length, totals.Output);
+        TestAssert.Equal(0L, totals.Spilled);
+        diagnostics.Clear();
+        OoxPdfConverter.Convert(input, TestFixtures.NewTemporaryPath(".pdf"), options);
+        TestAssert.Equal(summary.Message, diagnostics.Single(d => d.Id == "CONVERSION_RESOURCE_SUMMARY").Message);
 
-        TestAssert.True(!summary.Message.Contains("pdfFontBytes=0", StringComparison.Ordinal), "Serialized font bytes must be reported, got: " + summary.Message);
-        TestAssert.True(!summary.Message.Contains("pdfImageBytes=0", StringComparison.Ordinal), "Serialized image bytes must be reported, got: " + summary.Message);
+        diagnostics.Clear();
+        OoxPdfConverter.Convert(input, TestFixtures.NewTemporaryPath(".pdf"), new OoxPdfOptions
+        {
+            FontResolver = options.FontResolver,
+            DiagnosticSink = diagnostics.Add,
+        });
+        TestAssert.True(diagnostics.All(d => d.Id != "CONVERSION_RESOURCE_SUMMARY"), "Summary must stay off by default.");
     }
+
+    internal static (long Content, long Output, long Font, long Image, long Spilled)
+        ReadSinglePageResourceSummary(OoxPdfDiagnostic diagnostic)
+    {
+        TestAssert.Equal("CONVERSION_RESOURCE_SUMMARY", diagnostic.Id);
+        TestAssert.Equal(OoxPdfSeverity.Info, diagnostic.Severity);
+        TestAssert.True(diagnostic.PartName is null && diagnostic.SlideIndex is null && diagnostic.PageIndex is null &&
+            diagnostic.Feature is null && diagnostic.Fallback is null, "The summary retains conversion-wide provenance.");
+        Match totals = Regex.Match(diagnostic.Message,
+            @"\AConversion output totals: pages=1; pdfPages=1; pdfContentBytes=(?<content>[0-9]+); pdfOutputBytes=(?<output>[0-9]+); pdfFontBytes=(?<font>[0-9]+); pdfImageBytes=(?<image>[0-9]+); pageContentSpilledBytes=(?<spilled>[0-9]+)\.\z");
+        TestAssert.True(totals.Success, "Unexpected resource summary: " + diagnostic.Message);
+        long ReadTotal(string name) => long.Parse(totals.Groups[name].Value, CultureInfo.InvariantCulture);
+        return (ReadTotal("content"), ReadTotal("output"), ReadTotal("font"), ReadTotal("image"), ReadTotal("spilled"));
+    }
+
     public static void ConversionLimitsRejectNegativeCaps()
     {
         // Q01: negative cumulative caps are rejected at option validation.

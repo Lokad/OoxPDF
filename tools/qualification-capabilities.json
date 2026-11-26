@@ -17065,7 +17065,6 @@
     "RepaginationDoesNotRechargePages",
     "RepeatedConversionsReuseRetainedFontBytes",
     "RepeatedHeaderImagesShareOneResource",
-    "SerializedFontImageBytesReportedOnFilePath",
     "SeriesNameMemoSharesResultsWithinFrame",
     "SeriesVectorsMemoSharesResultsWithinFrame",
     "SharedDecoderClassifiesContentTypes",
