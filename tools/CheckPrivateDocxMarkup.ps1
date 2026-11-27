@@ -15,7 +15,9 @@ param(
 
     [switch] $SkipPdfInspect,
 
-    [switch] $ValidateOnly
+    [switch] $ValidateOnly,
+
+    [string] $CliPath
 )
 
 $ErrorActionPreference = "Stop"
@@ -622,31 +624,16 @@ function Get-DocxMarkupFeatureCounts([string] $Path) {
 }
 
 . (Join-Path $PSScriptRoot "JsonArray.ps1")
-$caseFull = (Resolve-Path -LiteralPath $Case).Path
-Assert-PrivateUntracked $caseFull "Private case manifest"
-
-$caseDirectory = Split-Path -Parent $caseFull
-$manifest = Get-Content -Raw -LiteralPath $caseFull | ConvertFrom-Json
-if ([string]::IsNullOrWhiteSpace($manifest.id)) {
-    throw "Private case manifest must contain an id."
-}
-
-$caseId = [string]$manifest.id
-if ($caseId.IndexOfAny([System.IO.Path]::GetInvalidFileNameChars()) -ge 0 -or $caseId.Contains("/") -or $caseId.Contains("\")) {
-    throw "Private case id must be a single filename-safe path segment."
-}
+$binding = Read-PrivateCase $Case
+$caseFull = $binding.CasePath
+$caseId = $binding.Id
+$inputFull = $binding.InputPath
+$manifest = $binding.Manifest
 
 if ($manifest.kind -ne $null -and -not [string]::Equals([string]$manifest.kind, "docx", [System.StringComparison]::OrdinalIgnoreCase)) {
     throw "Private DOCX markup check only supports kind 'docx'."
 }
 
-if ([string]::IsNullOrWhiteSpace($manifest.input)) {
-    throw "Private case manifest must contain an input path."
-}
-
-$inputPath = Join-Path $caseDirectory $manifest.input
-$inputFull = (Resolve-Path -LiteralPath $inputPath).Path
-Assert-PrivateUntracked $inputFull "Private case input"
 if (-not [string]::Equals([System.IO.Path]::GetExtension($inputFull), ".docx", [System.StringComparison]::OrdinalIgnoreCase)) {
     throw "Private DOCX markup check requires a .docx input."
 }
@@ -656,6 +643,7 @@ if ($ValidateOnly) {
     return
 }
 
+$cliDll = Resolve-PrivateCaseCli $CliPath $Framework
 $runId = "candidate-only-" + (Get-Date -Format "yyyyMMdd-HHmmss")
 $runRoot = Join-Path $repoRoot ("artifacts/private-visual/{0}/{1}" -f $caseId, $runId)
 $candidateDir = Join-Path $runRoot "candidate"
@@ -676,12 +664,6 @@ $diagnosticsPath = Join-Path $candidateDir "diagnostics.json"
 $summaryPath = Join-Path $runRoot "summary.json"
 $featureCountsPath = Join-Path $inventoryDir "markup-feature-counts.json"
 
-dotnet build (Join-Path $repoRoot "src/Lokad.OoxPdf.Cli/Lokad.OoxPdf.Cli.csproj") -f $Framework --nologo
-if ($LASTEXITCODE -ne 0) {
-    throw "CLI build failed with exit code $LASTEXITCODE."
-}
-
-$cliDll = Join-Path $repoRoot "src/Lokad.OoxPdf.Cli/bin/Debug/$Framework/Lokad.OoxPdf.Cli.dll"
 dotnet $cliDll convert $inputFull $candidatePdf --diagnostics $diagnosticsPath --docx-markup $MarkupMode --docx-markup-geometry $MarkupGeometry
 if ($LASTEXITCODE -ne 0) {
     throw "Candidate conversion failed with exit code $LASTEXITCODE."

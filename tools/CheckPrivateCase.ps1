@@ -3,7 +3,9 @@ param(
     [Parameter(Mandatory = $true)]
     [string] $Case,
 
-    [switch] $ValidateOnly
+    [switch] $ValidateOnly,
+
+    [string] $CliPath
 )
 
 $ErrorActionPreference = "Stop"
@@ -13,27 +15,11 @@ $privateRoot = Join-Path $repoRoot "private-cases"
 
 . (Join-Path $PSScriptRoot "PrivateGuard.ps1")
 
-$caseFull = (Resolve-Path -LiteralPath $Case).Path
-Assert-PrivateUntracked $caseFull "Private case manifest"
-
-$caseDirectory = Split-Path -Parent $caseFull
-$manifest = Get-Content -Raw -LiteralPath $caseFull | ConvertFrom-Json
-if ([string]::IsNullOrWhiteSpace($manifest.id)) {
-    throw "Private case manifest must contain an id."
-}
-
-$caseId = [string]$manifest.id
-if ($caseId.IndexOfAny([System.IO.Path]::GetInvalidFileNameChars()) -ge 0 -or $caseId.Contains("/") -or $caseId.Contains("\")) {
-    throw "Private case id must be a single filename-safe path segment."
-}
-
-if ([string]::IsNullOrWhiteSpace($manifest.input)) {
-    throw "Private case manifest must contain an input path."
-}
-
-$inputPath = Join-Path $caseDirectory $manifest.input
-$inputFull = (Resolve-Path -LiteralPath $inputPath).Path
-Assert-PrivateUntracked $inputFull "Private case input"
+$binding = Read-PrivateCase $Case
+$caseFull = $binding.CasePath
+$caseId = $binding.Id
+$inputFull = $binding.InputPath
+$manifest = $binding.Manifest
 
 $docxMarkup = if ($manifest.PSObject.Properties.Name -contains "docxMarkup" -and $manifest.docxMarkup -ne $null) { [string]$manifest.docxMarkup } else { $null }
 $docxMarkupGeometry = if ($manifest.PSObject.Properties.Name -contains "docxMarkupGeometry" -and $manifest.docxMarkupGeometry -ne $null) { [string]$manifest.docxMarkupGeometry } else { $null }
@@ -51,6 +37,7 @@ if ($ValidateOnly) {
     return
 }
 
+$cliDll = Resolve-PrivateCaseCli $CliPath $Framework
 $runId = Get-Date -Format "yyyyMMdd-HHmmss"
 $runRoot = Join-Path $repoRoot ("artifacts/private-visual/{0}/{1}" -f $caseId, $runId)
 $referenceDir = Join-Path $runRoot "reference"
@@ -63,12 +50,6 @@ $candidatePdf = Join-Path $candidateDir "output.pdf"
 $diagnostics = Join-Path $candidateDir "diagnostics.json"
 $dpi = if ($manifest.dpi -ne $null) { [int]$manifest.dpi } else { 144 }
 
-dotnet build (Join-Path $repoRoot "src/Lokad.OoxPdf.Cli/Lokad.OoxPdf.Cli.csproj") -f $Framework --nologo
-if ($LASTEXITCODE -ne 0) {
-    throw "CLI build failed with exit code $LASTEXITCODE."
-}
-
-$cliDll = Join-Path $repoRoot "src/Lokad.OoxPdf.Cli/bin/Debug/$Framework/Lokad.OoxPdf.Cli.dll"
 $candidateArgs = @("convert", $inputFull, $candidatePdf, "--diagnostics", $diagnostics)
 if (-not [string]::IsNullOrWhiteSpace($docxMarkup)) {
     $candidateArgs += @("--docx-markup", $docxMarkup)

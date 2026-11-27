@@ -204,6 +204,8 @@ Place private manifests and inputs under ignored `private-cases/`. Run
 ignored `artifacts/private-visual/`. The script rejects tracked inputs, paths
 outside private-cases and unsafe IDs. Public notes record anonymized feature gaps,
 never private text, screenshots, filenames or document contents.
+Both private case commands accept `-CliPath <qualified.dll>` to reuse a built
+CLI. Reference rendering and optional inspections have their own tool builds.
 
 Office reference operations require an available authorized environment. Respect
 rejected actions. Missing references block their conclusions, not unrelated work.

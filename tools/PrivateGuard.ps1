@@ -36,3 +36,38 @@ function Assert-PrivateUntracked([string] $Path, [string] $Label) {
         throw "$Label is tracked by git and must not be used as a private case: $Path"
     }
 }
+
+function Read-PrivateCase([string] $Case) {
+    $casePath = (Resolve-Path -LiteralPath $Case).Path
+    Assert-PrivateUntracked $casePath 'Private case manifest'
+
+    $manifest = Get-Content -Raw -LiteralPath $casePath | ConvertFrom-Json
+    if ([string]::IsNullOrWhiteSpace($manifest.id)) {
+        throw 'Private case manifest must contain an id.'
+    }
+    $id = [string]$manifest.id
+    if ($id.IndexOfAny([IO.Path]::GetInvalidFileNameChars()) -ge 0 -or $id.Contains('/') -or $id.Contains('\')) {
+        throw 'Private case id must be a single filename-safe path segment.'
+    }
+    if ([string]::IsNullOrWhiteSpace($manifest.input)) {
+        throw 'Private case manifest must contain an input path.'
+    }
+    $inputPath = (Resolve-Path -LiteralPath (Join-Path (Split-Path -Parent $casePath) $manifest.input)).Path
+    Assert-PrivateUntracked $inputPath 'Private case input'
+    return [pscustomobject]@{ CasePath = $casePath; Id = $id; InputPath = $inputPath; Manifest = $manifest }
+}
+
+function Resolve-PrivateCaseCli([string] $CliPath, [string] $Framework) {
+    if ($CliPath) {
+        $assembly = Get-Item -LiteralPath $CliPath
+        if ($assembly -isnot [IO.FileInfo] -or $assembly.Extension -ine '.dll') {
+            throw 'CliPath must identify an existing CLI assembly.'
+        }
+        return $assembly.FullName
+    }
+
+    $project = Join-Path $repoRoot 'src/Lokad.OoxPdf.Cli/Lokad.OoxPdf.Cli.csproj'
+    $assemblyPath = Join-Path $repoRoot "src/Lokad.OoxPdf.Cli/bin/Debug/$Framework/Lokad.OoxPdf.Cli.dll"
+    & (Join-Path $PSScriptRoot 'EnsureDotnetBuild.ps1') -Project $project -OutputDll $assemblyPath -Description 'CLI' -Framework $Framework | Out-Host
+    return $assemblyPath
+}
