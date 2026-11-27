@@ -369,8 +369,9 @@ internal static partial class DocxFootnotesTests
 
     public static void DocxEndnoteContentGapFollowsContentFont()
     {
-        double control = LayoutEndnoteContentGapWithFamilies("Calibri", "Calibri");
-        double mixed = LayoutEndnoteContentGapWithFamilies("Calibri", "Tahoma");
+        const DocxRelatedStoryKind kind = DocxRelatedStoryKind.Endnote;
+        double control = LayoutNoteContentGap(kind, "Calibri", "Calibri");
+        double mixed = LayoutNoteContentGap(kind, "Tahoma", "Tahoma");
         TestAssert.True(Math.Abs(control - 3.37d) < 0.01d, "Uniform endnote gap must keep the shared value; control=" + control.ToString(CultureInfo.InvariantCulture) + ".");
         TestAssert.True(Math.Abs(mixed - 6.72d) < 0.01d, "Endnote gap must follow content font; mixed=" + mixed.ToString(CultureInfo.InvariantCulture) + ".");
     }

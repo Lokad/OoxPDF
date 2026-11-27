@@ -4383,48 +4383,16 @@ internal static partial class DocxFootnotesTests
 
     public static void DocxFootnoteContentGapFollowsFirstParagraph()
     {
-        // RV06 mixed-gap probes (Word 16.0, Pal/Cal orders with r2f diff minus 1.20):
-        // Office content gap follows the first paragraph while story-max would give
-        // plus 0.4, so a Calibri-first mixed note keeps the Calibri-uniform gap while
-        // Tahoma-first keeps the Tahoma-uniform gap.
-        double tahUniform = LayoutFootnoteContentGapWithFamilies("Calibri", "Tahoma");
-        double calUniform = LayoutFootnoteContentGapWithFamilies("Calibri", "Calibri");
-        double tahFirst = LayoutMixedFootnoteContentGap("Tahoma", "Calibri");
-        double calFirst = LayoutMixedFootnoteContentGap("Calibri", "Tahoma");
-        TestAssert.True(Math.Abs(tahFirst - tahUniform) < 0.02d, "Tahoma-first mixed gap must keep the Tahoma-uniform gap; tahFirst=" + tahFirst.ToString(CultureInfo.InvariantCulture) + " tahUniform=" + tahUniform.ToString(CultureInfo.InvariantCulture) + ".");
-        TestAssert.True(Math.Abs(calFirst - calUniform) < 0.02d, "Calibri-first mixed gap must keep the Calibri-uniform gap; calFirst=" + calFirst.ToString(CultureInfo.InvariantCulture) + " calUniform=" + calUniform.ToString(CultureInfo.InvariantCulture) + ".");
-    }
-
-    private static double LayoutMixedFootnoteContentGap(string firstFamily, string secondFamily)
-    {
-        string input = TestFixtures.WriteTempPackage(".docx", new Dictionary<string, string>
-        {
-            ["[Content_Types].xml"] = """<?xml version="1.0" encoding="UTF-8"?><Types xmlns="http://schemas.openxmlformats.org/package/2006/content-types"><Default Extension="rels" ContentType="application/vnd.openxmlformats-package.relationships+xml"/><Default Extension="xml" ContentType="application/xml"/><Override PartName="/word/document.xml" ContentType="application/vnd.openxmlformats-officedocument.wordprocessingml.document.main+xml"/><Override PartName="/word/footnotes.xml" ContentType="application/vnd.openxmlformats-officedocument.wordprocessingml.footnotes+xml"/></Types>""",
-            ["_rels/.rels"] = """<?xml version="1.0" encoding="UTF-8"?><Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships"><Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/officeDocument" Target="word/document.xml"/></Relationships>""",
-            ["word/_rels/document.xml.rels"] = """<?xml version="1.0" encoding="UTF-8"?><Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships"><Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/footnotes" Target="footnotes.xml"/></Relationships>""",
-            ["word/document.xml"] = """<?xml version="1.0" encoding="UTF-8"?><w:document xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main" xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships"><w:body><w:p><w:r><w:t xml:space="preserve">Body with footnote</w:t></w:r><w:r><w:rPr><w:vertAlign w:val="superscript"/></w:rPr><w:footnoteReference w:id="2"/></w:r></w:p><w:sectPr><w:pgSz w:w="12240" w:h="15840"/></w:sectPr></w:body></w:document>""",
-            ["word/footnotes.xml"] = """<?xml version="1.0" encoding="UTF-8"?><w:footnotes xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main"><w:footnote w:type="separator" w:id="0"><w:p><w:r><w:rPr><w:rFonts w:ascii="Calibri" w:hAnsi="Calibri"/><w:sz w:val="24"/><w:szCs w:val="24"/></w:rPr><w:separator/></w:r></w:p></w:footnote><w:footnote w:type="continuationSeparator" w:id="1"><w:p><w:r><w:continuationSeparator/></w:r></w:p></w:footnote><w:footnote w:id="2"><w:p><w:r><w:rPr><w:rFonts w:ascii="F1" w:hAnsi="F1"/><w:sz w:val="24"/><w:szCs w:val="24"/></w:rPr><w:t xml:space="preserve">Note body one</w:t></w:r></w:p><w:p><w:r><w:rPr><w:rFonts w:ascii="F2" w:hAnsi="F2"/><w:sz w:val="24"/><w:szCs w:val="24"/></w:rPr><w:t xml:space="preserve">Note body two</w:t></w:r></w:p></w:footnote></w:footnotes>""".Replace("F1", firstFamily).Replace("F2", secondFamily)
-        });
-        DocxDocument document;
-        using (FileStream stream = File.OpenRead(input))
-        {
-            OoxPackage package = OoxPackage.Open(stream, CancellationToken.None);
-            document = new DocxReader().Read(package, null, CancellationToken.None, OoxPdfDocxMarkupMode.Final);
-        }
-
-        DocxLayout layout = new DocxLayoutEngine(OoxPdfDocxMarkupGeometryMode.PreserveDocumentLayout)
-            .Create(document, new FamilyGapTextMeasurer(new DocxTests.FamilyWidthTextMeasurer()), CancellationToken.None);
-        DocxPlacedRelatedStoryLayout separator = layout.Pages[0].PlacedRelatedStories.Single(story => story.StoryLayout.Story.Kind == DocxRelatedStoryKind.Footnote && story.StoryLayout.Story.Type == DocxRelatedStoryType.Separator);
-        DocxPlacedRelatedStoryLayout content = layout.Pages[0].PlacedRelatedStories.Single(story => story.StoryLayout.Story.Kind == DocxRelatedStoryKind.Footnote && (story.StoryLayout.Story.Type is null || story.StoryLayout.Story.Type == DocxRelatedStoryType.Normal));
-        return (separator.TopY - separator.Height) - content.TopY;
-    }
-
-    public static void DocxFootnoteContentGapFollowsContentFont()
-    {
-        double control = LayoutFootnoteContentGapWithFamilies("Calibri", "Calibri");
-        double mixed = LayoutFootnoteContentGapWithFamilies("Calibri", "Tahoma");
-        TestAssert.True(Math.Abs(control - 3.37d) < 0.01d, "Uniform footnote gap must keep the shared value; control=" + control.ToString(CultureInfo.InvariantCulture) + ".");
-        TestAssert.True(Math.Abs(mixed - 6.72d) < 0.01d, "Footnote gap must follow content font; mixed=" + mixed.ToString(CultureInfo.InvariantCulture) + ".");
+        const DocxRelatedStoryKind kind = DocxRelatedStoryKind.Footnote;
+        double calibri = LayoutNoteContentGap(kind, "Calibri", "Calibri");
+        double tahoma = LayoutNoteContentGap(kind, "Tahoma", "Tahoma");
+        double tahomaFirst = LayoutNoteContentGap(kind, "Tahoma", "Calibri");
+        double calibriFirst = LayoutNoteContentGap(kind, "Calibri", "Tahoma");
+        TestAssert.True(Math.Abs(calibri - 3.37d) < 0.01d, $"Uniform Calibri footnote gap was {calibri}pt.");
+        TestAssert.True(Math.Abs(tahoma - 6.72d) < 0.01d, $"Uniform Tahoma footnote gap was {tahoma}pt.");
+        // The mixed-note Word probes follow the first paragraph rather than the tallest line.
+        TestAssert.True(Math.Abs(tahomaFirst - tahoma) < 0.02d, $"Tahoma-first gap {tahomaFirst}pt differs from {tahoma}pt.");
+        TestAssert.True(Math.Abs(calibriFirst - calibri) < 0.02d, $"Calibri-first gap {calibriFirst}pt differs from {calibri}pt.");
     }
 
     private sealed class FamilyGapTextMeasurer(IDocxTextMeasurer inner) : IDocxTextMeasurer
@@ -4438,52 +4406,59 @@ internal static partial class DocxFootnotesTests
         }
     }
 
-    private static double LayoutFootnoteContentGapWithFamilies(string markFamily, string contentFamily)
+    private static double LayoutNoteContentGap(DocxRelatedStoryKind kind, string firstFamily, string secondFamily)
     {
+        string note = kind == DocxRelatedStoryKind.Footnote ? "footnote" : "endnote";
         string input = TestFixtures.WriteTempPackage(".docx", new Dictionary<string, string>
         {
-            ["[Content_Types].xml"] = """<?xml version="1.0" encoding="UTF-8"?><Types xmlns="http://schemas.openxmlformats.org/package/2006/content-types"><Default Extension="rels" ContentType="application/vnd.openxmlformats-package.relationships+xml"/><Default Extension="xml" ContentType="application/xml"/><Override PartName="/word/document.xml" ContentType="application/vnd.openxmlformats-officedocument.wordprocessingml.document.main+xml"/><Override PartName="/word/footnotes.xml" ContentType="application/vnd.openxmlformats-officedocument.wordprocessingml.footnotes+xml"/></Types>""",
-            ["_rels/.rels"] = """<?xml version="1.0" encoding="UTF-8"?><Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships"><Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/officeDocument" Target="word/document.xml"/></Relationships>""",
-            ["word/_rels/document.xml.rels"] = """<?xml version="1.0" encoding="UTF-8"?><Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships"><Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/footnotes" Target="footnotes.xml"/></Relationships>""",
-            ["word/document.xml"] = """<?xml version="1.0" encoding="UTF-8"?><w:document xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main" xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships"><w:body><w:p><w:r><w:t xml:space="preserve">Body with footnote</w:t></w:r><w:r><w:rPr><w:vertAlign w:val="superscript"/></w:rPr><w:footnoteReference w:id="2"/></w:r></w:p><w:sectPr><w:pgSz w:w="12240" w:h="15840"/></w:sectPr></w:body></w:document>""",
-            ["word/footnotes.xml"] = """<?xml version="1.0" encoding="UTF-8"?><w:footnotes xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main"><w:footnote w:type="separator" w:id="0"><w:p><w:r><w:rPr><w:rFonts w:ascii="MFAM" w:hAnsi="MFAM"/><w:sz w:val="24"/><w:szCs w:val="24"/></w:rPr><w:separator/></w:r></w:p></w:footnote><w:footnote w:type="continuationSeparator" w:id="1"><w:p><w:r><w:continuationSeparator/></w:r></w:p></w:footnote><w:footnote w:id="2"><w:p><w:r><w:rPr><w:rFonts w:ascii="CFAM" w:hAnsi="CFAM"/><w:sz w:val="24"/><w:szCs w:val="24"/></w:rPr><w:t xml:space="preserve">Note body one</w:t></w:r></w:p><w:p><w:r><w:rPr><w:rFonts w:ascii="CFAM" w:hAnsi="CFAM"/><w:sz w:val="24"/><w:szCs w:val="24"/></w:rPr><w:t xml:space="preserve">Note body two</w:t></w:r></w:p></w:footnote></w:footnotes>""".Replace("MFAM", markFamily).Replace("CFAM", contentFamily)
+            ["[Content_Types].xml"] = $$"""
+                <Types xmlns="http://schemas.openxmlformats.org/package/2006/content-types">
+                  <Default Extension="rels" ContentType="application/vnd.openxmlformats-package.relationships+xml"/>
+                  <Default Extension="xml" ContentType="application/xml"/>
+                  <Override PartName="/word/document.xml" ContentType="application/vnd.openxmlformats-officedocument.wordprocessingml.document.main+xml"/>
+                  <Override PartName="/word/{{note}}s.xml" ContentType="application/vnd.openxmlformats-officedocument.wordprocessingml.{{note}}s+xml"/>
+                </Types>
+                """,
+            ["_rels/.rels"] = """
+                <Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">
+                  <Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/officeDocument" Target="word/document.xml"/>
+                </Relationships>
+                """,
+            ["word/_rels/document.xml.rels"] = $$"""
+                <Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">
+                  <Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/{{note}}s" Target="{{note}}s.xml"/>
+                </Relationships>
+                """,
+            ["word/document.xml"] = $$"""
+                <w:document xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main">
+                  <w:body>
+                    <w:p><w:r><w:t xml:space="preserve">Body with {{note}}</w:t></w:r>
+                      <w:r><w:rPr><w:vertAlign w:val="superscript"/></w:rPr><w:{{note}}Reference w:id="2"/></w:r>
+                    </w:p>
+                    <w:sectPr><w:pgSz w:w="12240" w:h="15840"/></w:sectPr>
+                  </w:body>
+                </w:document>
+                """,
+            [$"word/{note}s.xml"] = $$"""
+                <w:{{note}}s xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main">
+                  <w:{{note}} w:type="separator" w:id="0">
+                    <w:p><w:r><w:rPr><w:rFonts w:ascii="Calibri" w:hAnsi="Calibri"/><w:sz w:val="24"/><w:szCs w:val="24"/></w:rPr><w:separator/></w:r></w:p>
+                  </w:{{note}}>
+                  <w:{{note}} w:type="continuationSeparator" w:id="1"><w:p><w:r><w:continuationSeparator/></w:r></w:p></w:{{note}}>
+                  <w:{{note}} w:id="2">
+                    <w:p><w:r><w:rPr><w:rFonts w:ascii="{{firstFamily}}" w:hAnsi="{{firstFamily}}"/><w:sz w:val="24"/><w:szCs w:val="24"/></w:rPr><w:t xml:space="preserve">Note body one</w:t></w:r></w:p>
+                    <w:p><w:r><w:rPr><w:rFonts w:ascii="{{secondFamily}}" w:hAnsi="{{secondFamily}}"/><w:sz w:val="24"/><w:szCs w:val="24"/></w:rPr><w:t xml:space="preserve">Note body two</w:t></w:r></w:p>
+                  </w:{{note}}>
+                </w:{{note}}s>
+                """
         });
-        DocxDocument document;
-        using (FileStream stream = File.OpenRead(input))
-        {
-            OoxPackage package = OoxPackage.Open(stream, CancellationToken.None);
-            document = new DocxReader().Read(package, null, CancellationToken.None, OoxPdfDocxMarkupMode.Final);
-        }
-
+        DocxDocument document = DocxTests.ReadDocx(input, OoxPdfDocxMarkupMode.Final);
         DocxLayout layout = new DocxLayoutEngine(OoxPdfDocxMarkupGeometryMode.PreserveDocumentLayout)
             .Create(document, new FamilyGapTextMeasurer(new DocxTests.FamilyWidthTextMeasurer()), CancellationToken.None);
-        DocxPlacedRelatedStoryLayout separator = layout.Pages[0].PlacedRelatedStories.Single(story => story.StoryLayout.Story.Kind == DocxRelatedStoryKind.Footnote && story.StoryLayout.Story.Type == DocxRelatedStoryType.Separator);
-        DocxPlacedRelatedStoryLayout content = layout.Pages[0].PlacedRelatedStories.Single(story => story.StoryLayout.Story.Kind == DocxRelatedStoryKind.Footnote && (story.StoryLayout.Story.Type is null || story.StoryLayout.Story.Type == DocxRelatedStoryType.Normal));
-        return (separator.TopY - separator.Height) - content.TopY;
-    }
-
-    private static double LayoutEndnoteContentGapWithFamilies(string markFamily, string contentFamily)
-    {
-        string input = TestFixtures.WriteTempPackage(".docx", new Dictionary<string, string>
-        {
-            ["[Content_Types].xml"] = """<?xml version="1.0" encoding="UTF-8"?><Types xmlns="http://schemas.openxmlformats.org/package/2006/content-types"><Default Extension="rels" ContentType="application/vnd.openxmlformats-package.relationships+xml"/><Default Extension="xml" ContentType="application/xml"/><Override PartName="/word/document.xml" ContentType="application/vnd.openxmlformats-officedocument.wordprocessingml.document.main+xml"/><Override PartName="/word/endnotes.xml" ContentType="application/vnd.openxmlformats-officedocument.wordprocessingml.endnotes+xml"/></Types>""",
-            ["_rels/.rels"] = """<?xml version="1.0" encoding="UTF-8"?><Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships"><Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/officeDocument" Target="word/document.xml"/></Relationships>""",
-            ["word/_rels/document.xml.rels"] = """<?xml version="1.0" encoding="UTF-8"?><Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships"><Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/endnotes" Target="endnotes.xml"/></Relationships>""",
-            ["word/document.xml"] = """<?xml version="1.0" encoding="UTF-8"?><w:document xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main" xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships"><w:body><w:p><w:r><w:t xml:space="preserve">Body with endnote</w:t></w:r><w:r><w:rPr><w:vertAlign w:val="superscript"/></w:rPr><w:endnoteReference w:id="2"/></w:r></w:p><w:sectPr><w:pgSz w:w="12240" w:h="15840"/></w:sectPr></w:body></w:document>""",
-            ["word/endnotes.xml"] = """<?xml version="1.0" encoding="UTF-8"?><w:endnotes xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main"><w:endnote w:type="separator" w:id="0"><w:p><w:r><w:rPr><w:rFonts w:ascii="MFAM" w:hAnsi="MFAM"/><w:sz w:val="24"/><w:szCs w:val="24"/></w:rPr><w:separator/></w:r></w:p></w:endnote><w:endnote w:type="continuationSeparator" w:id="1"><w:p><w:r><w:continuationSeparator/></w:r></w:p></w:endnote><w:endnote w:id="2"><w:p><w:r><w:rPr><w:rFonts w:ascii="CFAM" w:hAnsi="CFAM"/><w:sz w:val="24"/><w:szCs w:val="24"/></w:rPr><w:t xml:space="preserve">Note body one</w:t></w:r></w:p><w:p><w:r><w:rPr><w:rFonts w:ascii="CFAM" w:hAnsi="CFAM"/><w:sz w:val="24"/><w:szCs w:val="24"/></w:rPr><w:t xml:space="preserve">Note body two</w:t></w:r></w:p></w:endnote></w:endnotes>""".Replace("MFAM", markFamily).Replace("CFAM", contentFamily)
-        });
-        DocxDocument document;
-        using (FileStream stream = File.OpenRead(input))
-        {
-            OoxPackage package = OoxPackage.Open(stream, CancellationToken.None);
-            document = new DocxReader().Read(package, null, CancellationToken.None, OoxPdfDocxMarkupMode.Final);
-        }
-
-        DocxLayout layout = new DocxLayoutEngine(OoxPdfDocxMarkupGeometryMode.PreserveDocumentLayout)
-            .Create(document, new FamilyGapTextMeasurer(new DocxTests.FamilyWidthTextMeasurer()), CancellationToken.None);
-        DocxPlacedRelatedStoryLayout separator = layout.Pages[0].PlacedRelatedStories.Single(story => story.StoryLayout.Story.Kind == DocxRelatedStoryKind.Endnote && story.StoryLayout.Story.Type == DocxRelatedStoryType.Separator);
-        DocxPlacedRelatedStoryLayout content = layout.Pages[0].PlacedRelatedStories.Single(story => story.StoryLayout.Story.Kind == DocxRelatedStoryKind.Endnote && (story.StoryLayout.Story.Type is null || story.StoryLayout.Story.Type == DocxRelatedStoryType.Normal));
-        return (separator.TopY - separator.Height) - content.TopY;
+        var stories = layout.Pages[0].PlacedRelatedStories.Where(story => story.StoryLayout.Story.Kind == kind);
+        var separator = stories.Single(story => story.StoryLayout.Story.Type == DocxRelatedStoryType.Separator);
+        var content = stories.Single(story => story.StoryLayout.Story.Type is null or DocxRelatedStoryType.Normal);
+        return separator.TopY - separator.Height - content.TopY;
     }
 
     private static double LayoutEndnoteContentGapWithWindowsAscender(string markFamily, string contentFamily)
