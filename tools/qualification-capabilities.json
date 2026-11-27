@@ -3731,7 +3731,7 @@
     "PptxChartUnknownLegendPositionResolvesThroughExplicitDefault",
     "PptxChartMissingLegendUsesSceneAuthoritativeHiddenLayout",
     "PptxChartLegendLayoutPreservesTextBodyPropertiesAtRendererBoundary",
-    "PptxChartShapeStylePreservesPictureFillTokens",
+    "PptxChartShapeStyleReadsPictureFillSampling",
     "PptxChartShapeStylePreservesUnsupportedEffectTokens"
   ],
   "pptx-chart-global-options": [

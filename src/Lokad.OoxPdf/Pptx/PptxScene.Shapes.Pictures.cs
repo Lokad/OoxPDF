@@ -128,22 +128,11 @@ internal sealed partial class PptxSceneBuilder
         return PptxSceneImageRecolor.None;
     }
 
-    private static PptxSceneRect ReadPercentageRectangle(XElement element)
-    {
-        string? left = (string?)element.Attribute("l");
-        string? top = (string?)element.Attribute("t");
-        string? right = (string?)element.Attribute("r");
-        string? bottom = (string?)element.Attribute("b");
-        return new PptxSceneRect(
-            ParsePercentage(left),
-            ParsePercentage(top),
-            ParsePercentage(right),
-            ParsePercentage(bottom),
-            left,
-            top,
-            right,
-            bottom);
-    }
+    private static PptxSceneRect ReadPercentageRectangle(XElement element) => new(
+        ParsePercentage((string?)element.Attribute("l")),
+        ParsePercentage((string?)element.Attribute("t")),
+        ParsePercentage((string?)element.Attribute("r")),
+        ParsePercentage((string?)element.Attribute("b")));
 
     private static double ParsePercentage(string? value)
     {
