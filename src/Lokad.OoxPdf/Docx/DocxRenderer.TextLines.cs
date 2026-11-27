@@ -182,17 +182,9 @@ internal sealed partial class DocxRenderer
         {
             foreach (DocxInlineTextBoxLayout box in cell.InlineTextBoxes)
             {
-                foreach (DocxTextLineLayout boxLine in box.TextLines)
+                foreach (DocxTextLineLayout boxLine in EnumerateTextBoxSourceLines(box.TextLines, box.TableRows))
                 {
                     yield return boxLine;
-                }
-
-                foreach (DocxTableRowLayout boxRow in box.TableRows)
-                {
-                    foreach (DocxTextLineLayout boxCellLine in EnumerateTableRowTextLines(boxRow))
-                    {
-                        yield return boxCellLine;
-                    }
                 }
             }
 
@@ -364,18 +356,9 @@ internal sealed partial class DocxRenderer
                 continue;
             }
 
-            foreach (DocxTextLineLayout line in box.TextLines)
+            foreach (DocxTextLineLayout line in EnumerateTextBoxSourceLines(box.TextLines, includeTableRows ? box.TableRows : []))
             {
                 yield return line;
-            }
-
-            if (!includeTableRows) continue;
-            foreach (DocxTableRowLayout row in box.TableRows)
-            {
-                foreach (DocxTextLineLayout cellLine in EnumerateTableRowTextLines(row))
-                {
-                    yield return cellLine;
-                }
             }
         }
     }
@@ -502,24 +485,8 @@ internal sealed partial class DocxRenderer
 
     // Box-only static walk for comment suppression: static text comments keep
     // ballooning while static-box ones suppress by paragraph identity.
-    private static IEnumerable<DocxTextLineLayout> EnumerateStaticTextBoxLines(DocxLayoutPage page)
-    {
-        foreach (DocxInlineTextBoxLayout box in page.StaticInlineTextBoxes)
-        {
-            foreach (DocxTextLineLayout boxLine in box.TextLines)
-            {
-                yield return boxLine;
-            }
-
-            foreach (DocxTableRowLayout boxRow in box.TableRows)
-            {
-                foreach (DocxTextLineLayout boxCellLine in EnumerateTableRowTextLines(boxRow))
-                {
-                    yield return boxCellLine;
-                }
-            }
-        }
-    }
+    private static IEnumerable<DocxTextLineLayout> EnumerateStaticTextBoxLines(DocxLayoutPage page) =>
+        page.StaticInlineTextBoxes.SelectMany(box => EnumerateTextBoxSourceLines(box.TextLines, box.TableRows));
 
     // Suppression uses paragraph identity from placed boxes without mapping coordinates.
     private static IEnumerable<DocxTextLineLayout> EnumerateFloatingDrawingTextBoxSourceLines(DocxFloatingDrawingLayout drawing)
@@ -528,22 +495,15 @@ internal sealed partial class DocxRenderer
             drawing.PlacedTop is null ||
             drawing.TextBoxLayout is not { } textBoxLayout)
         {
-            yield break;
+            return [];
         }
 
-        foreach (DocxTextLineLayout line in textBoxLayout.TextLines)
-        {
-            yield return line;
-        }
-
-        foreach (DocxTableRowLayout row in textBoxLayout.TableRows)
-        {
-            foreach (DocxTextLineLayout cellLine in EnumerateTableRowTextLines(row))
-            {
-                yield return cellLine;
-            }
-        }
+        return EnumerateTextBoxSourceLines(textBoxLayout.TextLines, textBoxLayout.TableRows);
     }
+
+    private static IEnumerable<DocxTextLineLayout> EnumerateTextBoxSourceLines(
+        IReadOnlyList<DocxTextLineLayout> lines, IReadOnlyList<DocxTableRowLayout> rows) =>
+        lines.Concat(rows.SelectMany(EnumerateTableRowTextLines));
 
     private static IEnumerable<DocxTableRowLayout> EnumerateFloatingDrawingTextBoxTableRows(IEnumerable<DocxFloatingDrawingLayout> drawings)
     {
@@ -615,17 +575,9 @@ internal sealed partial class DocxRenderer
 
             foreach (DocxInlineTextBoxLayout box in cell.InlineTextBoxes)
             {
-                foreach (DocxTextLineLayout boxLine in box.TextLines)
+                foreach (DocxTextLineLayout boxLine in EnumerateTextBoxSourceLines(box.TextLines, box.TableRows))
                 {
                     yield return boxLine;
-                }
-
-                foreach (DocxTableRowLayout boxRow in box.TableRows)
-                {
-                    foreach (DocxTextLineLayout boxCellLine in EnumerateTableRowTextLines(boxRow))
-                    {
-                        yield return boxCellLine;
-                    }
                 }
             }
         }
