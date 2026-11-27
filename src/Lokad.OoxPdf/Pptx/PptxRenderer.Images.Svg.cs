@@ -1961,7 +1961,7 @@ internal sealed partial class PptxRenderer
                     cancellationToken.ThrowIfCancellationRequested();
                     if (IsSvgPaintableElement(child))
                         yield return child;
-                    else if (unsupportedElements is not null && child.Name.LocalName == "a")
+                    else if (unsupportedElements is not null)
                         CountUnsupportedSvgElement(child, admittedElements, unsupportedElements);
                 }
             }
@@ -1983,12 +1983,17 @@ internal sealed partial class PptxRenderer
         long? MeasureGeometry(XElement element)
         {
             cancellationToken.ThrowIfCancellationRequested();
-            bool group = IsSvgReferenceContainer(element);
-            if (element.Name.Namespace != source.Name.Namespace ||
-                !(group || IsSvgPaintableElement(element)) ||
-                !HasSupportedSvgReferenceEffects(element, ReadSvgStyleDeclarations(element))) return null;
+            if (element.Name.Namespace != source.Name.Namespace) return null;
 
             long size = 2L * element.Name.LocalName.Length + 5 + MeasureAttributes(element);
+            // Keep nested references as leaves for the omission diagnostic.
+            // Their targets are not needed to paint the surrounding geometry.
+            if (element.Name.LocalName == "use") return size;
+
+            bool group = IsSvgReferenceContainer(element);
+            if (!(group || IsSvgPaintableElement(element)) ||
+                !HasSupportedSvgReferenceEffects(element, ReadSvgStyleDeclarations(element))) return null;
+
             foreach (XElement child in element.Elements())
             {
                 cancellationToken.ThrowIfCancellationRequested();

@@ -607,8 +607,8 @@ internal static partial class SvgTextTests
             </defs>
             <use href="#chained"/><use href="#masked"/><use href="#viewport"/>
             """), diagnostics);
-        AssertEquivalentSvgPaint(Paint(Svg(sibling)), unsupported,
-            "Unsupported references leave the surrounding picture intact.");
+        AssertEquivalentSvgPaint(Paint(Svg(sibling + """<rect width="30" height="20"/>""")), unsupported,
+            "A reference cycle leaves the group's other artwork intact. Masked groups and viewport references keep their fallback.");
         TestAssert.Contains("3 unsupported use elements", diagnostics.Single().Message);
     }
 
@@ -661,17 +661,18 @@ internal static partial class SvgTextTests
         AssertSvgPaintInBothFormats(literal, [hiddenUse, hiddenGroup, transparentUse, transparentGroup, outsideAncestor],
             null, "1 0 0 rg", "0 0 1 rg", "0 1 0 rg");
 
-        var siblingPaint = Paint(Svg(sibling));
+        var literalPaint = Paint(literal);
         foreach (string child in new[]
         {
             """<use href="#accent" display="none" style="display:inline"/>""",
-            """<use href="#accent" opacity="0" style="opacity:.5"/>"""
+            """<use href="#accent" opacity="0" style="opacity:.5"/>""",
+            """<use href="#missing"/>"""
         })
         {
             var diagnostics = new List<OoxPdfDiagnostic>();
             var unsupported = Paint(Reference(child), diagnostics);
-            AssertEquivalentSvgPaint(siblingPaint, unsupported,
-                "A visible chained reference retains the diagnosed fallback.");
+            AssertEquivalentSvgPaint(literalPaint, unsupported,
+                "A skipped nested reference leaves the rest of its group at the authored origin.");
             TestAssert.Contains("1 unsupported use element.", diagnostics.Single().Message);
         }
     }
@@ -727,8 +728,8 @@ internal static partial class SvgTextTests
 
         var diagnostics = new List<OoxPdfDiagnostic>();
         var unsupported = Paint(Reference(nested, """<use href="#badge"/>"""), diagnostics);
-        AssertEquivalentSvgPaint(Paint(Svg(sibling)), unsupported,
-            "An unsupported graphical child omits its instance and preserves the visible sibling.");
+        AssertEquivalentSvgPaint(Paint(literal), unsupported,
+            "A cyclic use leaves the paint servers and neighboring artwork available.");
         TestAssert.Contains("1 unsupported use element.", diagnostics.Single().Message);
     }
 
@@ -765,8 +766,10 @@ internal static partial class SvgTextTests
         TestAssert.Equal(0, diagnostics.Count);
 
         var unsupported = Paint(Referenced(WithinGroup(Link() + """<use href="#badge"/>""")), diagnostics);
-        AssertEquivalentSvgPaint(siblingOnly, unsupported, "The chained reference keeps its omission fallback.");
-        TestAssert.Contains("1 unsupported use element.", diagnostics.Single().Message);
+        AssertEquivalentSvgPaint(literal, unsupported, "A skipped reference leaves the link artwork intact.");
+        TestAssert.Equal(2, diagnostics.Count);
+        TestAssert.Equal(linkDiagnostic, diagnostics[0]);
+        TestAssert.Contains("1 unsupported use element.", diagnostics[1].Message);
     }
 
     public static void SvgDecreasingStopsKeepNativePaintAndOpacityInBothFormats()
