@@ -1894,8 +1894,8 @@ internal sealed partial class PptxRenderer
         double viewHeight, bool hasStylesheet, HashSet<XElement> admittedElements, CancellationToken cancellationToken)
     {
         Dictionary<string, (XElement? Element, long? Characters)>? byId = null;
-        // Limit the total geometry materialized through references to the same
-        // input bound as literal SVG markup. Only one instance is attached at a time.
+        // Limit repeated scans and materialized geometry by the literal SVG
+        // input bound. Only one instance is attached at a time.
         long remainingCharacters = SafeXml.DefaultMaxCharacters;
         foreach (XElement element in elements)
         {
@@ -1938,9 +1938,7 @@ internal sealed partial class PptxRenderer
 
             // The instance inherits at the use site, independently of the
             // definition's ancestors. It borrows the existing group painter.
-            var geometryRoot = source.Name.LocalName == "g"
-                ? new XElement(source)
-                : new XElement(source.Name, source.Attributes());
+            var geometryRoot = CloneSvgReferenceGeometry(source, cancellationToken);
             var instance = new XElement(element.Name.Namespace + "g", element.Attributes(), geometryRoot);
             if (x != 0d || y != 0d)
                 instance.SetAttributeValue("transform", $"{(string?)instance.Attribute("transform")} translate({SvgPathNumber(x)} {SvgPathNumber(y)})");
@@ -1964,34 +1962,54 @@ internal sealed partial class PptxRenderer
     private static long? MeasureSvgReferenceSource(XElement source, CancellationToken cancellationToken)
     {
         if (IsSvgPaintableElement(source)) return MeasureAttributes(source);
+        return MeasureGeometry(source);
 
-        long size = 0;
-        foreach (XNode node in source.DescendantNodesAndSelf())
+        long? MeasureGeometry(XElement element)
         {
             cancellationToken.ThrowIfCancellationRequested();
-            switch (node)
+            bool group = element.Name.LocalName == "g";
+            if (element.Name.Namespace != source.Name.Namespace ||
+                !(group || IsSvgPaintableElement(element)) ||
+                !HasSupportedSvgReferenceEffects(element, ReadSvgStyleDeclarations(element))) return null;
+
+            long size = 2L * element.Name.LocalName.Length + 5 + MeasureAttributes(element);
+            foreach (XElement child in element.Elements())
             {
-                case XElement element when element.Name.Namespace == source.Name.Namespace &&
-                    (ReferenceEquals(element, source) || element.Parent?.Name.LocalName == "g") &&
-                    (element.Name.LocalName == "g" || IsSvgPaintableElement(element)) &&
-                    HasSupportedSvgReferenceEffects(element, ReadSvgStyleDeclarations(element)):
-                    size += 2L * element.Name.LocalName.Length + 5 + MeasureAttributes(element);
-                    break;
-                case XText text:
-                    size += text.Value.Length;
-                    break;
-                case XComment comment:
-                    size += comment.Value.Length + 7L;
-                    break;
-                default:
-                    return null;
+                cancellationToken.ThrowIfCancellationRequested();
+                if (IsSvgReferenceMetadata(child))
+                {
+                    // Only the child element is visited when making an instance.
+                    size += 2L * child.Name.LocalName.Length + 5;
+                    continue;
+                }
+                if (!group || MeasureGeometry(child) is not long childSize) return null;
+                size += childSize;
             }
+            return size;
         }
-        return size;
 
         static long MeasureAttributes(XElement element) =>
             element.Attributes().Sum(attribute => (long)attribute.Name.LocalName.Length + attribute.Value.Length + 4);
     }
+
+    private static XElement CloneSvgReferenceGeometry(XElement source, CancellationToken cancellationToken)
+    {
+        cancellationToken.ThrowIfCancellationRequested();
+        var clone = new XElement(source.Name, source.Attributes());
+        if (source.Name.LocalName == "g")
+        {
+            foreach (XElement child in source.Elements())
+            {
+                cancellationToken.ThrowIfCancellationRequested();
+                if (!IsSvgReferenceMetadata(child))
+                    clone.Add(CloneSvgReferenceGeometry(child, cancellationToken));
+            }
+        }
+        return clone;
+    }
+
+    private static bool IsSvgReferenceMetadata(XElement element) =>
+        element.Name.Namespace == element.Parent?.Name.Namespace && IsSvgMetadataElement(element);
 
     private static string? ReadSvgFragmentReference(XElement element)
     {

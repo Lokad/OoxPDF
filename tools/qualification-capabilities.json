@@ -702,6 +702,7 @@
     "=SvgEncodedLocalFragmentsKeepGradientPaintAndFallbacks",
     "=SvgLocalShapeReferencesPreservePlacementAndPaint",
     "=SvgLocalShapeGroupsPreserveOrderAndInheritedPaint",
+    "=SvgLocalShapeGroupsKeepPaintBesideDescriptiveMetadata",
     "=SvgZeroOpacityReferencesPreserveSurroundingPaintAndDiagnostics",
     "=SvgDecreasingStopsKeepNativePaintAndOpacityInBothFormats",
     "=SvgGradientTemplatesMatchExpandedPaintInBothFormats",

@@ -612,6 +612,26 @@ internal static partial class SvgTextTests
         TestAssert.Contains("3 unsupported use elements", diagnostics.Single().Message);
     }
 
+    public static void SvgLocalShapeGroupsKeepPaintBesideDescriptiveMetadata()
+    {
+        const string circle = """<circle cx="42" cy="20" r="10" fill="blue"/>""";
+        string Shapes(string description) =>
+            $"""<rect width="30" height="20" fill="red">{description}</rect>{circle}""";
+        string Reference(string metadata, string description) =>
+            Svg($"""<defs><g id="tile">{metadata}{Shapes(description)}</g></defs><use href="#tile" x="45" y="20"/>""");
+
+        string literal = Svg($"""<g transform="translate(45 20)">{Shapes("")}</g>""");
+        string reference = Reference("", "");
+        string described = Reference("""
+            <title>Reusable marker</title>
+            <metadata><note:entry xmlns:note="urn:public-test">
+              <rect width="400" height="160" fill="magenta"/>
+              <style>* { display: none }</style>
+            </note:entry></metadata>
+            """, "<desc>First marker</desc>");
+        AssertSvgPaintInBothFormats(literal, [reference, described], null, "1 0 0 rg", "0 0 1 rg");
+    }
+
     public static void SvgDecreasingStopsKeepNativePaintAndOpacityInBothFormats()
     {
         string Picture(string last) => Svg($"""
