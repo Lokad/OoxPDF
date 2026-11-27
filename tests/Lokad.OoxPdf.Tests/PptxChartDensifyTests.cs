@@ -117,9 +117,9 @@ internal static class PptxChartDensifyTests
     // tolerance. The sparse counts only need the declared slots and the one point.
     private static PptxRenderer.ChartIndexedNumberVector[] CreateSparseCountProbe() =>
     [
-        new([new(0, 1d, "1", true, default)], null, null, null, default, [], false),
-        new([], null, null, null, default, [], false),
-        new([], PptxRenderer.MaxChartDensePoints, null, null, default, [], false)
+        new([new(0, 1d, "1", true, default)], null, null, [], false),
+        new([], null, null, [], false),
+        new([], PptxRenderer.MaxChartDensePoints, null, [], false)
     ];
 
     private static void AssertSparseCount(Func<int> count, int expected, string operation)
@@ -256,9 +256,9 @@ internal static class PptxChartDensifyTests
     {
         var (workbook, plot, otherPlot) = CreateMemoContext();
         IReadOnlyList<PptxRenderer.ChartIndexedNumberVector> firstResult =
-            [new([new(0, 5d, "5", true, default)], 1, null, "0", default, [], false)];
+            [new([new(0, 5d, "5", true, default)], 1, "0", [], false)];
         IReadOnlyList<PptxRenderer.ChartIndexedNumberVector> otherResult =
-            [new([new(0, 9d, "9", true, default)], 1, null, "0", default, [], false)];
+            [new([new(0, 9d, "9", true, default)], 1, "0", [], false)];
         TestAssert.True(!ReferenceEquals(firstResult, otherResult), "Factory results must be independently distinguishable.");
         int computations = 0;
         Func<IReadOnlyList<PptxRenderer.ChartIndexedNumberVector>> firstFactory = () => { computations++; return firstResult; };

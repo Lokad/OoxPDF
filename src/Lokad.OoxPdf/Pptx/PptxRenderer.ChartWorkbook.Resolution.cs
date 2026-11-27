@@ -26,13 +26,13 @@ internal sealed partial class PptxRenderer
                 if (!IsSupportedNativeChartPlot(plot.PlotKind) || !plot.Series.Any(HasRenderableCachedValues)) continue;
                 foreach (var series in plot.Series)
                 {
-                    var source = series.DataSources;
+                    var formulas = series.Formulas;
                     if (string.IsNullOrWhiteSpace(series.Name))
                     {
-                        Count(source.Name);
+                        Count(formulas.Name);
                     }
-                    Count(source.Values); Count(source.Categories);
-                    Count(source.XValues); Count(source.YValues); Count(source.BubbleSizes);
+                    Count(formulas.Values); Count(formulas.Categories);
+                    Count(formulas.XValues); Count(formulas.YValues); Count(formulas.BubbleSizes);
                 }
             }
             // Coarse capacity for range records, list/array replacement overlap,
@@ -41,11 +41,11 @@ internal sealed partial class PptxRenderer
             // a result. This is a frame shape estimate, not cumulative work.
             return checked(2048L * cells);
 
-            void Count(PptxSceneChartDataSource source)
+            void Count(string? formula)
             {
                 token.ThrowIfCancellationRequested();
-                if (string.IsNullOrWhiteSpace(source.Formula)) return;
-                string[] areas = SplitRangeAreas(ResolveRangeFormula(source.Formula));
+                if (string.IsNullOrWhiteSpace(formula)) return;
+                string[] areas = SplitRangeAreas(ResolveRangeFormula(formula));
                 long count = 0;
                 foreach (string area in areas.Take(MaxChartRangeAreas))
                 {

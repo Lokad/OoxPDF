@@ -153,7 +153,7 @@ internal sealed partial class PptxRenderer
                     return series.Name.Trim();
                 }
 
-                string? workbookName = workbook?.ReadRangeCells(series.DataSources.Name.Formula)
+                string? workbookName = workbook?.ReadRangeCells(series.Formulas.Name)
                     .FirstOrDefault(cell => cell.HasValue && !string.IsNullOrWhiteSpace(cell.Text)).Text;
                 return string.IsNullOrWhiteSpace(workbookName) ? $"Series {index + 1}" : workbookName.Trim();
             })

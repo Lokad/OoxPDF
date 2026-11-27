@@ -1240,7 +1240,7 @@ internal static class PptxChartRenderingTests
         {
             var series = plot.Series.Single();
             return readText.Invoke(null, [series.CategoryPoints, series.CategoryPointCount, series.CategoryLevels,
-                series.DataSources.Categories, parsedWorkbook, true])!;
+                series.Formulas.Categories, parsedWorkbook, true])!;
         }
         object textVector = TextVector(labelPlot);
         object[] visibleLabelWorkbookPoints = (((System.Collections.IEnumerable?)textVector.GetType().GetMethod("WorkbookPointsForPlotVisibility")?.Invoke(textVector, [true])) ?? throw new InvalidOperationException("Expected visibility-filtered text workbook points.")).Cast<object>().ToArray();
@@ -1269,11 +1269,7 @@ internal static class PptxChartRenderingTests
     {
         var cached = BuildChart("<c:strCache><c:pt idx=\"0\"><c:v>  Cached Name  </c:v></c:pt></c:strCache>");
         var uncached = BuildChart(string.Empty);
-        PptxSceneChartDataSource name = cached.Plots.Single().Series.Single().DataSources.Name;
-        TestAssert.Equal("Sheet1!$B$1:$B$4", name.Formula);
-        TestAssert.Equal(PptxSceneChartDataSourceReferenceKind.StringReference, name.ReferenceKindValue);
-        TestAssert.Equal(PptxSceneChartDataSourceCacheKind.StringCache, name.CacheKindValue);
-        TestAssert.True(name.HasCachedPoints, "The parsed chart retains its name cache.");
+        TestAssert.Equal("Sheet1!$B$1:$B$4", cached.Plots.Single().Series.Single().Formulas.Name);
 
         var sheets = new Dictionary<string, Dictionary<string, string>>(StringComparer.OrdinalIgnoreCase)
         {

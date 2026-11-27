@@ -36,7 +36,7 @@ internal sealed partial class PptxSceneBuilder
                 source.Order,
                 source.OrderValue,
                 ReadChartSeriesName(seriesElement),
-                ReadChartSeriesDataSources(seriesElement),
+                ReadChartSeriesFormulas(seriesElement),
                 ReadChartSeriesNumberPoints(seriesElement, "val"),
                 ReadChartSeriesPointCount(seriesElement, "val"),
                 ReadChartSeriesNumberFormatCode(seriesElement, "val"),
@@ -220,48 +220,33 @@ internal sealed partial class PptxSceneBuilder
         return ReadChartText(series.Element(ChartNamespace + "tx"), false);
     }
 
-    private static PptxSceneChartSeriesDataSources ReadChartSeriesDataSources(XElement series)
+    private static PptxSceneChartSeriesFormulas ReadChartSeriesFormulas(XElement series)
     {
-        return new PptxSceneChartSeriesDataSources(
-            ReadChartDataSource(series.Element(ChartNamespace + "tx"), "strRef", "numRef"),
-            ReadChartDataSource(series.Element(ChartNamespace + "val"), "numRef"),
-            ReadChartDataSource(series.Element(ChartNamespace + "cat"), "strRef", "numRef", "multiLvlStrRef"),
-            ReadChartDataSource(series.Element(ChartNamespace + "xVal"), "numRef", "strRef", "multiLvlStrRef"),
-            ReadChartDataSource(series.Element(ChartNamespace + "yVal"), "numRef"),
-            ReadChartDataSource(series.Element(ChartNamespace + "bubbleSize"), "numRef"));
+        return new PptxSceneChartSeriesFormulas(
+            ReadChartFormula(series.Element(ChartNamespace + "tx"), "strRef", "numRef"),
+            ReadChartFormula(series.Element(ChartNamespace + "val"), "numRef"),
+            ReadChartFormula(series.Element(ChartNamespace + "cat"), "strRef", "numRef", "multiLvlStrRef"),
+            ReadChartFormula(series.Element(ChartNamespace + "xVal"), "numRef", "strRef", "multiLvlStrRef"),
+            ReadChartFormula(series.Element(ChartNamespace + "yVal"), "numRef"),
+            ReadChartFormula(series.Element(ChartNamespace + "bubbleSize"), "numRef"));
     }
 
-    internal static PptxSceneChartDataSource ReadChartDataSource(XElement? container, params string[] referenceKinds)
+    private static string? ReadChartFormula(XElement? container, params string[] referenceKinds)
     {
         if (container is null)
         {
-            return default;
+            return null;
         }
 
         foreach (string referenceKind in referenceKinds)
         {
-            XElement? reference = container.Element(ChartNamespace + referenceKind);
-            if (reference is null)
+            if (container.Element(ChartNamespace + referenceKind) is { } reference)
             {
-                continue;
+                return (string?)reference.Element(ChartNamespace + "f");
             }
-
-            XElement? cache = reference
-                .Elements()
-                .FirstOrDefault(element => element.Name.Namespace == ChartNamespace && element.Name.LocalName.EndsWith("Cache", StringComparison.Ordinal));
-            bool hasCachedPoints = cache?
-                .Descendants(ChartNamespace + "pt")
-                .Any() == true;
-            return new PptxSceneChartDataSource(
-                (string?)reference.Element(ChartNamespace + "f"),
-                ParseChartDataSourceReferenceKind(referenceKind),
-                referenceKind,
-                ParseChartDataSourceCacheKind(cache?.Name.LocalName),
-                cache?.Name.LocalName ?? string.Empty,
-                hasCachedPoints);
         }
 
-        return default;
+        return null;
     }
 
     internal static string? ReadChartText(XElement? text, bool trimLiteral)

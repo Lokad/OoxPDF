@@ -26,9 +26,6 @@ internal static partial class PptxWorkbookOwnershipTests
         {
             using var cancellation = new CancellationTokenSource();
             var workbook = Read(Parts(PptxTests.EmbeddedChartWorkbook()), cancellation.Token);
-            var source = new PptxSceneChartDataSource("Sheet1!A1:A100000",
-                PptxSceneChartDataSourceReferenceKind.NumberReference, "numRef",
-                PptxSceneChartDataSourceCacheKind.NumberCache, "numCache", true);
             MethodInfo projection = typeof(PptxRenderer).GetMethod(consumer, BindingFlags.NonPublic | BindingFlags.Static)!;
             cancellation.Cancel();
             var failure = TestAssert.Throws<OperationCanceledException>(() => Invoke());
@@ -36,7 +33,7 @@ internal static partial class PptxWorkbookOwnershipTests
 
             void Invoke()
             {
-                try { projection.Invoke(null, [workbook, source]); }
+                try { projection.Invoke(null, [workbook, "Sheet1!A1:A100000"]); }
                 catch (TargetInvocationException ex) { throw ex.InnerException ?? ex; }
             }
         }

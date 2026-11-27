@@ -394,7 +394,7 @@ internal sealed record PptxSceneChartSeries(
     int? Order,
     string OrderValue,
     string? Name,
-    PptxSceneChartSeriesDataSources DataSources,
+    PptxSceneChartSeriesFormulas Formulas,
     IReadOnlyList<PptxSceneChartNumberPoint> ValuePoints,
     int? ValuePointCount,
     string? ValueFormatCode,
@@ -450,37 +450,13 @@ internal readonly record struct PptxSceneChartStringPoint(
     string Text,
     bool HasText);
 
-internal sealed record PptxSceneChartSeriesDataSources(
-    PptxSceneChartDataSource Name,
-    PptxSceneChartDataSource Values,
-    PptxSceneChartDataSource Categories,
-    PptxSceneChartDataSource XValues,
-    PptxSceneChartDataSource YValues,
-    PptxSceneChartDataSource BubbleSizes);
-
-internal readonly record struct PptxSceneChartDataSource(
-    string? Formula,
-    PptxSceneChartDataSourceReferenceKind ReferenceKindValue,
-    string ReferenceKind,
-    PptxSceneChartDataSourceCacheKind CacheKindValue,
-    string CacheKind,
-    bool HasCachedPoints);
-
-internal enum PptxSceneChartDataSourceReferenceKind
-{
-    Unknown,
-    StringReference,
-    NumberReference,
-    MultiLevelStringReference
-}
-
-internal enum PptxSceneChartDataSourceCacheKind
-{
-    Unknown,
-    StringCache,
-    NumberCache,
-    MultiLevelStringCache
-}
+internal sealed record PptxSceneChartSeriesFormulas(
+    string? Name,
+    string? Values,
+    string? Categories,
+    string? XValues,
+    string? YValues,
+    string? BubbleSizes);
 
 internal sealed record PptxSceneChartMarker(
     bool IsDefined,

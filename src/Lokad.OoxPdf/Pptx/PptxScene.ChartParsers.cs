@@ -35,28 +35,6 @@ internal sealed partial class PptxSceneBuilder
         };
     }
 
-    internal static PptxSceneChartDataSourceReferenceKind ParseChartDataSourceReferenceKind(string? referenceKind)
-    {
-        return referenceKind switch
-        {
-            "strRef" => PptxSceneChartDataSourceReferenceKind.StringReference,
-            "numRef" => PptxSceneChartDataSourceReferenceKind.NumberReference,
-            "multiLvlStrRef" => PptxSceneChartDataSourceReferenceKind.MultiLevelStringReference,
-            _ => PptxSceneChartDataSourceReferenceKind.Unknown
-        };
-    }
-
-    internal static PptxSceneChartDataSourceCacheKind ParseChartDataSourceCacheKind(string? cacheKind)
-    {
-        return cacheKind switch
-        {
-            "strCache" => PptxSceneChartDataSourceCacheKind.StringCache,
-            "numCache" => PptxSceneChartDataSourceCacheKind.NumberCache,
-            "multiLvlStrCache" => PptxSceneChartDataSourceCacheKind.MultiLevelStringCache,
-            _ => PptxSceneChartDataSourceCacheKind.Unknown
-        };
-    }
-
     internal static PptxSceneChartDisplayBlanksAs ParseChartDisplayBlanksAs(string? displayBlanksAs)
     {
         return displayBlanksAs switch

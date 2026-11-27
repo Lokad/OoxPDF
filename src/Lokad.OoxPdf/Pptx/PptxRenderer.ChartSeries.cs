@@ -309,7 +309,7 @@ internal sealed partial class PptxRenderer
                 series.ValuePoints,
                 series.ValuePointCount,
                 series.ValueFormatCode,
-                series.DataSources.Values,
+                series.Formulas.Values,
                 workbook,
                 plotVisibleOnly))
             .ToArray();
@@ -332,21 +332,21 @@ internal sealed partial class PptxRenderer
                     item.XValuePoints,
                     item.XValuePointCount,
                     item.XValueFormatCode,
-                    item.DataSources.XValues,
+                    item.Formulas.XValues,
                     workbook,
                     plotVisibleOnly),
                 BuildChartIndexedNumberVector(
                     item.YValuePoints,
                     item.YValuePointCount,
                     item.YValueFormatCode,
-                    item.DataSources.YValues,
+                    item.Formulas.YValues,
                     workbook,
                     plotVisibleOnly),
                 BuildChartIndexedNumberVector(
                     item.BubbleSizePoints,
                     item.BubbleSizePointCount,
                     item.BubbleSizeFormatCode,
-                    item.DataSources.BubbleSizes,
+                    item.Formulas.BubbleSizes,
                     workbook,
                     plotVisibleOnly),
                 readBubbleSize))
@@ -360,7 +360,7 @@ internal sealed partial class PptxRenderer
                 series.CategoryPoints,
                 series.CategoryPointCount,
                 series.CategoryLevels,
-                series.DataSources.Categories,
+                series.Formulas.Categories,
                 workbook,
                 plotVisibleOnly))
             .FirstOrDefault(vector => vector.Points.Count != 0 || vector.PointCount is not null);
@@ -558,14 +558,14 @@ internal sealed partial class PptxRenderer
         IReadOnlyList<PptxSceneChartNumberPoint> scenePoints,
         int? pointCount,
         string? formatCode,
-        PptxSceneChartDataSource source,
+        string? formula,
         ChartWorkbookData? workbook,
         bool plotVisibleOnly)
     {
-        IReadOnlyList<ChartIndexedNumberPoint> workbookPoints = ReadWorkbookNumberPoints(workbook, source);
+        IReadOnlyList<ChartIndexedNumberPoint> workbookPoints = ReadWorkbookNumberPoints(workbook, formula);
         IReadOnlyList<ChartIndexedNumberPoint> points = scenePoints.Select(ToChartIndexedNumberPoint).ToArray();
         pointCount ??= InferPointCount(points.Count == 0 ? null : points.Max(static point => point.Index));
-        return new ChartIndexedNumberVector(points, pointCount, source.Formula, formatCode, source, workbookPoints, plotVisibleOnly);
+        return new ChartIndexedNumberVector(points, pointCount, formatCode, workbookPoints, plotVisibleOnly);
     }
 
     private static ChartIndexedNumberPoint ToChartIndexedNumberPoint(PptxSceneChartNumberPoint point)
@@ -582,17 +582,17 @@ internal sealed partial class PptxRenderer
         IReadOnlyList<PptxSceneChartStringPoint> scenePoints,
         int? pointCount,
         IReadOnlyList<IReadOnlyList<PptxSceneChartStringPoint>> categoryLevels,
-        PptxSceneChartDataSource source,
+        string? formula,
         ChartWorkbookData? workbook,
         bool plotVisibleOnly)
     {
-        IReadOnlyList<ChartIndexedTextPoint> workbookPoints = ReadWorkbookTextPoints(workbook, source);
+        IReadOnlyList<ChartIndexedTextPoint> workbookPoints = ReadWorkbookTextPoints(workbook, formula);
         IReadOnlyList<ChartIndexedTextPoint> points = scenePoints.Select(ToChartIndexedTextPoint).ToArray();
         IReadOnlyList<IReadOnlyList<ChartIndexedTextPoint>> levels = categoryLevels
             .Select(level => level.Select(ToChartIndexedTextPoint).ToArray())
             .ToArray();
         pointCount ??= InferPointCount(points.Count == 0 ? null : points.Max(static point => point.Index));
-        return new ChartIndexedTextVector(points, pointCount, levels, source.Formula, source, workbookPoints, plotVisibleOnly);
+        return new ChartIndexedTextVector(points, pointCount, levels, workbookPoints, plotVisibleOnly);
     }
 
     private static ChartIndexedTextPoint ToChartIndexedTextPoint(PptxSceneChartStringPoint point)
@@ -604,10 +604,10 @@ internal sealed partial class PptxRenderer
             default);
     }
 
-    private static IReadOnlyList<ChartIndexedNumberPoint> ReadWorkbookNumberPoints(ChartWorkbookData? workbook, PptxSceneChartDataSource source)
+    private static IReadOnlyList<ChartIndexedNumberPoint> ReadWorkbookNumberPoints(ChartWorkbookData? workbook, string? formula)
     {
         return workbook?
-            .ReadRangeCells(source.Formula)
+            .ReadRangeCells(formula)
             .Select(cell => new ChartIndexedNumberPoint(
                 cell.Index,
                 double.TryParse(cell.Text, NumberStyles.Float, CultureInfo.InvariantCulture, out double value) ? value : null,
@@ -617,10 +617,10 @@ internal sealed partial class PptxRenderer
             .ToArray() ?? [];
     }
 
-    private static IReadOnlyList<ChartIndexedTextPoint> ReadWorkbookTextPoints(ChartWorkbookData? workbook, PptxSceneChartDataSource source)
+    private static IReadOnlyList<ChartIndexedTextPoint> ReadWorkbookTextPoints(ChartWorkbookData? workbook, string? formula)
     {
         return workbook?
-            .ReadRangeCells(source.Formula)
+            .ReadRangeCells(formula)
             .Select(cell => new ChartIndexedTextPoint(cell.Index, cell.Text, cell.HasValue && !string.IsNullOrWhiteSpace(cell.Text), cell))
             .ToArray() ?? [];
     }
@@ -688,14 +688,14 @@ internal sealed partial class PptxRenderer
                     series.ValuePoints,
                     series.ValuePointCount,
                     series.ValueFormatCode,
-                    series.DataSources.Values,
+                    series.Formulas.Values,
                     workbook,
                     plotVisibleOnly: true);
                 ChartIndexedTextVector categories = BuildChartIndexedTextVector(
                     series.CategoryPoints,
                     series.CategoryPointCount,
                     series.CategoryLevels,
-                    series.DataSources.Categories,
+                    series.Formulas.Categories,
                     workbook,
                     plotVisibleOnly: true);
                 return Math.Max(values.PointCount ?? 0, categories.PointCount ?? 0);

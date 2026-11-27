@@ -46,9 +46,7 @@ internal sealed partial class PptxRenderer
     internal readonly record struct ChartIndexedNumberVector(
         IReadOnlyList<ChartIndexedNumberPoint> Points,
         int? PointCount,
-        string? Formula,
         string? FormatCode,
-        PptxSceneChartDataSource Source,
         IReadOnlyList<ChartIndexedNumberPoint> WorkbookPoints,
         bool PlotVisibleOnly)
     {
@@ -157,8 +155,6 @@ internal sealed partial class PptxRenderer
         IReadOnlyList<ChartIndexedTextPoint> Points,
         int? PointCount,
         IReadOnlyList<IReadOnlyList<ChartIndexedTextPoint>> Levels,
-        string? Formula,
-        PptxSceneChartDataSource Source,
         IReadOnlyList<ChartIndexedTextPoint> WorkbookPoints,
         bool PlotVisibleOnly)
     {

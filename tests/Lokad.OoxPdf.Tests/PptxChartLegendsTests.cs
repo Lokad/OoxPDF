@@ -642,7 +642,7 @@ internal static partial class PptxChartLegendsTests
         TestAssert.Equal(string.Empty, string.Join(",", plotArea.UnsupportedEffectNames));
     }
 
-    public static void PptxScenePreservesChartSeriesDataSourceReferences()
+    public static void PptxSceneKeepsEmptyAndPopulatedChartDataSources()
     {
         PptxSceneChart? chart = PptxTests.BuildSingleChartScene("""
             <?xml version="1.0" encoding="UTF-8"?>
@@ -663,66 +663,19 @@ internal static partial class PptxChartLegendsTests
             """);
 
         PptxSceneChartSeries lineSeries = chart?.Plots[0].Series[0] ?? throw new InvalidOperationException("Expected line chart series.");
-        TestAssert.Equal("Sheet1!$B$1", lineSeries.DataSources.Name.Formula ?? string.Empty);
-        TestAssert.Equal(PptxSceneChartDataSourceReferenceKind.StringReference, lineSeries.DataSources.Name.ReferenceKindValue);
-        TestAssert.Equal("strRef", lineSeries.DataSources.Name.ReferenceKind);
-        TestAssert.Equal(PptxSceneChartDataSourceCacheKind.StringCache, lineSeries.DataSources.Name.CacheKindValue);
-        TestAssert.Equal("strCache", lineSeries.DataSources.Name.CacheKind);
-        TestAssert.True(!lineSeries.DataSources.Name.HasCachedPoints, "Expected empty string cache to preserve the formula without inventing cached points.");
-        TestAssert.Equal("Sheet1!$A$2:$A$4", lineSeries.DataSources.Categories.Formula ?? string.Empty);
-        TestAssert.Equal(PptxSceneChartDataSourceReferenceKind.MultiLevelStringReference, lineSeries.DataSources.Categories.ReferenceKindValue);
-        TestAssert.Equal("multiLvlStrRef", lineSeries.DataSources.Categories.ReferenceKind);
-        TestAssert.Equal(PptxSceneChartDataSourceCacheKind.MultiLevelStringCache, lineSeries.DataSources.Categories.CacheKindValue);
-        TestAssert.Equal("multiLvlStrCache", lineSeries.DataSources.Categories.CacheKind);
-        TestAssert.Equal("Sheet1!$B$2:$B$4", lineSeries.DataSources.Values.Formula ?? string.Empty);
-        TestAssert.Equal(PptxSceneChartDataSourceReferenceKind.NumberReference, lineSeries.DataSources.Values.ReferenceKindValue);
-        TestAssert.Equal("numRef", lineSeries.DataSources.Values.ReferenceKind);
-        TestAssert.Equal(PptxSceneChartDataSourceCacheKind.NumberCache, lineSeries.DataSources.Values.CacheKindValue);
-        TestAssert.Equal("numCache", lineSeries.DataSources.Values.CacheKind);
-        TestAssert.True(!lineSeries.DataSources.Values.HasCachedPoints, "Expected formula-only numeric references to remain distinguishable from cached values.");
+        TestAssert.Equal("Sheet1!$B$1", lineSeries.Formulas.Name);
+        TestAssert.Equal("Sheet1!$A$2:$A$4", lineSeries.Formulas.Categories);
+        TestAssert.Equal("Sheet1!$B$2:$B$4", lineSeries.Formulas.Values);
+        TestAssert.True(lineSeries.Name is null && lineSeries.CategoryPoints.Count == 0 && lineSeries.ValuePoints.Count == 0,
+            "An empty name, category or value cache leaves formula resolution available without inventing cached content.");
 
         PptxSceneChartSeries scatterSeries = chart?.Plots[1].Series[0] ?? throw new InvalidOperationException("Expected scatter chart series.");
-        TestAssert.Equal("Sheet2!$A$2:$A$4", scatterSeries.DataSources.XValues.Formula ?? string.Empty);
-        TestAssert.Equal(PptxSceneChartDataSourceReferenceKind.NumberReference, scatterSeries.DataSources.XValues.ReferenceKindValue);
-        TestAssert.Equal(PptxSceneChartDataSourceCacheKind.NumberCache, scatterSeries.DataSources.XValues.CacheKindValue);
-        TestAssert.True(scatterSeries.DataSources.XValues.HasCachedPoints, "Expected x-value cache point presence in the scene model.");
-        TestAssert.Equal("Sheet2!$B$2:$B$4", scatterSeries.DataSources.YValues.Formula ?? string.Empty);
-        TestAssert.Equal(PptxSceneChartDataSourceReferenceKind.NumberReference, scatterSeries.DataSources.YValues.ReferenceKindValue);
-        TestAssert.Equal(PptxSceneChartDataSourceCacheKind.NumberCache, scatterSeries.DataSources.YValues.CacheKindValue);
-        TestAssert.True(scatterSeries.DataSources.YValues.HasCachedPoints, "Expected y-value cache point presence in the scene model.");
-        TestAssert.Equal("Sheet2!$C$2:$C$4", scatterSeries.DataSources.BubbleSizes.Formula ?? string.Empty);
-        TestAssert.Equal(PptxSceneChartDataSourceReferenceKind.NumberReference, scatterSeries.DataSources.BubbleSizes.ReferenceKindValue);
-        TestAssert.Equal(PptxSceneChartDataSourceCacheKind.NumberCache, scatterSeries.DataSources.BubbleSizes.CacheKindValue);
-        TestAssert.True(!scatterSeries.DataSources.BubbleSizes.HasCachedPoints, "Expected empty bubble-size cache to remain explicit.");
-    }
-
-    public static void PptxSceneKeepsEmptyAndPopulatedChartDataSources()
-    {
-        PptxSceneChart? chart = PptxTests.BuildSingleChartScene("""
-            <?xml version="1.0" encoding="UTF-8"?>
-            <c:chartSpace xmlns:c="http://schemas.openxmlformats.org/drawingml/2006/chart">
-              <c:chart><c:plotArea>
-                <c:lineChart><c:ser>
-                  <c:tx><c:strRef><c:f>Sheet1!$B$1</c:f><c:strCache/></c:strRef></c:tx>
-                  <c:cat><c:multiLvlStrRef><c:f>Sheet1!$A$2:$A$4</c:f><c:multiLvlStrCache/></c:multiLvlStrRef></c:cat>
-                  <c:val><c:numRef><c:f>Sheet1!$B$2:$B$4</c:f><c:numCache><c:pt idx="0"><c:v>7</c:v></c:pt></c:numCache></c:numRef></c:val>
-                </c:ser></c:lineChart>
-              </c:plotArea></c:chart>
-            </c:chartSpace>
-            """);
-
-        var sources = TestAssert.NotNull(chart).Plots.Single().Series.Single().DataSources;
-        TestAssert.Equal("Sheet1!$B$1", sources.Name.Formula);
-        TestAssert.Equal("Sheet1!$A$2:$A$4", sources.Categories.Formula);
-        TestAssert.Equal("Sheet1!$B$2:$B$4", sources.Values.Formula);
-        TestAssert.Equal("strRef", sources.Name.ReferenceKind);
-        TestAssert.Equal("multiLvlStrRef", sources.Categories.ReferenceKind);
-        TestAssert.Equal("numRef", sources.Values.ReferenceKind);
-        TestAssert.Equal("strCache", sources.Name.CacheKind);
-        TestAssert.Equal("multiLvlStrCache", sources.Categories.CacheKind);
-        TestAssert.Equal("numCache", sources.Values.CacheKind);
-        TestAssert.True(!sources.Name.HasCachedPoints && !sources.Categories.HasCachedPoints && sources.Values.HasCachedPoints,
-            "Presence of a cache declaration and populated data remain independent.");
+        TestAssert.Equal("Sheet2!$A$2:$A$4", scatterSeries.Formulas.XValues);
+        TestAssert.Equal("Sheet2!$B$2:$B$4", scatterSeries.Formulas.YValues);
+        TestAssert.Equal("Sheet2!$C$2:$C$4", scatterSeries.Formulas.BubbleSizes);
+        TestAssert.Equal<double?>(1d, scatterSeries.XValuePoints.Single().Value);
+        TestAssert.Equal<double?>(2d, scatterSeries.YValuePoints.Single().Value);
+        TestAssert.Equal(0, scatterSeries.BubbleSizePoints.Count);
     }
 
     public static void PptxSceneParsesChartPlotNumericOptions()
@@ -1073,10 +1026,11 @@ internal static partial class PptxChartLegendsTests
         PptxSceneChart? chart = PptxTests.BuildSingleChartScene(chartXml);
 
         PptxSceneChartSeries series = chart?.Plots[0].Series[0] ?? throw new InvalidOperationException("Expected chart series.");
-        TestAssert.Equal(PptxSceneChartDataSourceReferenceKind.MultiLevelStringReference, series.DataSources.Categories.ReferenceKindValue);
-        TestAssert.True(series.DataSources.Categories.HasCachedPoints, "Expected multi-level category cache point presence to survive scene parsing.");
+        TestAssert.Equal("Sheet1!$A$2:$B$4", series.Formulas.Categories);
         TestAssert.Equal(3, series.CategoryPointCount ?? 0);
-        TestAssert.Equal(5, series.CategoryPoints.Count);
+        TestAssert.True(series.CategoryPoints.Select(point => (point.Index, point.Text)).SequenceEqual(
+            [(0, "FY26"), (2, "FY27"), (0, "Q1"), (1, ""), (2, "Q3")]),
+            "Sparse and blank category points retain their authored order for rendering.");
         TestAssert.Equal(2, series.CategoryLevels.Count);
         TestAssert.Equal(2, series.CategoryLevels[0].Count);
         TestAssert.Equal(0, series.CategoryLevels[0][0].Index);
@@ -1088,28 +1042,6 @@ internal static partial class PptxChartLegendsTests
         TestAssert.Equal(string.Empty, series.CategoryLevels[1][1].Text);
         TestAssert.True(series.CategoryLevels[1][1].HasText, "Expected blank multi-level category value to preserve its value element.");
 
-        System.Reflection.MethodInfo readCategoryLabelVector = typeof(PptxRenderer)
-            .GetMethods(System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Static)
-            .Single(method => method.Name == "ReadSceneCategoryLabelVector" && method.GetParameters().Length == 3);
-        object rawVector = readCategoryLabelVector.Invoke(null, [TestAssert.NotNull(chart).Plots[0], null, true]) ?? throw new InvalidOperationException("Expected parsed category-label vector.");
-        TestAssert.Equal("Sheet1!$A$2:$B$4", (string?)rawVector.GetType().GetProperty("Formula")?.GetValue(rawVector) ?? string.Empty);
-        TestAssert.Equal(3, (int?)rawVector.GetType().GetProperty("PointCount")?.GetValue(rawVector) ?? 0);
-
-        object rawSource = rawVector.GetType().GetProperty("Source")?.GetValue(rawVector) ?? throw new InvalidOperationException("Expected parsed category source metadata.");
-        TestAssert.Equal(PptxSceneChartDataSourceReferenceKind.MultiLevelStringReference, (PptxSceneChartDataSourceReferenceKind?)rawSource.GetType().GetProperty("ReferenceKindValue")?.GetValue(rawSource) ?? default);
-        TestAssert.Equal(PptxSceneChartDataSourceCacheKind.MultiLevelStringCache, (PptxSceneChartDataSourceCacheKind?)rawSource.GetType().GetProperty("CacheKindValue")?.GetValue(rawSource) ?? default);
-        TestAssert.True((bool?)rawSource.GetType().GetProperty("HasCachedPoints")?.GetValue(rawSource) == true, "Expected parsed multi-level category cache point presence to survive fallback parsing.");
-
-        object[] rawPoints = (((System.Collections.IEnumerable?)rawVector.GetType().GetProperty("Points")?.GetValue(rawVector)) ?? throw new InvalidOperationException("Expected parsed category points.")).Cast<object>().ToArray();
-        TestAssert.Equal(5, rawPoints.Length);
-        object[] rawLevels = (((System.Collections.IEnumerable?)rawVector.GetType().GetProperty("Levels")?.GetValue(rawVector)) ?? throw new InvalidOperationException("Expected parsed category levels.")).Cast<object>().ToArray();
-        TestAssert.Equal(2, rawLevels.Length);
-        object[] rawFirstLevel = (((System.Collections.IEnumerable?)rawLevels[0]) ?? throw new InvalidOperationException("Expected first raw category level.")).Cast<object>().ToArray();
-        object[] rawSecondLevel = (((System.Collections.IEnumerable?)rawLevels[1]) ?? throw new InvalidOperationException("Expected second raw category level.")).Cast<object>().ToArray();
-        TestAssert.Equal(2, rawFirstLevel.Length);
-        TestAssert.Equal(3, rawSecondLevel.Length);
-        TestAssert.Equal(string.Empty, (string?)rawSecondLevel[1].GetType().GetProperty("Text")?.GetValue(rawSecondLevel[1]) ?? string.Empty);
-        TestAssert.True((bool?)rawSecondLevel[1].GetType().GetProperty("HasText")?.GetValue(rawSecondLevel[1]) == true, "Expected parsed blank multi-level category value to preserve its value element.");
     }
 
     public static void PptxScenePreservesChartNumberFormatMetadata()
