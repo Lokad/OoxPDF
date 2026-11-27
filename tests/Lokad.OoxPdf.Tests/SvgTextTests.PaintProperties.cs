@@ -618,23 +618,29 @@ internal static partial class SvgTextTests
         const string before = """<rect width="90" height="36" fill="red"/>""";
         const string after = """<rect x="115" width="40" height="24" fill="blue"/>""";
         const string peer = """<rect x="260" y="20" width="42" height="35" fill="lime"/>""";
-        const string paint = """font-family="DejaVu Sans" color="#112233" opacity=".5" """;
+        const string paint = """font-family="DejaVu Sans" opacity=".5" """;
+        const string groupColor = """color="#112233" """;
+        const string directColor = """color="#2254B4" """;
+        const string directLabelInk = "0.133 0.329 0.706 rg";
         string literal = Svg($"""
-            <g transform="translate(12 15)" font-size="24" {paint}><g>{before}{label}{after}</g></g>
+            <g transform="translate(12 15)" font-size="24" {paint}{groupColor}><g>{before}{label}{after}</g></g>
             {peer}
-            <g transform="translate(165 55)" font-size="24" {paint}>{label}</g>
+            <g transform="translate(165 55)" font-size="24" {paint}{directColor}>{label}</g>
             """);
         string referenced = Svg($"""
             <defs><g display="none" font-family="Unused Definition Face" color="orange">
               <g id="tile">{before}{label}{after}</g>
               {label.Insert(5, """ id="caption" """)}
             </g></defs>
-            <use href="#tile" x="12" y="15" font-size="150%" {paint}/>
+            <use href="#tile" x="12" y="15" font-size="150%" {paint}{groupColor}/>
             {peer}
-            <use href="#caption" x="165" y="55" font-size="150%" {paint}/>
+            <use href="#caption" x="165" y="55" font-size="150%" {paint}{directColor}/>
             """);
-        AssertSvgPaintInBothFormats(literal, referenced, pdf => TestAssert.Equal(10, LabelPaths(pdf)),
-            "1 0 0 rg", "0 0 1 rg", "0 1 0 rg", LabelColor, "/ca 0.5 /CA 0.5");
+        AssertSvgPaintInBothFormats(literal, referenced, pdf =>
+        {
+            TestAssert.Equal(5, LabelPaths(pdf, LabelColor));
+            TestAssert.Equal(5, LabelPaths(pdf, directLabelInk));
+        }, "1 0 0 rg", "0 0 1 rg", "0 1 0 rg", "/ca 0.5 /CA 0.5");
     }
 
     public static void SvgLocalShapeGroupsKeepPaintBesideDescriptiveMetadata()
