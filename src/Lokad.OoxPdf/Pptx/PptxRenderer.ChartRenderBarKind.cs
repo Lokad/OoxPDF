@@ -213,10 +213,12 @@ internal sealed partial class PptxRenderer
                 }
                 bool valueAxisLabelsVisible = IsSceneChartAxisLabelVisible(valueSceneAxis);
                 RenderBarChart(graphics, theme, colorMap, barPalette, chartLayout.PlotAreaBox, plotBox, barSeriesVectors, horizontalBars, barOptions, seriesFills, pointFills, pointStrokes, valueAxisOptions, axesStyle, plotAreaStyle, valueExtents, valueAxisLabelsVisible, chartLayout.ManualPlotLayoutApplied, barStyleId, resolvedCategory, context: context);
-                        PptxSceneChartAxis? secondaryValueSceneAxis = null;
+                PptxSceneChartAxis? secondaryValueSceneAxis = null;
                 ChartValueExtents secondaryValueExtents = default;
                 ChartAxisUnits secondaryAxisUnits = default;
                 bool secondaryAxisReversed = false;
+                // The first column plot paints the chart's shared secondary axis.
+                ChartSeriesStroke? remainingSecondaryStroke = horizontalBars ? axesStyle.SecondaryValueAxis : null;
                 foreach (PptxSceneChartPlot extraBarPlot in barPlots.Skip(1))
                 {
                     IReadOnlyList<ChartIndexedNumberVector> extraSeriesVectors = ReadSharedChartSeriesVectors(extraBarPlot, workbook, plotVisibleOnly);
@@ -268,12 +270,17 @@ internal sealed partial class PptxRenderer
                         extraPointFills,
                         extraPointStrokes,
                         extraValueAxisOptions with { MajorGridlines = false, MinorGridlines = false, GridlineStyle = ChartGridlineStyle.Empty },
-                        axesStyle with { ValueAxisVisible = false, CategoryAxisVisible = false },
+                        axesStyle with { ValueAxisVisible = false, CategoryAxisVisible = false, SecondaryValueAxis = remainingSecondaryStroke },
                         ChartShapeStyle.Empty,
                         extraValueExtents,
                         valueAxisLabelsVisible: false,
                         manualPlotLayoutApplied: chartLayout.ManualPlotLayoutApplied,
                         barStyleId, categoryPlacement: sharedValueAxis && extraHorizontalBars ? resolvedCategory : null, context: context);
+                    if (!extraHorizontalBars)
+                    {
+                        remainingSecondaryStroke = null;
+                    }
+
                     await RenderBarDataLabelsAsync(
                         theme,
                         colorMap,

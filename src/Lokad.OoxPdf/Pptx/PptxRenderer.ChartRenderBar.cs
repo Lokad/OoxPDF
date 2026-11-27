@@ -121,14 +121,19 @@ internal sealed partial class PptxRenderer
                 }
             }
 
-            if (!horizontalBars && axesStyle.SecondaryValueAxis is { } secondaryValueAxisStroke)
+            if (!horizontalBars && axesStyle.SecondaryValueAxis is { Alpha: > 0.001d } secondaryValueAxisStroke)
             {
-                if (secondaryValueAxisStroke.Alpha > 0.001d)
+                SetChartStroke(graphics, secondaryValueAxisStroke);
+                double axisX = axesStyle.SecondaryValueAxisRightSide ? plotX + plotWidth : plotX;
+                RenderInChartPlotAreaClip(graphics, plotClipBox, () =>
                 {
-                    SetChartStroke(graphics, secondaryValueAxisStroke);
-                    double axisX = axesStyle.SecondaryValueAxisRightSide ? plotX + plotWidth : plotX;
-                    RenderInChartPlotAreaClip(graphics, plotClipBox, () => graphics.StrokeLine(axisX, plotY, axisX, plotY + plotHeight));
-                }
+                    if (secondaryValueAxisStroke.Alpha < 1d)
+                    {
+                        graphics.SetAlpha(1d, secondaryValueAxisStroke.Alpha);
+                    }
+
+                    graphics.StrokeLine(axisX, plotY, axisX, plotY + plotHeight);
+                });
             }
 
             if (stacked)

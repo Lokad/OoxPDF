@@ -4032,6 +4032,9 @@
   ],
   "pptx-chart-axis-selection": [
     "PptxChartAxisCaptionsKeepTheirAuthoredOpacity",
+    "=PptxSyntheticChartCategoryAxisLineUsesCrossingTick",
+    "=PptxSyntheticChartValueAxisStrokeUsesAxisPosition",
+    "=PptxSyntheticChartSecondaryValueAxisStrokeUsesOwnAxisPosition",
     "PptxScatterAndBubbleHideOnlyAuthoredValueAxisCaptions",
     "PptxChartAxisSelectionKeepsDeclaredOrderAndMissingSources",
     "PptxChartSceneAxesKeepParsedSourcesAndDateContext",

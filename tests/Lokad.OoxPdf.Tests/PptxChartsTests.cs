@@ -2212,206 +2212,72 @@ internal static partial class PptxChartsTests
 
     public static void PptxSyntheticChartCategoryAxisLineUsesCrossingTick()
     {
-        string input = TestFixtures.WriteTempPackage(".pptx", new Dictionary<string, byte[]>
-        {
-            ["[Content_Types].xml"] = TestFixtures.Utf8(PptxTests.BasicContentTypes()),
-            ["_rels/.rels"] = TestFixtures.Utf8(PptxTests.PackageRelationship()),
-            ["ppt/_rels/presentation.xml.rels"] = TestFixtures.Utf8(PptxTests.PresentationRelationship()),
-            ["ppt/presentation.xml"] = TestFixtures.Utf8(PptxTests.BasicPresentation()),
-            ["ppt/slides/_rels/slide1.xml.rels"] = TestFixtures.Utf8("""
-                <?xml version="1.0" encoding="UTF-8"?>
-                <Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">
-                  <Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/chart" Target="../charts/chart1.xml"/>
-                </Relationships>
-                """),
-            ["ppt/slides/slide1.xml"] = TestFixtures.Utf8("""
-                <?xml version="1.0" encoding="UTF-8"?>
-                <p:sld xmlns:p="http://schemas.openxmlformats.org/presentationml/2006/main"
-                       xmlns:a="http://schemas.openxmlformats.org/drawingml/2006/main"
-                       xmlns:c="http://schemas.openxmlformats.org/drawingml/2006/chart"
-                       xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships">
-                  <p:cSld><p:spTree>
-                    <p:graphicFrame>
-                      <p:xfrm><a:off x="914400" y="914400"/><a:ext cx="3657600" cy="2743200"/></p:xfrm>
-                      <a:graphic><a:graphicData uri="http://schemas.openxmlformats.org/drawingml/2006/chart"><c:chart r:id="rId1"/></a:graphicData></a:graphic>
-                    </p:graphicFrame>
-                  </p:spTree></p:cSld>
-                </p:sld>
-                """),
-            ["ppt/charts/chart1.xml"] = TestFixtures.Utf8("""
-                <?xml version="1.0" encoding="UTF-8"?>
-                <c:chartSpace xmlns:c="http://schemas.openxmlformats.org/drawingml/2006/chart"
-                              xmlns:a="http://schemas.openxmlformats.org/drawingml/2006/main">
-                  <c:chart><c:plotArea>
-                  <c:barChart>
-                    <c:barDir val="col"/>
-                    <c:ser><c:cat><c:strLit><c:pt idx="0"><c:v>A</c:v></c:pt></c:strLit></c:cat><c:val><c:numLit><c:pt idx="0"><c:v>10</c:v></c:pt></c:numLit></c:val></c:ser>
-                    <c:axId val="1"/><c:axId val="2"/>
-                  </c:barChart>
-                  <c:catAx>
-                    <c:axId val="1"/><c:axPos val="b"/><c:crossAx val="2"/><c:crosses val="max"/><c:tickLblPos val="none"/>
-                  </c:catAx>
-                  <c:valAx>
-                    <c:axId val="2"/><c:axPos val="l"/><c:tickLblPos val="none"/>
-                    <c:scaling><c:min val="0"/><c:max val="30"/></c:scaling><c:crossAx val="1"/><c:crosses val="autoZero"/>
-                  </c:valAx>
-                  </c:plotArea></c:chart>
-                </c:chartSpace>
-                """)
-        });
-        string output = Path.ChangeExtension(Path.GetTempFileName(), ".pdf");
-
-        OoxPdfConverter.Convert(input, output);
-
-        string pdf = File.ReadAllText(output, Encoding.ASCII);
-        var horizontalLines = Regex.Matches(pdf, @"(?<x1>[0-9.]+) (?<y1>[0-9.]+) m (?<x2>[0-9.]+) (?<y2>[0-9.]+) l S")
-            .Cast<Match>()
-            .Select(match => new
-            {
-                X1 = double.Parse(match.Groups["x1"].Value, CultureInfo.InvariantCulture),
-                Y1 = double.Parse(match.Groups["y1"].Value, CultureInfo.InvariantCulture),
-                X2 = double.Parse(match.Groups["x2"].Value, CultureInfo.InvariantCulture),
-                Y2 = double.Parse(match.Groups["y2"].Value, CultureInfo.InvariantCulture)
-            })
-            .Where(line => Math.Abs(line.Y1 - line.Y2) < 0.001d && Math.Abs(line.X1 - line.X2) > 100d)
-            .ToArray();
-        var verticalLines = Regex.Matches(pdf, @"(?<x1>[0-9.]+) (?<y1>[0-9.]+) m (?<x2>[0-9.]+) (?<y2>[0-9.]+) l S")
-            .Cast<Match>()
-            .Select(match => new
-            {
-                X1 = double.Parse(match.Groups["x1"].Value, CultureInfo.InvariantCulture),
-                Y1 = double.Parse(match.Groups["y1"].Value, CultureInfo.InvariantCulture),
-                X2 = double.Parse(match.Groups["x2"].Value, CultureInfo.InvariantCulture),
-                Y2 = double.Parse(match.Groups["y2"].Value, CultureInfo.InvariantCulture)
-            })
-            .Where(line => Math.Abs(line.X1 - line.X2) < 0.001d && Math.Abs(line.Y1 - line.Y2) > 100d)
-            .ToArray();
-
-        TestAssert.True(horizontalLines.Length >= 1, "Expected a category-axis horizontal stroke.");
-        TestAssert.True(verticalLines.Length >= 1, "Expected a value-axis vertical stroke.");
-        double categoryAxisY = horizontalLines.Max(line => line.Y1);
-        double valueAxisTopY = verticalLines.Max(line => Math.Max(line.Y1, line.Y2));
-        TestAssert.True(Math.Abs(categoryAxisY - valueAxisTopY) < 0.001d,
+        var strokes = ReadChartAxisSegments("""
+            <?xml version="1.0" encoding="UTF-8"?>
+            <c:chartSpace xmlns:c="http://schemas.openxmlformats.org/drawingml/2006/chart"
+                          xmlns:a="http://schemas.openxmlformats.org/drawingml/2006/main">
+              <c:chart><c:plotArea>
+              <c:barChart>
+                <c:barDir val="col"/>
+                <c:ser><c:cat><c:strLit><c:pt idx="0"><c:v>A</c:v></c:pt></c:strLit></c:cat><c:val><c:numLit><c:pt idx="0"><c:v>10</c:v></c:pt></c:numLit></c:val></c:ser>
+                <c:axId val="1"/><c:axId val="2"/>
+              </c:barChart>
+              <c:catAx>
+                <c:axId val="1"/><c:axPos val="b"/><c:crossAx val="2"/><c:crosses val="max"/><c:tickLblPos val="none"/>
+              </c:catAx>
+              <c:valAx>
+                <c:axId val="2"/><c:axPos val="l"/><c:tickLblPos val="none"/>
+                <c:scaling><c:min val="0"/><c:max val="30"/></c:scaling><c:crossAx val="1"/><c:crosses val="autoZero"/>
+              </c:valAx>
+              </c:plotArea></c:chart>
+            </c:chartSpace>
+            """);
+        var category = strokes.Single(IsHorizontalAxisStroke);
+        var value = strokes.Single(IsVerticalAxisStroke);
+        double valueAxisTopY = Math.Max(value.Start.Y, value.End.Y);
+        TestAssert.True(Math.Abs(category.Start.Y - valueAxisTopY) < 0.001d,
             "When the category crossing is max, the category-axis line should be placed at the value-axis maximum.");
     }
 
     public static void PptxSyntheticChartValueAxisStrokeUsesAxisPosition()
     {
-        string input = TestFixtures.WriteTempPackage(".pptx", new Dictionary<string, byte[]>
-        {
-            ["[Content_Types].xml"] = TestFixtures.Utf8(PptxTests.BasicContentTypes()),
-            ["_rels/.rels"] = TestFixtures.Utf8(PptxTests.PackageRelationship()),
-            ["ppt/_rels/presentation.xml.rels"] = TestFixtures.Utf8(PptxTests.PresentationRelationship()),
-            ["ppt/presentation.xml"] = TestFixtures.Utf8(PptxTests.BasicPresentation()),
-            ["ppt/slides/_rels/slide1.xml.rels"] = TestFixtures.Utf8("""
-                <?xml version="1.0" encoding="UTF-8"?>
-                <Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">
-                  <Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/chart" Target="../charts/chart1.xml"/>
-                </Relationships>
-                """),
-            ["ppt/slides/slide1.xml"] = TestFixtures.Utf8("""
-                <?xml version="1.0" encoding="UTF-8"?>
-                <p:sld xmlns:p="http://schemas.openxmlformats.org/presentationml/2006/main"
-                       xmlns:a="http://schemas.openxmlformats.org/drawingml/2006/main"
-                       xmlns:c="http://schemas.openxmlformats.org/drawingml/2006/chart"
-                       xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships">
-                  <p:cSld><p:spTree>
-                    <p:graphicFrame>
-                      <p:xfrm><a:off x="914400" y="914400"/><a:ext cx="3657600" cy="2743200"/></p:xfrm>
-                      <a:graphic><a:graphicData uri="http://schemas.openxmlformats.org/drawingml/2006/chart"><c:chart r:id="rId1"/></a:graphicData></a:graphic>
-                    </p:graphicFrame>
-                  </p:spTree></p:cSld>
-                </p:sld>
-                """),
-            ["ppt/charts/chart1.xml"] = TestFixtures.Utf8("""
-                <?xml version="1.0" encoding="UTF-8"?>
-                <c:chartSpace xmlns:c="http://schemas.openxmlformats.org/drawingml/2006/chart"
-                              xmlns:a="http://schemas.openxmlformats.org/drawingml/2006/main">
-                  <c:chart><c:plotArea>
-                  <c:barChart>
-                    <c:barDir val="col"/>
-                    <c:ser><c:cat><c:strLit><c:pt idx="0"><c:v>A</c:v></c:pt></c:strLit></c:cat><c:val><c:numLit><c:pt idx="0"><c:v>10</c:v></c:pt></c:numLit></c:val></c:ser>
-                    <c:axId val="1"/><c:axId val="2"/>
-                  </c:barChart>
-                  <c:catAx>
-                    <c:axId val="1"/><c:axPos val="b"/><c:tickLblPos val="none"/>
-                  </c:catAx>
-                  <c:valAx>
-                    <c:axId val="2"/><c:axPos val="r"/><c:tickLblPos val="none"/>
-                    <c:scaling><c:min val="0"/><c:max val="30"/></c:scaling>
-                  </c:valAx>
-                  </c:plotArea></c:chart>
-                </c:chartSpace>
-                """)
-        });
-        string output = Path.ChangeExtension(Path.GetTempFileName(), ".pdf");
-
-        OoxPdfConverter.Convert(input, output);
-
-        string pdf = File.ReadAllText(output, Encoding.ASCII);
-        var horizontalLines = Regex.Matches(pdf, @"(?<x1>[0-9.]+) (?<y1>[0-9.]+) m (?<x2>[0-9.]+) (?<y2>[0-9.]+) l S")
-            .Cast<Match>()
-            .Select(match => new
-            {
-                X1 = double.Parse(match.Groups["x1"].Value, CultureInfo.InvariantCulture),
-                Y1 = double.Parse(match.Groups["y1"].Value, CultureInfo.InvariantCulture),
-                X2 = double.Parse(match.Groups["x2"].Value, CultureInfo.InvariantCulture),
-                Y2 = double.Parse(match.Groups["y2"].Value, CultureInfo.InvariantCulture)
-            })
-            .Where(line => Math.Abs(line.Y1 - line.Y2) < 0.001d && Math.Abs(line.X1 - line.X2) > 100d)
-            .ToArray();
-        var verticalLines = Regex.Matches(pdf, @"(?<x1>[0-9.]+) (?<y1>[0-9.]+) m (?<x2>[0-9.]+) (?<y2>[0-9.]+) l S")
-            .Cast<Match>()
-            .Select(match => new
-            {
-                X1 = double.Parse(match.Groups["x1"].Value, CultureInfo.InvariantCulture),
-                Y1 = double.Parse(match.Groups["y1"].Value, CultureInfo.InvariantCulture),
-                X2 = double.Parse(match.Groups["x2"].Value, CultureInfo.InvariantCulture),
-                Y2 = double.Parse(match.Groups["y2"].Value, CultureInfo.InvariantCulture)
-            })
-            .Where(line => Math.Abs(line.X1 - line.X2) < 0.001d && Math.Abs(line.Y1 - line.Y2) > 100d)
-            .ToArray();
-
-        TestAssert.True(horizontalLines.Length >= 1, "Expected a category-axis horizontal stroke.");
-        TestAssert.True(verticalLines.Length >= 1, "Expected a value-axis vertical stroke.");
-        double categoryAxisLeftX = horizontalLines.Min(line => Math.Min(line.X1, line.X2));
-        double categoryAxisRightX = horizontalLines.Max(line => Math.Max(line.X1, line.X2));
-        double valueAxisX = verticalLines.Max(line => line.X1);
-        TestAssert.True(Math.Abs(valueAxisX - categoryAxisRightX) < 0.001d,
-            "A value axis with c:axPos val=\"r\" should emit its vertical stroke on the plot area's right edge.");
-        TestAssert.True(Math.Abs(valueAxisX - categoryAxisLeftX) > 100d,
-            "The value-axis stroke should not remain on the left edge when c:axPos requests the right side.");
+        var strokes = ReadChartAxisSegments("""
+            <?xml version="1.0" encoding="UTF-8"?>
+            <c:chartSpace xmlns:c="http://schemas.openxmlformats.org/drawingml/2006/chart"
+                          xmlns:a="http://schemas.openxmlformats.org/drawingml/2006/main">
+              <c:chart><c:plotArea>
+              <c:barChart>
+                <c:barDir val="col"/>
+                <c:ser><c:cat><c:strLit><c:pt idx="0"><c:v>A</c:v></c:pt></c:strLit></c:cat><c:val><c:numLit><c:pt idx="0"><c:v>10</c:v></c:pt></c:numLit></c:val></c:ser>
+                <c:axId val="1"/><c:axId val="2"/>
+              </c:barChart>
+              <c:catAx>
+                <c:axId val="1"/><c:axPos val="b"/><c:tickLblPos val="none"/>
+              </c:catAx>
+              <c:valAx>
+                <c:axId val="2"/><c:axPos val="r"/><c:tickLblPos val="none"/>
+                <c:scaling><c:min val="0"/><c:max val="30"/></c:scaling>
+              </c:valAx>
+              </c:plotArea></c:chart>
+            </c:chartSpace>
+            """);
+        var category = strokes.Single(IsHorizontalAxisStroke);
+        var value = strokes.Single(IsVerticalAxisStroke);
+        double left = Math.Min(category.Start.X, category.End.X);
+        double right = Math.Max(category.Start.X, category.End.X);
+        TestAssert.True(Math.Abs(value.Start.X - right) < 0.001d,
+            "The right-side value axis should emit its vertical stroke at the right plot edge.");
+        TestAssert.True(Math.Abs(value.Start.X - left) > 100d,
+            "The axis should be distinct from the left plot edge.");
     }
 
     public static void PptxSyntheticChartSecondaryValueAxisStrokeUsesOwnAxisPosition()
     {
-        string input = TestFixtures.WriteTempPackage(".pptx", new Dictionary<string, byte[]>
+        var secondaryColor = new RgbColor(0x12, 0x34, 0x56);
+        foreach (var (primarySide, secondarySide, alpha) in new[]
+            { ("r", "l", 100000), ("l", "r", 100000), ("r", "l", 50000), ("r", "l", 0) })
         {
-            ["[Content_Types].xml"] = TestFixtures.Utf8(PptxTests.BasicContentTypes()),
-            ["_rels/.rels"] = TestFixtures.Utf8(PptxTests.PackageRelationship()),
-            ["ppt/_rels/presentation.xml.rels"] = TestFixtures.Utf8(PptxTests.PresentationRelationship()),
-            ["ppt/presentation.xml"] = TestFixtures.Utf8(PptxTests.BasicPresentation()),
-            ["ppt/slides/_rels/slide1.xml.rels"] = TestFixtures.Utf8("""
-                <?xml version="1.0" encoding="UTF-8"?>
-                <Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">
-                  <Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/chart" Target="../charts/chart1.xml"/>
-                </Relationships>
-                """),
-            ["ppt/slides/slide1.xml"] = TestFixtures.Utf8("""
-                <?xml version="1.0" encoding="UTF-8"?>
-                <p:sld xmlns:p="http://schemas.openxmlformats.org/presentationml/2006/main"
-                       xmlns:a="http://schemas.openxmlformats.org/drawingml/2006/main"
-                       xmlns:c="http://schemas.openxmlformats.org/drawingml/2006/chart"
-                       xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships">
-                  <p:cSld><p:spTree>
-                    <p:graphicFrame>
-                      <p:xfrm><a:off x="914400" y="914400"/><a:ext cx="3657600" cy="2743200"/></p:xfrm>
-                      <a:graphic><a:graphicData uri="http://schemas.openxmlformats.org/drawingml/2006/chart"><c:chart r:id="rId1"/></a:graphicData></a:graphic>
-                    </p:graphicFrame>
-                  </p:spTree></p:cSld>
-                </p:sld>
-                """),
-            ["ppt/charts/chart1.xml"] = TestFixtures.Utf8("""
+            var strokes = ReadChartAxisSegments($$"""
                 <?xml version="1.0" encoding="UTF-8"?>
                 <c:chartSpace xmlns:c="http://schemas.openxmlformats.org/drawingml/2006/chart"
                               xmlns:a="http://schemas.openxmlformats.org/drawingml/2006/main">
@@ -2430,57 +2296,48 @@ internal static partial class PptxChartsTests
                     <c:axId val="1"/><c:axPos val="b"/><c:tickLblPos val="none"/>
                   </c:catAx>
                   <c:valAx>
-                    <c:axId val="2"/><c:axPos val="r"/><c:tickLblPos val="none"/>
+                    <c:axId val="2"/><c:axPos val="{{primarySide}}"/><c:tickLblPos val="none"/>
                     <c:scaling><c:min val="0"/><c:max val="30"/></c:scaling>
                   </c:valAx>
                   <c:valAx>
-                    <c:axId val="3"/><c:axPos val="l"/><c:tickLblPos val="none"/>
+                    <c:axId val="3"/><c:axPos val="{{secondarySide}}"/><c:tickLblPos val="none"/>
                     <c:scaling><c:min val="0"/><c:max val="30"/></c:scaling>
-                    <c:spPr><a:ln><a:solidFill><a:srgbClr val="123456"/></a:solidFill></a:ln></c:spPr>
+                    <c:spPr><a:ln><a:solidFill><a:srgbClr val="123456"><a:alpha val="{{alpha.ToString(CultureInfo.InvariantCulture)}}"/></a:srgbClr></a:solidFill></a:ln></c:spPr>
                   </c:valAx>
                   </c:plotArea></c:chart>
                 </c:chartSpace>
-                """)
-        });
-        string output = Path.ChangeExtension(Path.GetTempFileName(), ".pdf");
+                """);
+            var category = strokes.Single(IsHorizontalAxisStroke);
+            var primary = strokes.Single(stroke => IsVerticalAxisStroke(stroke) && stroke.Color == default);
+            double left = Math.Min(category.Start.X, category.End.X);
+            double right = Math.Max(category.Start.X, category.End.X);
+            TestAssert.True(Math.Abs(primary.Start.X - (primarySide == "l" ? left : right)) < 0.001d,
+                "The primary stroke should follow its own authored side.");
+            TestAssert.Equal(1d, primary.Opacity);
 
-        OoxPdfConverter.Convert(input, output);
-
-        string pdf = File.ReadAllText(output, Encoding.ASCII);
-        var horizontalLines = Regex.Matches(pdf, @"(?<x1>[0-9.]+) (?<y1>[0-9.]+) m (?<x2>[0-9.]+) (?<y2>[0-9.]+) l S")
-            .Cast<Match>()
-            .Select(match => new
+            var secondary = strokes.Where(stroke => IsVerticalAxisStroke(stroke) && stroke.Color == secondaryColor).ToArray();
+            TestAssert.Equal(alpha == 0 ? 0 : 1, secondary.Length);
+            if (alpha > 0)
             {
-                X1 = double.Parse(match.Groups["x1"].Value, CultureInfo.InvariantCulture),
-                Y1 = double.Parse(match.Groups["y1"].Value, CultureInfo.InvariantCulture),
-                X2 = double.Parse(match.Groups["x2"].Value, CultureInfo.InvariantCulture),
-                Y2 = double.Parse(match.Groups["y2"].Value, CultureInfo.InvariantCulture)
-            })
-            .Where(line => Math.Abs(line.Y1 - line.Y2) < 0.001d && Math.Abs(line.X1 - line.X2) > 100d)
-            .ToArray();
-        var verticalLineXs = Regex.Matches(pdf, @"(?<x1>[0-9.]+) (?<y1>[0-9.]+) m (?<x2>[0-9.]+) (?<y2>[0-9.]+) l S")
-            .Cast<Match>()
-            .Select(match => new
-            {
-                X1 = double.Parse(match.Groups["x1"].Value, CultureInfo.InvariantCulture),
-                Y1 = double.Parse(match.Groups["y1"].Value, CultureInfo.InvariantCulture),
-                X2 = double.Parse(match.Groups["x2"].Value, CultureInfo.InvariantCulture),
-                Y2 = double.Parse(match.Groups["y2"].Value, CultureInfo.InvariantCulture)
-            })
-            .Where(line => Math.Abs(line.X1 - line.X2) < 0.001d && Math.Abs(line.Y1 - line.Y2) > 100d)
-            .Select(line => line.X1)
-            .Distinct()
-            .OrderBy(x => x)
-            .ToArray();
-
-        TestAssert.True(horizontalLines.Length >= 1, "Expected a category-axis horizontal stroke.");
-        double categoryAxisLeftX = horizontalLines.Min(line => Math.Min(line.X1, line.X2));
-        double categoryAxisRightX = horizontalLines.Max(line => Math.Max(line.X1, line.X2));
-        TestAssert.True(verticalLineXs.Any(x => Math.Abs(x - categoryAxisLeftX) < 0.001d),
-            "The secondary value axis should use its own c:axPos val=\"l\" instead of being forced to the right side.");
-        TestAssert.True(verticalLineXs.Any(x => Math.Abs(x - categoryAxisRightX) < 0.001d),
-            "The primary value axis should still use c:axPos val=\"r\".");
+                TestAssert.True(Math.Abs(secondary[0].Start.X - (secondarySide == "l" ? left : right)) < 0.001d,
+                    "The secondary stroke should follow its own authored side.");
+                TestAssert.Equal(alpha / 100000d, secondary[0].Opacity);
+            }
+        }
     }
+
+    private static PptxLinePointStyleTests.StrokeSegment[] ReadChartAxisSegments(string chart)
+    {
+        using var input = PptxTests.CreateSingleChartPackageStream(chart);
+        PdfPage page = PptxTests.RenderSingleSlidePage(input);
+        return PptxLinePointStyleTests.ReadStrokeSegments(page).Where(stroke => stroke.Operator == "l").ToArray();
+    }
+
+    private static bool IsHorizontalAxisStroke(PptxLinePointStyleTests.StrokeSegment stroke) =>
+        Math.Abs(stroke.Start.Y - stroke.End.Y) < 0.001d && Math.Abs(stroke.Start.X - stroke.End.X) > 100d;
+
+    private static bool IsVerticalAxisStroke(PptxLinePointStyleTests.StrokeSegment stroke) =>
+        Math.Abs(stroke.Start.X - stroke.End.X) < 0.001d && Math.Abs(stroke.Start.Y - stroke.End.Y) > 100d;
 
     public static void PptxSyntheticChartVisibleSecondaryAxisReservesInnerPlotStrips()
     {

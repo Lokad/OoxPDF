@@ -313,14 +313,21 @@ internal static class PptxLinePointStyleTests
             .Select(show => show.Text).ToArray();
     }
 
-    private readonly record struct StrokeState(RgbColor? Color, double Width, double Opacity, int Cap, int Join, PdfRectangle Clip);
+    private readonly record struct StrokeState(RgbColor Color, double Width, double Opacity, int Cap, int Join, PdfRectangle Clip);
+
+    internal readonly record struct StrokeSegment(RgbColor Color, double Width, double Opacity, string Operator, int Cap, int Join,
+        (double X, double Y) Start, (double X, double Y) End, PdfRectangle Clip);
 
     // These fixtures use segments over 40pt wide and shorter markers and keys.
-    // Read the state of each painted plot segment from the generated PDF.
-    private static IEnumerable<(RgbColor Color, double Width, string Operator, int Cap, int Join,
-        (double X, double Y) Start, (double X, double Y) End, PdfRectangle Clip)> NativeSegments(PdfPage page)
+    private static IEnumerable<StrokeSegment> NativeSegments(PdfPage page) =>
+        ReadStrokeSegments(page).Where(segment => segment.Opacity > 0d &&
+            Math.Abs(segment.End.X - segment.Start.X) > 40d &&
+            (segment.Color.Red != segment.Color.Green || segment.Color.Green != segment.Color.Blue));
+
+    // Read the graphics state at the generated PDF's line and curve strokes.
+    internal static IEnumerable<StrokeSegment> ReadStrokeSegments(PdfPage page)
     {
-        var stroke = new StrokeState(null, 1d, 1d, 0, 0, new PdfRectangle(0d, 0d, page.Width, page.Height));
+        var stroke = new StrokeState(default, 1d, 1d, 0, 0, new PdfRectangle(0d, 0d, page.Width, page.Height));
         var states = new Stack<StrokeState>();
         var edges = new List<(string Operator, (double X, double Y) Start, (double X, double Y) End)>();
         (double X, double Y) current = default;
@@ -337,7 +344,11 @@ internal static class PptxLinePointStyleTests
                 var color = new RgbColor((byte)Math.Round(N(0) * 255), (byte)Math.Round(N(1) * 255), (byte)Math.Round(N(2) * 255));
                 stroke = stroke with { Color = color };
             }
-            else if (op == "G") stroke = stroke with { Color = null };
+            else if (op == "G")
+            {
+                byte gray = (byte)Math.Round(N(0) * 255d);
+                stroke = stroke with { Color = new RgbColor(gray, gray, gray) };
+            }
             else if (op == "w") stroke = stroke with { Width = N(0) };
             else if (op == "J") stroke = stroke with { Cap = (int)N(0) };
             else if (op == "j") stroke = stroke with { Join = (int)N(0) };
@@ -355,25 +366,20 @@ internal static class PptxLinePointStyleTests
             {
                 int endpoint = op == "c" ? 4 : 0;
                 var next = (N(endpoint), N(endpoint + 1));
-                AddEdge(op, current, next);
+                edges.Add((op, current, next));
                 current = next;
             }
 
             if (op is "S" or "s")
             {
                 if (words.Length == 7 && words[2] == "m" && words[5] == "l")
-                    AddEdge("l", (N(0), N(1)), (N(3), N(4)));
-                if (stroke.Opacity > 0d && stroke.Color is { } ink && (ink.Red != ink.Green || ink.Green != ink.Blue))
-                    foreach (var edge in edges)
-                        yield return (ink, stroke.Width, edge.Operator, stroke.Cap, stroke.Join, edge.Start, edge.End, stroke.Clip);
+                    edges.Add(("l", (N(0), N(1)), (N(3), N(4))));
+                foreach (var edge in edges)
+                    yield return new StrokeSegment(stroke.Color, stroke.Width, stroke.Opacity, edge.Operator, stroke.Cap, stroke.Join, edge.Start, edge.End, stroke.Clip);
                 edges.Clear();
             }
             else if (op is "n" or "f" or "f*") edges.Clear();
         }
 
-        void AddEdge(string op, (double X, double Y) start, (double X, double Y) end)
-        {
-            if (Math.Abs(end.X - start.X) > 40d) edges.Add((op, start, end));
-        }
     }
 }
