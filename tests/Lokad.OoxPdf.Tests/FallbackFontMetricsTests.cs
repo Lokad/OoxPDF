@@ -59,6 +59,31 @@ internal static class FallbackFontMetricsTests
             PdfFallbackFont.Helvetica.PositionGlyphs(Prefix, 0d, 0d, 11d, 0d, token: canceled.Token)).CancellationToken);
     }
 
+    public static void FallbackGlyphEmissionObservesCancellationDuringConstruction()
+    {
+        var budget = new TestMemoryBudget();
+        using var cancellation = new CancellationTokenSource();
+        using (var scope = budget.CreateScope())
+        using (var grant = OoxMemory.Reserve(scope, 0)!)
+        {
+            var graphics = new PdfGraphicsBuilder(grant, 0);
+            var glyphs = PdfFallbackFont.Helvetica.PositionGlyphs(new string('W', 512), 0d, 20d, 12d, 0d);
+            budget.RefuseChange = (before, after) =>
+            {
+                if (after > before && graphics.ContentLength > 0)
+                {
+                    cancellation.Cancel();
+                }
+                return false;
+            };
+            var error = TestAssert.Throws<OperationCanceledException>(() =>
+                graphics.DrawFallbackText("F0", 12d, 0, 0, 0, glyphs, cancellation.Token));
+            TestAssert.Equal(cancellation.Token, error.CancellationToken);
+            TestAssert.True(graphics.ContentLength > 0, "Cancellation must be observed during fallback glyph emission.");
+        }
+        TestAssert.Equal(0L, budget.Reserved);
+    }
+
     public static void DocxFallbackGlyphPaintAndWrapUseDeclaredFaceWidths()
     {
         foreach (var mode in new[] { OoxPdfDocxMarkupMode.Final, OoxPdfDocxMarkupMode.AllMarkup })

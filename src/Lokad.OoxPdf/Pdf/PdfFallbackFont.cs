@@ -89,11 +89,20 @@ internal sealed partial class PdfFallbackFont
         token.ThrowIfCancellationRequested();
         Rune[] runes = [.. text.EnumerateRunes()];
         if (runes.Length == 0) return [];
-        double units = 0d;
-        foreach (Rune rune in runes) { token.ThrowIfCancellationRequested(); units += MeasureAdvanceEm(rune); }
-        double scale = allocatedWidth is { } width && units > 0d
-            ? Math.Max(0d, width - Math.Max(0, runes.Length - 1) * characterSpacing) / units
-            : fontSize / UnitsPerEm;
+        double scale = fontSize / UnitsPerEm;
+        if (allocatedWidth is { } width)
+        {
+            double units = 0d;
+            foreach (Rune rune in runes)
+            {
+                token.ThrowIfCancellationRequested();
+                units += MeasureAdvanceEm(rune);
+            }
+            if (units > 0d)
+            {
+                scale = Math.Max(0d, width - (runes.Length - 1) * characterSpacing) / units;
+            }
+        }
         var glyphs = new List<PdfFallbackGlyph>(runes.Length);
         for (int i = 0; i < runes.Length; i++)
         {

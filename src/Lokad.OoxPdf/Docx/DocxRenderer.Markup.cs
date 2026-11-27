@@ -1583,7 +1583,8 @@ internal sealed partial class DocxRenderer
             body = SubstituteUncoveredGlyphs(labelResource.Embedded, body);
         }
 
-        DrawBalloonText(graphics, labelResource, title, placement.X + 3d, placement.Y + placement.Height - 7d, 5.5d, placement.TitleRgb.Red, placement.TitleRgb.Green, placement.TitleRgb.Blue, fallbackFace);
+        DrawBalloonText(graphics, labelResource, title, placement.X + 3d, placement.Y + placement.Height - 7d, 5.5d,
+            placement.TitleRgb.Red, placement.TitleRgb.Green, placement.TitleRgb.Blue, fallbackFace, cancellationToken);
         if (fallbackWordCompatibleText && fallbackFace is not null && labelResource is null && !string.IsNullOrWhiteSpace(body))
         {
             var rows = WrapFallbackBalloonBody(body, fallbackFace.Font, placement.Width, cancellationToken);
@@ -1592,12 +1593,14 @@ internal sealed partial class DocxRenderer
                 cancellationToken.ThrowIfCancellationRequested();
                 double y = placement.Y + 4d + (rows.Length - 1 - row) * FallbackBalloonLinePitch;
                 DrawBalloonText(graphics, null, rows[row].Text, placement.X + FallbackBalloonBodyInset, y,
-                    FallbackBalloonBodyFontSize, placement.BodyRgb.Red, placement.BodyRgb.Green, placement.BodyRgb.Blue, fallbackFace);
+                    FallbackBalloonBodyFontSize, placement.BodyRgb.Red, placement.BodyRgb.Green, placement.BodyRgb.Blue,
+                    fallbackFace, cancellationToken);
             }
         }
         else if (!string.IsNullOrWhiteSpace(body))
         {
-            DrawBalloonText(graphics, labelResource, body, placement.X + 3d, placement.Y + 4d, 5d, placement.BodyRgb.Red, placement.BodyRgb.Green, placement.BodyRgb.Blue, fallbackFace);
+            DrawBalloonText(graphics, labelResource, body, placement.X + 3d, placement.Y + 4d, 5d,
+                placement.BodyRgb.Red, placement.BodyRgb.Green, placement.BodyRgb.Blue, fallbackFace, cancellationToken);
         }
     }
 

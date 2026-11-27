@@ -86,7 +86,8 @@ internal sealed partial class DocxRenderer
         byte red,
         byte green,
         byte blue,
-        PdfFallbackFontResource? fallback = null)
+        PdfFallbackFontResource? fallback = null,
+        CancellationToken cancellationToken = default)
     {
         if (resource is null)
         {
@@ -94,7 +95,8 @@ internal sealed partial class DocxRenderer
             // with the diagnosed standard-14 fallback instead of vanishing.
             if (fallback is not null && text.Length != 0)
             {
-                DrawFallbackRunGlyphText(graphics, fallback, text, x, baselineY, new RgbColor(red, green, blue), fontSize, 0d);
+                DrawFallbackRunGlyphText(graphics, fallback, text, x, baselineY, new RgbColor(red, green, blue),
+                    fontSize, 0d, cancellationToken);
             }
 
             return;

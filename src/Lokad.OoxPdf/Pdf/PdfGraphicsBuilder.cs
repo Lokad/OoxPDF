@@ -449,13 +449,15 @@ internal sealed class PdfGraphicsBuilder
         byte red,
         byte green,
         byte blue,
-        IReadOnlyList<PdfFallbackGlyph> glyphs)
+        IReadOnlyList<PdfFallbackGlyph> glyphs,
+        CancellationToken cancellationToken = default)
     {
         if (glyphs.Count == 0)
         {
             return;
         }
 
+        cancellationToken.ThrowIfCancellationRequested();
         string name = PdfEmbeddedFont.SanitizeName(fontResourceName);
         string size = PdfDocumentWriter.FormatNumber(fontSize);
         AdmitTextConstruction(64L + name.Length + size.Length);
@@ -471,6 +473,7 @@ internal sealed class PdfGraphicsBuilder
         {
             string x = PdfDocumentWriter.FormatNumber(glyph.X), y = PdfDocumentWriter.FormatNumber(glyph.Y);
             AdmitTextConstruction(32L + x.Length + y.Length);
+            cancellationToken.ThrowIfCancellationRequested();
             builder.Append("1 0 0 1 ").Append(x).Append(" ").Append(y).AppendLine(" Tm");
             builder.Append("<").Append(glyph.Code.ToString("X2", CultureInfo.InvariantCulture)).AppendLine("> Tj");
         }

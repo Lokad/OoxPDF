@@ -16,7 +16,8 @@ internal sealed partial class DocxRenderer
     private static void RenderTextEmissionSegment(
         DocxTextEmissionSegment segment,
         PdfGraphicsBuilder graphics,
-        DocxMarkupContext markupContext)
+        DocxMarkupContext markupContext,
+        CancellationToken cancellationToken)
     {
         DocxTextRun style = segment.StyleRun;
         bool ShouldUseWordCompatibleRevisionDecorationProfile()
@@ -28,7 +29,7 @@ internal sealed partial class DocxRenderer
         RgbColor color = ResolvePaintedRevisionColor(segment, markupContext);
         if (segment.FallbackFace is { } fallback)
         {
-            DrawFallbackTextEmissionSegment(segment, fallback, graphics, markupContext);
+            DrawFallbackTextEmissionSegment(segment, fallback, graphics, color, cancellationToken);
             return;
         }
 
@@ -526,9 +527,9 @@ internal sealed partial class DocxRenderer
         DocxTextEmissionSegment segment,
         PdfFallbackFontResource fallback,
         PdfGraphicsBuilder graphics,
-        DocxMarkupContext markupContext)
+        RgbColor color,
+        CancellationToken cancellationToken)
     {
-        RgbColor color = ResolvePaintedRevisionColor(segment, markupContext);
         if (!segment.IsTerminalLineSpace)
         {
             RenderRunBackground(
@@ -550,7 +551,8 @@ internal sealed partial class DocxRenderer
             segment.BaselineY,
             color,
             plan.PdfFontSize,
-            plan.PositioningCharacterSpacing);
+            plan.PositioningCharacterSpacing,
+            cancellationToken);
 
         if (!segment.IsTerminalLineSpace)
         {
@@ -594,7 +596,7 @@ internal sealed partial class DocxRenderer
             UsesWordCompatibleAllMarkupTextProfile(markupContext), cancellationToken, background))
         {
             cancellationToken.ThrowIfCancellationRequested();
-            RenderTextEmissionSegment(segment, graphics, markupContext);
+            RenderTextEmissionSegment(segment, graphics, markupContext, cancellationToken);
         }
         if (line.IsInlineMath && line.Math is { } inlineMath)
             PaintMath(inlineMath, line.X + line.InlineMathOffsetX, line.BaselineY, line.MathScale,
@@ -689,7 +691,8 @@ internal sealed partial class DocxRenderer
                     .FirstOrDefault(face => face is not null);
                 if (fallbackLabel is not null)
                 {
-                    DrawFallbackRunGlyphText(graphics, fallbackLabel, label, markerX + 1.5d, markerY + 1.4d, new RgbColor(0, 0, 0), labelFontSize, 0d);
+                    DrawFallbackRunGlyphText(graphics, fallbackLabel, label, markerX + 1.5d, markerY + 1.4d,
+                        new RgbColor(0, 0, 0), labelFontSize, 0d, cancellationToken);
                 }
             }
         }

@@ -750,7 +750,8 @@ internal sealed partial class PptxRenderer
             double pdfFontSize = OfficePdfTextEmissionProfile.FontSize(run.FontSize);
             var glyphs = fallback.Font.PositionGlyphs(run.Text, run.X, baselineY, run.FontSize,
                 run.CharacterSpacing, run.Width, cancellationToken);
-            graphics.DrawFallbackText(fallback.ResourceName, pdfFontSize, run.Color.Red, run.Color.Green, run.Color.Blue, glyphs);
+            graphics.DrawFallbackText(fallback.ResourceName, pdfFontSize, run.Color.Red, run.Color.Green, run.Color.Blue,
+                glyphs, cancellationToken);
             if (run.Underline || run.Strike)
             {
                 graphics.SetFillRgb(run.Color.Red, run.Color.Green, run.Color.Blue);

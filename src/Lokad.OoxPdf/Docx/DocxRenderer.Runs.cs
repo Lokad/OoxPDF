@@ -403,11 +403,12 @@ internal sealed partial class DocxRenderer
         double baselineY,
         RgbColor color,
         double fontSize,
-        double characterSpacing)
+        double characterSpacing,
+        CancellationToken cancellationToken)
     {
-        var glyphs = fallback.Font.PositionGlyphs(text, x, baselineY, fontSize, characterSpacing);
+        var glyphs = fallback.Font.PositionGlyphs(text, x, baselineY, fontSize, characterSpacing, token: cancellationToken);
 
-        graphics.DrawFallbackText(fallback.ResourceName, fontSize, color.Red, color.Green, color.Blue, glyphs);
+        graphics.DrawFallbackText(fallback.ResourceName, fontSize, color.Red, color.Green, color.Blue, glyphs, cancellationToken);
     }
 
     private static RgbColor ResolveUnderlineDecorationColor(DocxEffectiveRunProperties effective, RgbColor textColor)
