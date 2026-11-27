@@ -669,29 +669,23 @@ internal sealed partial class DocxLayoutEngine
     private const long TextBoxDefaultHorizontalInsetEmu = 91440L;
     private const long TextBoxDefaultVerticalInsetEmu = 45720L;
 
-    internal static void ResolveTextBoxContentInsets(DocxFloatingDrawing drawing, out double insetLeft, out double insetTop, out double insetRight, out double insetBottom)
-    {
-        // RV05 floatbox probe (Word COM reference edge-floatbox): stroked textbox
-        // content starts inside the border, so every inset grows by half the outline
-        // width (0.5pt stroke shifts text by 0.25 on both axes). Un-outlined shapes
-        // resolve zero and keep legacy insets bit-identically.
-        double halfStrokePoints = (ReadEmuPoints(drawing.TextBoxStrokeWidthEmuValue) ?? 0d) / 2d;
-        insetLeft = ReadInsetEmuPoints(drawing.TextBoxInsetLeftValue, TextBoxDefaultHorizontalInsetEmu) + halfStrokePoints;
-        insetTop = ReadInsetEmuPoints(drawing.TextBoxInsetTopValue, TextBoxDefaultVerticalInsetEmu) + halfStrokePoints;
-        insetRight = ReadInsetEmuPoints(drawing.TextBoxInsetRightValue, TextBoxDefaultHorizontalInsetEmu) + halfStrokePoints;
-        insetBottom = ReadInsetEmuPoints(drawing.TextBoxInsetBottomValue, TextBoxDefaultVerticalInsetEmu) + halfStrokePoints;
-    }
+    internal static (double Left, double Top, double Right, double Bottom) ResolveTextBoxContentInsets(DocxFloatingDrawing drawing) =>
+        ResolveTextBoxContentInsets(drawing.TextBoxInsetLeftValue, drawing.TextBoxInsetTopValue,
+            drawing.TextBoxInsetRightValue, drawing.TextBoxInsetBottomValue, drawing.TextBoxStrokeWidthEmuValue);
 
-    internal static void ResolveInlineTextBoxContentInsets(DocxInlineTextBox textBox, out double insetLeft, out double insetTop, out double insetRight, out double insetBottom)
+    internal static (double Left, double Top, double Right, double Bottom) ResolveTextBoxContentInsets(DocxInlineTextBox box) =>
+        ResolveTextBoxContentInsets(box.TextBoxInsetLeftValue, box.TextBoxInsetTopValue,
+            box.TextBoxInsetRightValue, box.TextBoxInsetBottomValue, box.TextBoxStrokeWidthEmuValue);
+
+    private static (double Left, double Top, double Right, double Bottom) ResolveTextBoxContentInsets(
+        string? left, string? top, string? right, string? bottom, string? strokeWidth)
     {
-        // RV05 inline-box probe (Word COM reference edge-inlinebox): stroked inline
-        // content starts inside the border like floating boxes. Un-outlined shapes
-        // resolve zero and keep legacy insets bit-identically.
-        double halfStrokePoints = (ReadEmuPoints(textBox.TextBoxStrokeWidthEmuValue) ?? 0d) / 2d;
-        insetLeft = ReadInsetEmuPoints(textBox.TextBoxInsetLeftValue, TextBoxDefaultHorizontalInsetEmu) + halfStrokePoints;
-        insetTop = ReadInsetEmuPoints(textBox.TextBoxInsetTopValue, TextBoxDefaultVerticalInsetEmu) + halfStrokePoints;
-        insetRight = ReadInsetEmuPoints(textBox.TextBoxInsetRightValue, TextBoxDefaultHorizontalInsetEmu) + halfStrokePoints;
-        insetBottom = ReadInsetEmuPoints(textBox.TextBoxInsetBottomValue, TextBoxDefaultVerticalInsetEmu) + halfStrokePoints;
+        // The Word inline and floating probes put the content inside the outline.
+        double halfStrokePoints = (ReadEmuPoints(strokeWidth) ?? 0d) / 2d;
+        return (ReadInsetEmuPoints(left, TextBoxDefaultHorizontalInsetEmu) + halfStrokePoints,
+            ReadInsetEmuPoints(top, TextBoxDefaultVerticalInsetEmu) + halfStrokePoints,
+            ReadInsetEmuPoints(right, TextBoxDefaultHorizontalInsetEmu) + halfStrokePoints,
+            ReadInsetEmuPoints(bottom, TextBoxDefaultVerticalInsetEmu) + halfStrokePoints);
     }
 
     // Inline boxes join the scaled body flow uniformly (Office: the w6-inline probe shows
@@ -720,7 +714,7 @@ internal sealed partial class DocxLayoutEngine
             return null;
         }
 
-        ResolveInlineTextBoxContentInsets(textBox, out double insetLeft, out double insetTop, out double insetRight, out double insetBottom);
+        var (insetLeft, insetTop, insetRight, insetBottom) = ResolveTextBoxContentInsets(textBox);
         double boxWidth = Math.Min(width, fileWidth * paragraphSpacingScale);
         double contentWidth = Math.Max(1d, boxWidth - (insetLeft + insetRight) * paragraphSpacingScale);
         var story = new DocxRelatedStory(
@@ -873,7 +867,7 @@ internal sealed partial class DocxLayoutEngine
                 contentSpacingScale = 1d;
             }
 
-            ResolveTextBoxContentInsets(drawing, out double insetLeft, out _, out double insetRight, out _);
+            var (insetLeft, _, insetRight, _) = ResolveTextBoxContentInsets(drawing);
             var story = new DocxRelatedStory(
                 DocxRelatedStoryKind.TextBox,
                 "floating-drawing",

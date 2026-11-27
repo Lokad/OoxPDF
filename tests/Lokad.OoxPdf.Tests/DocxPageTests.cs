@@ -2724,14 +2724,34 @@ internal static class DocxPageTests
         TestAssert.True(Math.Abs(placedTop - (bodyBaseline + 12d * 0.94d - 72d)) < 0.000001d, "Paragraph-anchored boxes must hang off baseline plus first-line inset; placedTop=" + placedTop.ToString(CultureInfo.InvariantCulture) + ".");
     }
 
-    public static void DocxInlineTextBoxContentInsetsIncludeHalfStrokeWidth()
+    public static void DocxTextBoxContentInsetsRespectDefaultsZerosAndStroke()
     {
-        // RV05 inline-box probe (Word COM reference edge-inlinebox): stroked inline
-        // textbox content starts inside the border like floating boxes (0.5pt stroke
-        // shifts content by 0.25). Pre-fix insets ignore the stroke.
-        var textBox = new DocxInlineTextBox("1828800", "457200", "152400", "114300", "91440", "45720") with { TextBoxStrokeWidthEmuValue = "6350" };
-        DocxLayoutEngine.ResolveInlineTextBoxContentInsets(textBox, out double insetLeft, out double insetTop, out double insetRight, out double insetBottom);
-        TestAssert.True(Math.Abs(insetLeft - 12.25d) < 0.000001d && Math.Abs(insetTop - 9.25d) < 0.000001d, "Stroked inline content must start inside the border; insets=" + insetLeft.ToString(CultureInfo.InvariantCulture) + "/" + insetTop.ToString(CultureInfo.InvariantCulture) + ".");
+        (string? Left, string? Top, string? Right, string? Bottom, string? Stroke,
+            (double Left, double Top, double Right, double Bottom) Expected)[] cases =
+        [
+            (null, null, null, null, null, (7.2d, 3.6d, 7.2d, 3.6d)),
+            ("0", "0", "0", "0", null, (0d, 0d, 0d, 0d)),
+            ("152400", "114300", "101600", "50800", "6350", (12.25d, 9.25d, 8.25d, 4.25d)),
+            ("228600", "0", null, null, "6350", (18.25d, .25d, 7.45d, 3.85d))
+        ];
+        var paragraph = DocxTests.CreateDocxLayoutParagraph("Box text", 12d, 12d);
+        var drawing = DocxTests.CreateFloatingTextBoxDrawing([new DocxParagraphElement(paragraph)]);
+        foreach (var (left, top, right, bottom, stroke, expected) in cases)
+        {
+            var inline = new DocxInlineTextBox("1828800", "457200", left, top, right, bottom) { TextBoxStrokeWidthEmuValue = stroke };
+            var floating = drawing with
+            {
+                TextBoxInsetLeftValue = left, TextBoxInsetTopValue = top, TextBoxInsetRightValue = right,
+                TextBoxInsetBottomValue = bottom, TextBoxStrokeWidthEmuValue = stroke
+            };
+            foreach (var (owner, actual) in new[] { ("inline", DocxLayoutEngine.ResolveTextBoxContentInsets(inline)),
+                ("floating", DocxLayoutEngine.ResolveTextBoxContentInsets(floating)) })
+            {
+                TestAssert.True(Math.Abs(actual.Left - expected.Left) < .000001d && Math.Abs(actual.Top - expected.Top) < .000001d &&
+                    Math.Abs(actual.Right - expected.Right) < .000001d && Math.Abs(actual.Bottom - expected.Bottom) < .000001d,
+                    $"Expected {owner} content insets {expected}, got {actual}.");
+            }
+        }
     }
     public static void DocxReaderPreservesInlineTextBoxOutline()
     {
@@ -2777,16 +2797,4 @@ internal static class DocxPageTests
         TestAssert.Equal("6350", drawing.TextBoxStrokeWidthEmuValue ?? string.Empty);
         TestAssert.Equal("FF0000", drawing.TextBoxStrokeColorHex ?? string.Empty);
     }
-    public static void DocxFloatingTextBoxContentInsetsIncludeHalfStrokeWidth()
-    {
-        // RV05 floatbox probe (Word COM reference edge-floatbox): stroked textbox
-        // content starts inside the border (0.5pt stroke shifts content by 0.25 on each
-        // axis: text at 162.26 vs 162.00 with an 18pt left inset). Pre-fix insets ignore
-        // the stroke.
-        DocxParagraph boxParagraph = DocxTests.CreateDocxLayoutParagraph("Box text", 12d, 12d) with { LineSpacingPoints = null };
-        DocxFloatingDrawing drawing = DocxTests.CreateFloatingTextBoxDrawing([new DocxParagraphElement(boxParagraph)]) with { TextBoxInsetLeftValue = "228600", TextBoxInsetTopValue = "0", TextBoxStrokeWidthEmuValue = "6350" };
-        DocxLayoutEngine.ResolveTextBoxContentInsets(drawing, out double insetLeft, out double insetTop, out double insetRight, out double insetBottom);
-        TestAssert.True(Math.Abs(insetLeft - 18.25d) < 0.000001d && Math.Abs(insetTop - 0.25d) < 0.000001d, "Stroked textbox content must start inside the border; insets=" + insetLeft.ToString(CultureInfo.InvariantCulture) + "/" + insetTop.ToString(CultureInfo.InvariantCulture) + ".");
-    }
-
 }

@@ -398,7 +398,7 @@ internal sealed partial class DocxLayoutEngine
     // Callers validate revision/source ownership independently of this geometry.
     private static bool HasUsableInlineBoxContentWidth(DocxInlineTextBox box, double width)
     {
-        ResolveInlineTextBoxContentInsets(box, out double left, out _, out double right, out _);
+        var (left, _, right, _) = ResolveTextBoxContentInsets(box);
         return width - left - right > 0d;
     }
 }

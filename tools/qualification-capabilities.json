@@ -17227,7 +17227,7 @@
     "DocxInlineCompositionCellPageCountersMatchIndependentWordFrames",
     "DocxInlineCompositionCellPageNotesKeepIndependentLabelsMathAndImages",
     "DocxInlineImageClipTravelsWithScaledStoryPlacement",
-    "DocxInlineTextBoxContentInsetsIncludeHalfStrokeWidth",
+    "=DocxTextBoxContentInsetsRespectDefaultsZerosAndStroke",
     "DocxPictureCropRetainsAuthoredViewportAndPreviewOwnership",
     "DocxPictureFlipMirrorsNativeAndCroppedRasterPaint",
     "DocxReaderPreservesInlineTextBoxOutline",

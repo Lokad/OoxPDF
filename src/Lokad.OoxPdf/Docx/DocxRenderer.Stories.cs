@@ -340,7 +340,7 @@ internal sealed partial class DocxRenderer
     private static FloatingTextBoxPaintFrame ResolveFloatingTextBoxPaintFrame(DocxFloatingDrawing drawing,
         double placedX, double placedTop, double width, double height, DocxMarkupContext context, double pageHeight)
     {
-        DocxLayoutEngine.ResolveTextBoxContentInsets(drawing, out double left, out double top, out double right, out double bottom);
+        var (left, top, right, bottom) = DocxLayoutEngine.ResolveTextBoxContentInsets(drawing);
         double contentX = placedX + left;
         double contentTop = placedTop - top;
         double contentWidth = Math.Max(0d, width - left - right);

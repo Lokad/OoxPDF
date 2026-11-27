@@ -1204,7 +1204,7 @@ internal static class DocxImagesTests
             WordCompatibleTextYOffset = yOffset
         };
         TestAssert.True(DocxRenderer.FloatingTextBoxEmissionMap.TryCreate(context, pageHeight, out DocxRenderer.FloatingTextBoxEmissionMap map), "Scaled WC pages should engage the floating-textbox emission map.");
-        DocxLayoutEngine.ResolveTextBoxContentInsets(drawing.Drawing, out double insetLeft, out double insetTop, out _, out _);
+        var (insetLeft, insetTop, _, _) = DocxLayoutEngine.ResolveTextBoxContentInsets(drawing.Drawing);
         double designX = placedX + insetLeft + line.X;
         double designY = placedTop - insetTop + line.BaselineY;
         double expectedX = designX * printScale;
