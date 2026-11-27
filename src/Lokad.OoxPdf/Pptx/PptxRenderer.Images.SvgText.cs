@@ -48,11 +48,13 @@ internal sealed partial class PptxRenderer
             var content = EnumerateSvgContent(root, cancellationToken);
             if (HasSvgStylesheet(content, cancellationToken)) continue;
             var elements = content.OfType<XElement>();
+            if (!elements.Any(element => element.Name.LocalName == "text")) continue;
             var paintServers = new SvgPaintServers(elements, viewWidth, viewHeight, cancellationToken);
-            foreach (XElement element in elements.Where(e => e.Name.LocalName == "text"))
+            foreach (XElement element in EnumerateSvgPaintElements(elements, viewWidth, viewHeight, hasStylesheet: false,
+                admittedElements: null, unsupportedElements: null, cancellationToken))
             {
                 cancellationToken.ThrowIfCancellationRequested();
-                if (IsSvgDefinitionElement(element) || IsInFullyTransparentSvgContainer(element) ||
+                if (element.Name.LocalName != "text" || IsSvgDefinitionElement(element) || IsInFullyTransparentSvgContainer(element) ||
                     IsSvgDisplaySuppressed(element, ReadSvgStyleDeclarations(element)) ||
                     !TryReadSvgText(element, paintServers, viewWidth, viewHeight, cancellationToken, out SvgTextLabel? label) || label.Color is null ||
                     label.FillOpacity == 0d || label.GroupOpacity == 0d || fonts.ContainsKey(label.Font)) continue;

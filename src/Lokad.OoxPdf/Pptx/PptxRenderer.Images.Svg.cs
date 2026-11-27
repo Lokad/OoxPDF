@@ -1869,13 +1869,13 @@ internal sealed partial class PptxRenderer
             requiresObjectBounds);
     }
 
-    private static IEnumerable<XNode> EnumerateSvgContent(XElement root, CancellationToken cancellationToken)
+    private static IEnumerable<XNode> EnumerateSvgContent(XElement root, CancellationToken cancellationToken, bool descendantsOnly = false)
     {
         XNamespace ns = root.Name.Namespace;
 
         // Walk the owned SVG tree in source order. Keep document-level
         // stylesheet instructions and leave closed subtrees unvisited.
-        XNode? node = root.Document?.FirstNode ?? root;
+        XNode? node = descendantsOnly ? root.FirstNode : root.Document?.FirstNode ?? root;
         while (node is not null)
         {
             cancellationToken.ThrowIfCancellationRequested();
@@ -1892,13 +1892,17 @@ internal sealed partial class PptxRenderer
             {
                 yield return node;
             }
-            while (node.NextNode is null && node.Parent is { } parent) node = parent;
+            while (node.NextNode is null && node.Parent is { } parent)
+            {
+                if (descendantsOnly && ReferenceEquals(parent, root)) yield break;
+                node = parent;
+            }
             node = node.NextNode;
         }
     }
 
     private static IEnumerable<XElement> EnumerateSvgPaintElements(IEnumerable<XElement> elements, double viewWidth,
-        double viewHeight, bool hasStylesheet, HashSet<XElement> admittedElements,
+        double viewHeight, bool hasStylesheet, HashSet<XElement>? admittedElements,
         SortedDictionary<string, int>? unsupportedElements, CancellationToken cancellationToken)
     {
         Dictionary<string, (XElement? Element, long? Characters)>? byId = null;
@@ -1907,7 +1911,7 @@ internal sealed partial class PptxRenderer
         long remainingCharacters = SafeXml.DefaultMaxCharacters;
         foreach (XElement element in elements)
         {
-            if (IsSvgPaintableElement(element) || element.Name.LocalName == "text")
+            if (IsSvgPaintPrimitive(element))
             {
                 yield return element;
                 continue;
@@ -1929,7 +1933,7 @@ internal sealed partial class PptxRenderer
                 {
                     cancellationToken.ThrowIfCancellationRequested();
                     if ((string?)target.Attribute("id") is not { Length: > 0 } targetId) continue;
-                    XElement? geometry = IsSvgPaintableElement(target) || IsSvgReferenceContainer(target) ? target : null;
+                    XElement? geometry = IsSvgPaintPrimitive(target) || IsSvgReferenceContainer(target) ? target : null;
                     if (!byId.TryAdd(targetId, (geometry, null))) byId[targetId] = default;
                 }
             }
@@ -1944,30 +1948,54 @@ internal sealed partial class PptxRenderer
             if (characters is not long size || size > remainingCharacters) continue;
             remainingCharacters -= size;
 
-            // The instance inherits at the use site, independently of the
-            // definition's ancestors. It borrows the existing group painter.
-            var geometryRoot = CloneSvgReferenceGeometry(source, cancellationToken);
-            var instance = new XElement(element.Name.Namespace + "g", element.Attributes(), geometryRoot);
+            // Inherited properties stay on the use site. The synthetic group
+            // owns placement and compositing, so relative styles resolve once.
             string? transform = ReadSvgGeometryTransform(element, style);
             if (x != 0d || y != 0d)
                 transform = $"{transform} translate({SvgPathNumber(x)} {SvgPathNumber(y)})";
+            var geometryRoot = CloneSvgReferenceGeometry(source, cancellationToken);
+            var instance = new XElement(element.Name.Namespace + "g", geometryRoot);
             instance.SetAttributeValue("transform", transform);
+            instance.SetAttributeValue("opacity", ReadSvgElementOpacity(element, style));
             element.Add(instance);
             try
             {
-                admittedElements.Add(element);
-                foreach (XElement child in geometryRoot.DescendantsAndSelf())
-                {
-                    cancellationToken.ThrowIfCancellationRequested();
-                    if (IsSvgPaintableElement(child))
-                        yield return child;
-                    else if (unsupportedElements is not null)
-                        CountUnsupportedSvgElement(child, admittedElements, unsupportedElements);
-                }
+                admittedElements?.Add(element);
+                foreach (XElement child in EnumerateInstance(geometryRoot))
+                    yield return child;
             }
             finally { instance.Remove(); }
         }
+
+        IEnumerable<XElement> EnumerateInstance(XElement element)
+        {
+            cancellationToken.ThrowIfCancellationRequested();
+            if (IsSvgPaintPrimitive(element))
+            {
+                yield return element;
+                if (element.Name.LocalName == "text" && admittedElements is not null)
+                {
+                    if (unsupportedElements is not null)
+                    {
+                        CountUnsupportedSvgElement(element, admittedElements, unsupportedElements);
+                        foreach (var child in EnumerateSvgContent(element, cancellationToken, descendantsOnly: true).OfType<XElement>())
+                            CountUnsupportedSvgElement(child, admittedElements, unsupportedElements);
+                    }
+                    // Do not keep the detached instance through its painted labels.
+                    admittedElements.Remove(element);
+                }
+                yield break;
+            }
+            if (admittedElements is not null && unsupportedElements is not null)
+                CountUnsupportedSvgElement(element, admittedElements, unsupportedElements);
+            foreach (XElement child in element.Elements())
+                foreach (XElement primitive in EnumerateInstance(child))
+                    yield return primitive;
+        }
     }
+
+    private static bool IsSvgPaintPrimitive(XElement element) =>
+        IsSvgPaintableElement(element) || element.Name.LocalName == "text";
 
     private static bool HasSupportedSvgReferenceEffects(XElement element, IReadOnlyDictionary<string, string> style) =>
         IsNeutralSvgTextStyle("clip-path", ReadSvgPresentationAttribute(element, style, "clip-path")) &&
@@ -1985,10 +2013,28 @@ internal sealed partial class PptxRenderer
             cancellationToken.ThrowIfCancellationRequested();
             if (element.Name.Namespace != source.Name.Namespace) return null;
 
-            long size = 2L * element.Name.LocalName.Length + 5 + MeasureAttributes(element);
+            long size = MeasureElement(element);
             // Keep nested references as leaves for the omission diagnostic.
             // Their targets are not needed to paint the surrounding geometry.
             if (element.Name.LocalName == "use") return size;
+
+            // Text is painted as one label. Its markup and character data are
+            // copied with it and count against the same instance bound.
+            if (element.Name.LocalName == "text")
+            {
+                foreach (XNode node in element.DescendantNodes())
+                {
+                    cancellationToken.ThrowIfCancellationRequested();
+                    size += node switch
+                    {
+                        XElement child => MeasureElement(child),
+                        XText text => text.Value.Length,
+                        XProcessingInstruction instruction => instruction.Target.Length + instruction.Data.Length + 5L,
+                        _ => 0L
+                    };
+                }
+                return size;
+            }
 
             bool group = IsSvgReferenceContainer(element);
             if (!(group || IsSvgPaintableElement(element)) ||
@@ -2008,15 +2054,26 @@ internal sealed partial class PptxRenderer
             return size;
         }
 
+        static long MeasureElement(XElement element) =>
+            2L * element.Name.LocalName.Length + 5 + MeasureAttributes(element);
+
         static long MeasureAttributes(XElement element) =>
             element.Attributes().Sum(attribute => (long)attribute.Name.LocalName.Length + attribute.Value.Length + 4);
     }
 
-    private static XElement CloneSvgReferenceGeometry(XElement source, CancellationToken cancellationToken)
+    private static XElement CloneSvgReferenceGeometry(XElement source, CancellationToken cancellationToken, bool textSubtree = false)
     {
         cancellationToken.ThrowIfCancellationRequested();
         var clone = new XElement(source.Name, source.Attributes());
-        if (IsSvgReferenceContainer(source))
+        if (textSubtree || source.Name.LocalName == "text")
+        {
+            foreach (XNode child in source.Nodes())
+            {
+                cancellationToken.ThrowIfCancellationRequested();
+                clone.Add(child is XElement element ? CloneSvgReferenceGeometry(element, cancellationToken, textSubtree: true) : child);
+            }
+        }
+        else if (IsSvgReferenceContainer(source))
         {
             foreach (XElement child in source.Elements())
             {

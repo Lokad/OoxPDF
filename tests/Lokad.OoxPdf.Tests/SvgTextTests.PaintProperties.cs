@@ -612,6 +612,31 @@ internal static partial class SvgTextTests
         TestAssert.Contains("3 unsupported use elements", diagnostics.Single().Message);
     }
 
+    public static void SvgLocalReferencesKeepLabelsAndAdjacentShapes()
+    {
+        const string label = """<text x="12" y="72" fill="currentColor">NO<tspan>RTH</tspan></text>""";
+        const string before = """<rect width="90" height="36" fill="red"/>""";
+        const string after = """<rect x="115" width="40" height="24" fill="blue"/>""";
+        const string peer = """<rect x="260" y="20" width="42" height="35" fill="lime"/>""";
+        const string paint = """font-family="DejaVu Sans" color="#112233" opacity=".5" """;
+        string literal = Svg($"""
+            <g transform="translate(12 15)" font-size="24" {paint}><g>{before}{label}{after}</g></g>
+            {peer}
+            <g transform="translate(165 55)" font-size="24" {paint}>{label}</g>
+            """);
+        string referenced = Svg($"""
+            <defs><g display="none" font-family="Unused Definition Face" color="orange">
+              <g id="tile">{before}{label}{after}</g>
+              {label.Insert(5, """ id="caption" """)}
+            </g></defs>
+            <use href="#tile" x="12" y="15" font-size="150%" {paint}/>
+            {peer}
+            <use href="#caption" x="165" y="55" font-size="150%" {paint}/>
+            """);
+        AssertSvgPaintInBothFormats(literal, referenced, pdf => TestAssert.Equal(10, LabelPaths(pdf)),
+            "1 0 0 rg", "0 0 1 rg", "0 1 0 rg", LabelColor, "/ca 0.5 /CA 0.5");
+    }
+
     public static void SvgLocalShapeGroupsKeepPaintBesideDescriptiveMetadata()
     {
         const string circle = """<circle cx="42" cy="20" r="10" fill="blue"/>""";
@@ -675,6 +700,15 @@ internal static partial class SvgTextTests
                 "A skipped nested reference leaves the rest of its group at the authored origin.");
             TestAssert.Contains("1 unsupported use element.", diagnostics.Single().Message);
         }
+
+        var textDiagnostics = new List<OoxPdfDiagnostic>();
+        var pathText = Paint(Reference("""<text x="12" y="72"><textPath href="#accent">NORTH</textPath></text>"""),
+            textDiagnostics);
+        AssertEquivalentSvgPaint(literalPaint, pathText, "Unsupported text leaves both neighboring shapes intact.");
+        TestAssert.True(textDiagnostics.Any(diagnostic => diagnostic.Message.Contains("1 unsupported text element.", StringComparison.Ordinal)),
+            "The skipped label keeps its diagnostic.");
+        TestAssert.True(textDiagnostics.Any(diagnostic => diagnostic.Message.Contains("1 unsupported textPath element.", StringComparison.Ordinal)),
+            "The unsupported text-path markup keeps its diagnostic.");
     }
 
     public static void SvgInlineTransformNonePreservesGeometryAndReferenceOffsets()
