@@ -1213,8 +1213,8 @@ internal sealed partial class PptxRenderer
             // Without a viewBox, fixed viewport dimensions define the source
             // coordinate system at the origin, with one user unit per pixel.
             var style = ReadSvgStyleDeclarations(root);
-            return TryReadSvgLength(ReadSvgPresentationAttribute(root, style, "width"), out width) &&
-                TryReadSvgLength(ReadSvgPresentationAttribute(root, style, "height"), out height) &&
+            return TryReadSvgCoordinate(root, "width", percentageBasis: null, out width, style) &&
+                TryReadSvgCoordinate(root, "height", percentageBasis: null, out height, style) &&
                 width > 0d && height > 0d;
         }
 
@@ -1923,8 +1923,8 @@ internal sealed partial class PptxRenderer
                 IsFullyTransparentSvgContainer(element, style) ||
                 ReadSvgFragmentReference(element) is not { } id ||
                 !HasSupportedSvgReferenceEffects(element, style) ||
-                !TryReadSvgShapeCoordinate(element, "x", viewWidth, out double x, style) ||
-                !TryReadSvgShapeCoordinate(element, "y", viewHeight, out double y, style)) continue;
+                !TryReadSvgCoordinate(element, "x", viewWidth, out double x, style) ||
+                !TryReadSvgCoordinate(element, "y", viewHeight, out double y, style)) continue;
 
             if (byId is null)
             {
@@ -3368,7 +3368,7 @@ internal sealed partial class PptxRenderer
             _ => (string?)element.Attribute("d"),
         };
     }
-    private static bool TryReadSvgShapeCoordinate(XElement element, string name, double percentageBasis, out double value,
+    private static bool TryReadSvgCoordinate(XElement element, string name, double? percentageBasis, out double value,
         IReadOnlyDictionary<string, string>? style = null)
     {
         bool valid = TryReadSvgGeometryLength(element, name, percentageBasis, style, out double? length);
@@ -3376,13 +3376,13 @@ internal sealed partial class PptxRenderer
         return valid;
     }
 
-    private static bool TryReadSvgGeometryLength(XElement element, string name, double percentageBasis,
+    private static bool TryReadSvgGeometryLength(XElement element, string name, double? percentageBasis,
         IReadOnlyDictionary<string, string>? style, out double? length)
     {
         bool pairedRadius = name is "rx" or "ry";
         bool allowsAuto = pairedRadius || name is "width" or "height";
         if (style is not null && style.TryGetValue(name, out string? declaration) && TryRead(declaration, out length) &&
-            (!(allowsAuto || name == "r") || length.GetValueOrDefault() >= 0d))
+            (percentageBasis is null || !(allowsAuto || name == "r") || length.GetValueOrDefault() >= 0d))
         {
             return true;
         }
@@ -3394,8 +3394,11 @@ internal sealed partial class PptxRenderer
         bool TryRead(string text, out double? value)
         {
             value = null;
-            if (allowsAuto && text.AsSpan().Trim().Equals("auto", StringComparison.OrdinalIgnoreCase)) return true;
-            if (!TryReadSvgViewportLength(element, text, percentageBasis, out double number)) return false;
+            ReadOnlySpan<char> token = text.AsSpan().Trim();
+            if (allowsAuto && token.Equals("auto", StringComparison.OrdinalIgnoreCase)) return true;
+            // A percentage can own the dimension without a known basis to resolve it.
+            if (percentageBasis is null && token.EndsWith('%')) return TryReadSvgPercentage(token, out _);
+            if (!TryReadSvgViewportLength(element, token, percentageBasis.GetValueOrDefault(), out double number)) return false;
             value = number;
             return true;
         }
@@ -3408,15 +3411,21 @@ internal sealed partial class PptxRenderer
 
         value = 0d;
         // Nested viewports require their own dimensions.
-        if (text.Length == 1 || char.IsWhiteSpace(text[^2]) ||
-            element.Ancestors().Any(ancestor => ancestor.Name.LocalName == "svg" && ancestor.Parent is not null) ||
-            !double.TryParse(text[..^1], NumberStyles.Float, CultureInfo.InvariantCulture, out double percent))
+        if (element.Ancestors().Any(ancestor => ancestor.Name.LocalName == "svg" && ancestor.Parent is not null) ||
+            !TryReadSvgPercentage(text, out double percent))
         {
             return false;
         }
 
         value = (percent / 100d) * percentageBasis;
         return double.IsFinite(value);
+    }
+
+    private static bool TryReadSvgPercentage(ReadOnlySpan<char> text, out double percent)
+    {
+        percent = 0d;
+        return text.Length > 1 && !char.IsWhiteSpace(text[^2]) &&
+            double.TryParse(text[..^1], NumberStyles.Float, CultureInfo.InvariantCulture, out percent) && double.IsFinite(percent);
     }
 
     private static string SvgPathNumber(double value)
@@ -3444,10 +3453,10 @@ internal sealed partial class PptxRenderer
     private static string? ConvertSvgRectToPathData(XElement element, IReadOnlyDictionary<string, string> style,
         double viewWidth, double viewHeight)
     {
-        if (!TryReadSvgShapeCoordinate(element, "x", viewWidth, out double x, style)
-            || !TryReadSvgShapeCoordinate(element, "y", viewHeight, out double y, style)
-            || !TryReadSvgShapeCoordinate(element, "width", viewWidth, out double width, style)
-            || !TryReadSvgShapeCoordinate(element, "height", viewHeight, out double height, style))
+        if (!TryReadSvgCoordinate(element, "x", viewWidth, out double x, style)
+            || !TryReadSvgCoordinate(element, "y", viewHeight, out double y, style)
+            || !TryReadSvgCoordinate(element, "width", viewWidth, out double width, style)
+            || !TryReadSvgCoordinate(element, "height", viewHeight, out double height, style))
         {
             return null;
         }
@@ -3481,9 +3490,9 @@ internal sealed partial class PptxRenderer
     private static string? ConvertSvgCircleToPathData(XElement element, IReadOnlyDictionary<string, string> style,
         double viewWidth, double viewHeight)
     {
-        if (!TryReadSvgShapeCoordinate(element, "cx", viewWidth, out double cx, style)
-            || !TryReadSvgShapeCoordinate(element, "cy", viewHeight, out double cy, style)
-            || !TryReadSvgShapeCoordinate(element, "r", GetSvgNormalizedDiagonal(viewWidth, viewHeight), out double radius, style)
+        if (!TryReadSvgCoordinate(element, "cx", viewWidth, out double cx, style)
+            || !TryReadSvgCoordinate(element, "cy", viewHeight, out double cy, style)
+            || !TryReadSvgCoordinate(element, "r", GetSvgNormalizedDiagonal(viewWidth, viewHeight), out double radius, style)
             || radius <= 0d)
         {
             return null;
@@ -3493,8 +3502,8 @@ internal sealed partial class PptxRenderer
     private static string? ConvertSvgEllipseToPathData(XElement element, IReadOnlyDictionary<string, string> style,
         double viewWidth, double viewHeight)
     {
-        if (!TryReadSvgShapeCoordinate(element, "cx", viewWidth, out double cx, style)
-            || !TryReadSvgShapeCoordinate(element, "cy", viewHeight, out double cy, style)
+        if (!TryReadSvgCoordinate(element, "cx", viewWidth, out double cx, style)
+            || !TryReadSvgCoordinate(element, "cy", viewHeight, out double cy, style)
             || !TryReadSvgPairedRadii(element, style, viewWidth, viewHeight, out double rx, out double ry)
             || rx <= 0d || ry <= 0d)
         {
@@ -3515,10 +3524,10 @@ internal sealed partial class PptxRenderer
     }
     private static string? ConvertSvgLineToPathData(XElement element, double viewWidth, double viewHeight)
     {
-        if (!TryReadSvgShapeCoordinate(element, "x1", viewWidth, out double x1)
-            || !TryReadSvgShapeCoordinate(element, "y1", viewHeight, out double y1)
-            || !TryReadSvgShapeCoordinate(element, "x2", viewWidth, out double x2)
-            || !TryReadSvgShapeCoordinate(element, "y2", viewHeight, out double y2))
+        if (!TryReadSvgCoordinate(element, "x1", viewWidth, out double x1)
+            || !TryReadSvgCoordinate(element, "y1", viewHeight, out double y1)
+            || !TryReadSvgCoordinate(element, "x2", viewWidth, out double x2)
+            || !TryReadSvgCoordinate(element, "y2", viewHeight, out double y2))
         {
             return null;
         }

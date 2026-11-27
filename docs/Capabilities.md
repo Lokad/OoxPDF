@@ -188,6 +188,8 @@ Equivalent numeric spellings of integer SVG font weights from 100 through 900 ke
 Basic shape geometry, stroke widths, dash lengths and dash offsets accept viewport percentages.
 These lengths and fixed viewport dimensions also accept absolute CSS units.
 Rectangle, circle and ellipse geometry accepts these lengths in inline styles.
+For an SVG root without a viewBox, a fixed width or height attribute can supply
+the dimension when its inline value cannot be parsed.
 Supported SVG labels accept viewport percentages, em and absolute units in
 single-value x, y, dx and dy attributes. A dx or dy list can supply one initial
 offset followed by zeros. Later absolute positions or nonzero relative offsets

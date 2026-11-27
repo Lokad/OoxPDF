@@ -1906,6 +1906,14 @@ internal static partial class SvgTextTests
                 "Explicit dimensions supply the same coordinate frame as the equivalent viewBox.");
         }
         TestAssert.Equal(0, diagnostics.Count);
+
+        string fixedViewport = Picture("width=\"300\" height=\"150\"");
+        AssertSvgPaintInBothFormats(fixedViewport,
+            [
+                Picture("width=\"300\" height=\"150\" style=\"width:nonsense\""),
+                Picture("width=\"600\" height=\"150\" style=\"width:300px;height:nonsense\"")
+            ],
+            pdf => TestAssert.Equal(1, LabelPaths(pdf)), "1 0 0 rg", "0 0 1 RG");
     }
 
     public static void SvgUnknownSourceFrameRetainsIgnoredDiagnostic()
@@ -1915,6 +1923,11 @@ internal static partial class SvgTextTests
             "height=\"150\"",
             "width=\"100%\" height=\"150\"",
             "width=\"0\" height=\"150\"",
+            "height=\"150\" style=\"width:nonsense\"",
+            "width=\"300\" height=\"150\" style=\"width:100%\"",
+            "width=\"300\" height=\"150\" style=\"height:auto\"",
+            "width=\"300\" height=\"150\" style=\"width:0\"",
+            "width=\"300\" height=\"150\" style=\"height:-1px\"",
             "width=\"300\" height=\"150\" viewBox=\"invalid\""
         })
         {
