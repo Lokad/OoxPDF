@@ -632,6 +632,25 @@ internal static partial class SvgTextTests
         AssertSvgPaintInBothFormats(literal, [reference, described], null, "1 0 0 rg", "0 0 1 rg");
     }
 
+    public static void SvgInlineTransformNonePreservesGeometryAndReferenceOffsets()
+    {
+        const string red = """<rect x="12" y="15" width="35" height="25" fill="red"/>""";
+        const string green = """<circle cx="85" cy="40" r="12" fill="lime"/>""";
+        const string blue = """<rect width="20" height="12" fill="blue"/>""";
+        const string label = """<text x="200" y="65" font-size="16" fill="#112233">NORTH</text>""";
+        const string reset = """transform="translate(1500 0)" style="transform:NoNe !important;transform:translate(10px)" """;
+        string literal = Svg($"""{red}{green}<g transform="translate(120 18)">{blue}</g>{label}""");
+        string variant = Svg($"""
+            {red.Insert(6, reset)}
+            <g {reset}>{green}</g>
+            <defs>{blue.Insert(6, """id="tile" """)}</defs>
+            <use href="#tile" x="120" y="18" {reset}/>
+            {label.Insert(6, reset)}
+            """);
+        AssertSvgPaintInBothFormats(literal, variant, pdf => TestAssert.Equal(5, LabelPaths(pdf)),
+            "1 0 0 rg", "0 1 0 rg", "0 0 1 rg", LabelColor);
+    }
+
     public static void SvgDecreasingStopsKeepNativePaintAndOpacityInBothFormats()
     {
         string Picture(string last) => Svg($"""

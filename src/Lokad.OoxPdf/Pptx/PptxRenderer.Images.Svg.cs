@@ -235,7 +235,7 @@ internal sealed partial class PptxRenderer
             }
             if (element.Name.LocalName == "text")
             {
-                if (!hasStylesheet && TryReadSvgPathTransform(element, out SvgTransform textTransform) &&
+                if (!hasStylesheet && TryReadSvgPathTransform(element, style, out SvgTransform textTransform) &&
                     TryPaintSvgText(graphics, element, paintServers, textFonts, textTransform, viewWidth, viewHeight, sourceMinX, sourceMinY,
                         imageX, imageY, imageWidth, imageHeight, scaleX, scaleY, isolation.Count < PdfTransparencyGroup.MaxDepth,
                         AdmitSamples, cancellationToken))
@@ -247,7 +247,7 @@ internal sealed partial class PptxRenderer
             {
                 continue;
             }
-            if (!TryReadSvgPathTransform(element, out SvgTransform transform))
+            if (!TryReadSvgPathTransform(element, style, out SvgTransform transform))
             {
                 unsupportedTransforms++;
                 continue;
@@ -1940,8 +1940,10 @@ internal sealed partial class PptxRenderer
             // definition's ancestors. It borrows the existing group painter.
             var geometryRoot = CloneSvgReferenceGeometry(source, cancellationToken);
             var instance = new XElement(element.Name.Namespace + "g", element.Attributes(), geometryRoot);
+            string? transform = ReadSvgGeometryTransform(element, style);
             if (x != 0d || y != 0d)
-                instance.SetAttributeValue("transform", $"{(string?)instance.Attribute("transform")} translate({SvgPathNumber(x)} {SvgPathNumber(y)})");
+                transform = $"{transform} translate({SvgPathNumber(x)} {SvgPathNumber(y)})";
+            instance.SetAttributeValue("transform", transform);
             element.Add(instance);
             try
             {
@@ -3685,12 +3687,24 @@ internal sealed partial class PptxRenderer
         return mapped;
     }
 
-    private static bool TryReadSvgPathTransform(XElement path, out SvgTransform transform)
+    private static string? ReadSvgGeometryTransform(XElement element, IReadOnlyDictionary<string, string>? style = null)
+    {
+        string? transform = (string?)element.Attribute("transform");
+        // A synthesized group carries the resolved reference transform and x/y translation.
+        if (transform is null || element.Parent?.Name.LocalName == "use") return transform;
+
+        style ??= ReadSvgStyleDeclarations(element);
+        return style.TryGetValue("transform", out string? inline) && inline.Equals("none", StringComparison.OrdinalIgnoreCase)
+            ? null
+            : transform;
+    }
+
+    private static bool TryReadSvgPathTransform(XElement path, IReadOnlyDictionary<string, string> style, out SvgTransform transform)
     {
         transform = SvgTransform.Identity;
         foreach (XElement ancestor in path.Ancestors().Where(element => element.Name.LocalName is "g" or "a").Reverse())
         {
-            if (!TryParseSvgTransformList((string?)ancestor.Attribute("transform"), out SvgTransform ancestorTransform))
+            if (!TryParseSvgTransformList(ReadSvgGeometryTransform(ancestor), out SvgTransform ancestorTransform))
             {
                 transform = SvgTransform.Identity;
                 return false;
@@ -3699,7 +3713,7 @@ internal sealed partial class PptxRenderer
             transform = SvgTransform.Compose(transform, ancestorTransform);
         }
 
-        if (!TryParseSvgTransformList((string?)path.Attribute("transform"), out SvgTransform local))
+        if (!TryParseSvgTransformList(ReadSvgGeometryTransform(path, style), out SvgTransform local))
         {
             transform = SvgTransform.Identity;
             return false;

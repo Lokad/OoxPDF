@@ -145,6 +145,7 @@ Local SVG gradient templates reuse the authored stops and their source colors.
 Same-document SVG `use` references can reuse a direct shape or a group
 containing supported shapes, with placement and inherited paint at each use
 site. Titles, descriptions and metadata preserve reuse of supported geometry.
+Inline `transform:none` overrides the geometry's presentation transform.
 Symbol targets, external documents and chained references retain the diagnosed
 fallback.
 Supported user-space linear and radial gradients accept absolute CSS lengths.
