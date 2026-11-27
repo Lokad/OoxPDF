@@ -94,6 +94,12 @@ Use `--offline` with retained artifact metadata and archives to replay the
 binding. The stage checks write separate receipts. The package and symbols
 are stored under their revision-qualified names in `artifacts/nuget/`.
 
+Run `python -B tools/CheckHostedPackage.py transfer <stage>` on Windows and
+Ubuntu to compare the hosted CLI outputs with the qualified local receipts
+for both frameworks. After staging, run the same command with `readback`
+in place of `transfer` to verify the canonical assets, consumer receipts,
+and exact transfer outputs. Readback reuses retained evidence.
+
 Console tests launch prebuilt tools from the matching local build configuration
 or an explicitly bound assembly. For frozen tests, bind the tools your selection
 uses with `OOXPDF_TEST_CLI_ASSEMBLY`, `OOXPDF_TEST_PDF_INSPECTOR`,
