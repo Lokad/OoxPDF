@@ -704,6 +704,7 @@
     "=SvgLocalShapeGroupsPreserveOrderAndInheritedPaint",
     "=SvgLocalShapeGroupsKeepPaintBesideDescriptiveMetadata",
     "=SvgLocalShapeGroupsResolveNestedPaintServersFromTheirSource",
+    "=SvgLocalShapeReferencesKeepLinkArtworkAndDiagnoseTheAction",
     "=SvgInlineTransformNonePreservesGeometryAndReferenceOffsets",
     "=SvgZeroOpacityReferencesPreserveSurroundingPaintAndDiagnostics",
     "=SvgDecreasingStopsKeepNativePaintAndOpacityInBothFormats",

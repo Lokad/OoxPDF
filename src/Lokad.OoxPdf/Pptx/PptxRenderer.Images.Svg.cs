@@ -161,6 +161,7 @@ internal sealed partial class PptxRenderer
         var paintServers = new SvgPaintServers(elements, viewWidth, viewHeight, cancellationToken);
         double strokePercentageBasis = GetSvgNormalizedDiagonal(viewWidth, viewHeight);
         var admittedElements = new HashSet<XElement>();
+        SortedDictionary<string, int>? unsupportedElements = diagnosticSink is null ? null : new(StringComparer.Ordinal);
         bool hasStylesheet = HasSvgStylesheet(content, cancellationToken);
         var unsupportedCommands = new SortedSet<char>();
         int unreadablePaths = 0;
@@ -205,7 +206,8 @@ internal sealed partial class PptxRenderer
             graphics = entry.Parent;
             graphics.DrawTransparencyGroup(entry.Child, paintBounds ?? pictureFrame, entry.Opacity);
         }
-        foreach (XElement element in EnumerateSvgPaintElements(elements, viewWidth, viewHeight, hasStylesheet, admittedElements, cancellationToken))
+        foreach (XElement element in EnumerateSvgPaintElements(elements, viewWidth, viewHeight, hasStylesheet,
+            admittedElements, unsupportedElements, cancellationToken))
         {
             cancellationToken.ThrowIfCancellationRequested();
             // RV07-D2: definition descendants supply reusable paint resources;
@@ -594,7 +596,7 @@ internal sealed partial class PptxRenderer
             if (objectFrame.HasValue) { CloseGroup(objectFrame); }
         }
         while (isolation.Count > 0) { CloseGroup(); }
-        ReportUnsupportedSvgElements(elements, diagnosticSink, slideIndex, partName, admittedElements);
+        ReportUnsupportedSvgElements(elements, diagnosticSink, slideIndex, partName, admittedElements, unsupportedElements);
         ReportSkippedSvgPaths(unsupportedCommands, unreadablePaths, missingGradients, unpaintablePaths, unsupportedTransforms, gradientStrokes, unpaintableStrokes, invalidStrokePresentations, vectorEffectStrokes, focalRadialGradients, nonFiniteGradientPaths, diagnosticSink, slideIndex, partName);
         ReportIgnoredSvgOpacity(elements, paintServers, usedGradientIds, admittedContainers,
             admittedGradientAlpha, fallbackGradientAlpha, diagnosticSink, slideIndex, partName, cancellationToken);
@@ -608,25 +610,16 @@ internal sealed partial class PptxRenderer
     // restricted to paintable content outside definitions (inert definitions
     // are correctly skipped).
     private static void ReportUnsupportedSvgElements(IEnumerable<XElement> elements, Action<OoxPdfDiagnostic>? diagnosticSink, int slideIndex, string? partName,
-        HashSet<XElement> admittedElements)
+        HashSet<XElement> admittedElements, SortedDictionary<string, int>? counts)
     {
-        if (diagnosticSink is null)
+        if (diagnosticSink is null || counts is null)
         {
             return;
         }
 
-        var counts = new SortedDictionary<string, int>(StringComparer.Ordinal);
         foreach (XElement element in elements)
         {
-            string name = element.Name.LocalName;
-            if (IsSupportedSvgElement(name) || admittedElements.Contains(element) ||
-                name == "tspan" && element.Ancestors().Any(admittedElements.Contains) || IsSvgDefinitionElement(element) ||
-                IsInFullyTransparentSvgContainer(element) || IsHiddenSvgElement(element))
-            {
-                continue;
-            }
-            counts.TryGetValue(name, out int count);
-            counts[name] = count + 1;
+            CountUnsupportedSvgElement(element, admittedElements, counts);
         }
         foreach ((string name, int count) in counts)
         {
@@ -641,6 +634,20 @@ internal sealed partial class PptxRenderer
                 Fallback: "Partial"));
         }
     }
+
+    private static void CountUnsupportedSvgElement(XElement element, HashSet<XElement> admittedElements,
+        SortedDictionary<string, int> counts)
+    {
+        string name = element.Name.LocalName;
+        if (IsSupportedSvgElement(name) || admittedElements.Contains(element) ||
+            name == "tspan" && element.Ancestors().Any(admittedElements.Contains) || IsSvgDefinitionElement(element) ||
+            IsInFullyTransparentSvgContainer(element) || IsHiddenSvgElement(element))
+        {
+            return;
+        }
+        counts[name] = counts.GetValueOrDefault(name) + 1;
+    }
+
     private static void ReportIgnoredSvgOpacity(IEnumerable<XElement> elements, SvgPaintServers paintServers,
         HashSet<string>? usedGradientIds,
         HashSet<XElement> admittedContainers, HashSet<string> admittedGradientAlpha, HashSet<string> fallbackGradientAlpha,
@@ -1891,7 +1898,8 @@ internal sealed partial class PptxRenderer
     }
 
     private static IEnumerable<XElement> EnumerateSvgPaintElements(IEnumerable<XElement> elements, double viewWidth,
-        double viewHeight, bool hasStylesheet, HashSet<XElement> admittedElements, CancellationToken cancellationToken)
+        double viewHeight, bool hasStylesheet, HashSet<XElement> admittedElements,
+        SortedDictionary<string, int>? unsupportedElements, CancellationToken cancellationToken)
     {
         Dictionary<string, (XElement? Element, long? Characters)>? byId = null;
         // Limit repeated scans and materialized geometry by the literal SVG
@@ -1921,7 +1929,7 @@ internal sealed partial class PptxRenderer
                 {
                     cancellationToken.ThrowIfCancellationRequested();
                     if ((string?)target.Attribute("id") is not { Length: > 0 } targetId) continue;
-                    XElement? geometry = IsSvgPaintableElement(target) || target.Name.LocalName == "g" ? target : null;
+                    XElement? geometry = IsSvgPaintableElement(target) || IsSvgReferenceContainer(target) ? target : null;
                     if (!byId.TryAdd(targetId, (geometry, null))) byId[targetId] = default;
                 }
             }
@@ -1948,8 +1956,14 @@ internal sealed partial class PptxRenderer
             try
             {
                 admittedElements.Add(element);
-                foreach (var shape in geometryRoot.DescendantsAndSelf().Where(IsSvgPaintableElement))
-                    yield return shape;
+                foreach (XElement child in geometryRoot.DescendantsAndSelf())
+                {
+                    cancellationToken.ThrowIfCancellationRequested();
+                    if (IsSvgPaintableElement(child))
+                        yield return child;
+                    else if (unsupportedElements is not null && child.Name.LocalName == "a")
+                        CountUnsupportedSvgElement(child, admittedElements, unsupportedElements);
+                }
             }
             finally { instance.Remove(); }
         }
@@ -1969,7 +1983,7 @@ internal sealed partial class PptxRenderer
         long? MeasureGeometry(XElement element)
         {
             cancellationToken.ThrowIfCancellationRequested();
-            bool group = element.Name.LocalName == "g";
+            bool group = IsSvgReferenceContainer(element);
             if (element.Name.Namespace != source.Name.Namespace ||
                 !(group || IsSvgPaintableElement(element)) ||
                 !HasSupportedSvgReferenceEffects(element, ReadSvgStyleDeclarations(element))) return null;
@@ -1998,7 +2012,7 @@ internal sealed partial class PptxRenderer
     {
         cancellationToken.ThrowIfCancellationRequested();
         var clone = new XElement(source.Name, source.Attributes());
-        if (source.Name.LocalName == "g")
+        if (IsSvgReferenceContainer(source))
         {
             foreach (XElement child in source.Elements())
             {
@@ -2009,6 +2023,8 @@ internal sealed partial class PptxRenderer
         }
         return clone;
     }
+
+    private static bool IsSvgReferenceContainer(XElement element) => element.Name.LocalName is "g" or "a";
 
     // Paint servers are resolved from the original SVG tree, which owns their
     // inherited properties. The instance needs only its visible geometry.

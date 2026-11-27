@@ -688,6 +688,43 @@ internal static partial class SvgTextTests
         TestAssert.Contains("1 unsupported use element.", diagnostics.Single().Message);
     }
 
+    public static void SvgLocalShapeReferencesKeepLinkArtworkAndDiagnoseTheAction()
+    {
+        const string shapes = """
+            <rect width="40" height="26" fill="red"/><circle cx="55" cy="18" r="12" fill="blue"/>
+            """;
+        const string sibling = """<rect id="destination" x="260" y="10" width="22" height="20" fill="lime"/>""";
+        const string use = """<use href="#badge" x="12" y="15"/>""";
+        string Link(string attributes = "") =>
+            $"""<a {attributes} href="#destination" transform="translate(4 6)">{shapes}</a>""";
+        string Referenced(string source) => Svg($"""<defs>{source}</defs>{use}{sibling}""");
+        string WithinGroup(string body) => $"""<g id="badge">{body}</g>""";
+
+        var diagnostics = new List<OoxPdfDiagnostic>();
+        var literal = Paint(Svg($"""<g transform="translate(12 15)">{Link()}</g>{sibling}"""), diagnostics);
+        TestAssert.Contains("1 0 0 rg", literal.ToString());
+        TestAssert.Contains("0 0 1 rg", literal.ToString());
+        OoxPdfDiagnostic linkDiagnostic = diagnostics.Single();
+        TestAssert.Contains("1 unsupported a element.", linkDiagnostic.Message);
+        foreach (string source in new[] { WithinGroup(Link()), Link("""id="badge" """) })
+        {
+            diagnostics.Clear();
+            var actual = Paint(Referenced(source), diagnostics);
+            AssertEquivalentSvgPaint(literal, actual, "A reference preserves the placement of the link artwork.");
+            TestAssert.Equal(linkDiagnostic, diagnostics.Single());
+        }
+
+        diagnostics.Clear();
+        var siblingOnly = Paint(Svg(sibling));
+        var hidden = Paint(Referenced(WithinGroup(Link("""style="opacity:0" """))), diagnostics);
+        AssertEquivalentSvgPaint(siblingOnly, hidden, "A transparent link wrapper never contributes paint.");
+        TestAssert.Equal(0, diagnostics.Count);
+
+        var unsupported = Paint(Referenced(WithinGroup(Link() + """<use href="#badge"/>""")), diagnostics);
+        AssertEquivalentSvgPaint(siblingOnly, unsupported, "The chained reference keeps its omission fallback.");
+        TestAssert.Contains("1 unsupported use element.", diagnostics.Single().Message);
+    }
+
     public static void SvgDecreasingStopsKeepNativePaintAndOpacityInBothFormats()
     {
         string Picture(string last) => Svg($"""
