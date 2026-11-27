@@ -682,7 +682,7 @@ internal static class DocxTablesLayoutTests
         DocxTableCell Cell(string text, int span = 1) => new([DocxTests.CreateDocxLayoutParagraph(text, 10d, 12d)],
             null, null, null, null, [], DocxTableCellMargins.Empty,
             PreferredWidthPoints: span == 1 ? 130d : null, PreferredWidthType: "dxa") { GridSpan = span };
-        var first = new DocxTableRow([Cell("Left") with { NoWrap = true }, Cell("Peer"), Cell(""), Cell("")], null);
+        var first = new DocxTableRow([Cell("") with { NoWrap = true }, Cell(" "), Cell(""), Cell("")], null);
         Check([Cell(""), Cell(""), Cell("Merged", 2)], [130d, 50d, 90d, 90d], [130d, 50d, 180d]);
         Check([Cell(""), Cell("Merged", 3)], [90d, 90d, 90d, 90d], [90d, 270d]);
         Check([Cell("Merged", 2), Cell(""), Cell("")], [90d, 90d, 90d, 90d], [180d, 90d, 90d]);
@@ -696,7 +696,7 @@ internal static class DocxTablesLayoutTests
             };
             var document = DocxTests.CreateLayoutTestDocument([new DocxTableElement(table)]);
             var rows = new DocxLayoutEngine(OoxPdfDocxMarkupGeometryMode.PreserveDocumentLayout)
-                .Create(document, new DocxTests.FamilyWidthTextMeasurer(), default).Pages
+                .Create(document, textMeasurer: null, cancellationToken: default).Pages
                 .SelectMany(page => page.Items).OfType<DocxTableRowLayout>().ToArray();
             TestAssert.Equal(2, rows.Length);
             AssertRow(rows[0], firstWidths);

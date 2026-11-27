@@ -1779,12 +1779,13 @@ internal sealed partial class DocxLayoutEngine
                 }
             }
             string text = string.Concat(spans.Select(span => span.Text));
-            if (text.Length != 0)
+            // Positioned tabs and explicit breaks have their own width rules.
+            if (text.IndexOfAny(['\t', '\r', '\n']) >= 0) return null;
+            if (text.Any(static value => !OoxTextBreakRules.IsBreakableWhitespaceChar(value)))
             {
                 // Text needs metrics. Picture and text-box extents can be
                 // measured independently in cells with no text to lay out.
-                if (measurer is not { } textMetrics || text.IndexOfAny(['\t', '\r', '\n']) >= 0)
-                    return null;
+                if (measurer is not { } textMetrics) return null;
 
                 var spanStarts = new int[spans.Count + 1];
                 for (int index = 0; index < spans.Count; index++)
