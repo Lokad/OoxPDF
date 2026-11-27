@@ -1098,40 +1098,38 @@ internal sealed partial class DocxLayoutEngine
             double independentContentHeight = 0d;
             bool hasIndependentRowFloor = false;
             var cellContentHeights = sourceMeasurements.Length == 0 ? [] : new double[row.Cells.Count];
-            double contentHeight = textMeasurer is null
-                ? 0d
-                : row.Cells
-                    .Select((cell, columnIndex) =>
+            double contentHeight = row.Cells
+                .Select((cell, columnIndex) =>
+                {
+                    DocxTableCellContentHeight measured = MeasureTableCellContentHeight(cell, cellWidths[columnIndex], textMeasurer, defaultTabStopPoints, rowTopPadding, rowPageNumber, pageCount, paragraphSpacingScale, mathEquations, cancellationToken);
+                    double full = measured.Resolve(adjustAlignedMinimumMargins && paragraphSpacingScale == 1d &&
+                        IsEligibleTableMinimumCell(table, row, cell, textMeasurer));
+                    if (cellContentHeights.Length != 0) cellContentHeights[columnIndex] = full;
+                    double unexpanded = full;
+                    if (textMeasurer is not null && mergeSpans.TryGetValue(cell, out var span))
                     {
-                        DocxTableCellContentHeight measured = MeasureTableCellContentHeight(cell, cellWidths[columnIndex], textMeasurer, defaultTabStopPoints, rowTopPadding, rowPageNumber, pageCount, paragraphSpacingScale, mathEquations, cancellationToken);
-                        double full = measured.Resolve(adjustAlignedMinimumMargins && paragraphSpacingScale == 1d &&
-                            IsEligibleTableMinimumCell(table, row, cell, textMeasurer));
-                        if (cellContentHeights.Length != 0) cellContentHeights[columnIndex] = full;
-                        double unexpanded = full;
-                        if (mergeSpans.TryGetValue(cell, out var span))
-                        {
-                            span.RequiredHeight = full;
-                            unexpanded = MeasureMergeCellMarkHeight(cell, rowTopPadding, paragraphSpacingScale, textMeasurer) ??
-                                MeasureTableCellContentHeight(cell, cellWidths[columnIndex], textMeasurer,
-                                    defaultTabStopPoints, rowTopPadding, rowPageNumber, pageCount, paragraphSpacingScale,
-                                    mathEquations: null, cancellationToken).Resolve(false);
-                        }
-                        else
-                        {
-                            // A non-spanning source owns this row's floor.
-                            // Complete merged content belongs to the span,
-                            // including wrapped prose and pictures, not row1.
-                            independentContentHeight = Math.Max(independentContentHeight, full);
-                            hasIndependentRowFloor = true;
-                        }
-                        unexpandedContentHeight = Math.Max(unexpandedContentHeight, unexpanded);
-                        minimumContentHeight = Math.Max(minimumContentHeight,
-                            Math.Max(0d, full - (canDiscardAfter ? measured.TrailingAfterSpacing : 0d)));
-                        containsMath |= measured.ContainsMath;
-                        return full;
-                    })
-                    .DefaultIfEmpty(0d)
-                    .Max();
+                        span.RequiredHeight = full;
+                        unexpanded = MeasureMergeCellMarkHeight(cell, rowTopPadding, paragraphSpacingScale, textMeasurer) ??
+                            MeasureTableCellContentHeight(cell, cellWidths[columnIndex], textMeasurer,
+                                defaultTabStopPoints, rowTopPadding, rowPageNumber, pageCount, paragraphSpacingScale,
+                                mathEquations: null, cancellationToken).Resolve(false);
+                    }
+                    else
+                    {
+                        // A non-spanning source owns this row's floor.
+                        // Complete merged content belongs to the span,
+                        // including wrapped prose and pictures, not row1.
+                        independentContentHeight = Math.Max(independentContentHeight, full);
+                        hasIndependentRowFloor = true;
+                    }
+                    unexpandedContentHeight = Math.Max(unexpandedContentHeight, unexpanded);
+                    minimumContentHeight = Math.Max(minimumContentHeight,
+                        Math.Max(0d, full - (canDiscardAfter ? measured.TrailingAfterSpacing : 0d)));
+                    containsMath |= measured.ContainsMath;
+                    return full;
+                })
+                .DefaultIfEmpty(0d)
+                .Max();
             bool eligibleTopRow = adjustAlignedMinimumMargins && allowDeclaredTopMargins &&
                 !HasAutomaticTableRowHeight(row.HeightPoints, row.HeightRuleValue) &&
                 (string.Equals(row.HeightRuleValue, "exact", StringComparison.OrdinalIgnoreCase) ||

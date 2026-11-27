@@ -397,7 +397,7 @@ internal static class DocxGlyphlessAnchorTests
         });
     }
 
-    private sealed class EmptyProgramResolver : IFontResolver
+    internal sealed class EmptyProgramResolver : IFontResolver
     {
         private static readonly MemoryFontProgramSource Source = new("glyphless-empty-font", ReadOnlyMemory<byte>.Empty);
         public FontFaceResolution Resolve(FontRequest request) =>

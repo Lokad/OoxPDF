@@ -945,32 +945,45 @@ internal static class DocxTablesTests
 
     public static void DocxSyntheticTableCellInlinePngRendersImageXObject()
     {
-        string input = TestFixtures.WriteDocxInlinePng($"""
-            <w:tbl>
-              <w:tblGrid><w:gridCol w:w="2880"/></w:tblGrid>
-              <w:tr><w:tc><w:p>{TestFixtures.DocxInlinePngRun}</w:p></w:tc></w:tr>
-            </w:tbl>
-            """, TestFixtures.CreateRgbPng(1, 1, [0, 255, 0]));
-        string output = TestFixtures.NewTemporaryPath(".pdf");
-        OoxPdfConverter.Convert(input, output);
+        var options = new OoxPdfOptions { FontResolver = new DocxGlyphlessAnchorTests.EmptyProgramResolver() };
+        const string exactHeight = """<w:trPr><w:trHeight w:val="360" w:hRule="exact"/></w:trPr>""";
+        byte[] png = TestFixtures.CreateRgbPng(1, 1, [0, 255, 0]);
+        foreach (string rowProperties in new[] { "", exactHeight })
+        {
+            string input = TestFixtures.WriteDocxInlinePng($"""
+                <w:tbl>
+                  <w:tblGrid><w:gridCol w:w="2880"/></w:tblGrid>
+                  <w:tr>{rowProperties}<w:tc><w:p>{TestFixtures.DocxInlinePngRun}</w:p></w:tc></w:tr>
+                </w:tbl>
+                """, png);
+            string output = TestFixtures.NewTemporaryPath(".pdf");
+            OoxPdfConverter.Convert(input, output, options);
 
-        byte[] pixel = PptxTests.ReadPdfDeviceRgbImageStreams(output, width: 1, height: 1).Single();
-        TestAssert.True(pixel.AsSpan().SequenceEqual(new byte[] { 0, 255, 0 }),
-            "The cell picture must retain its authored green pixel.");
+            byte[] pixel = PptxTests.ReadPdfDeviceRgbImageStreams(output, width: 1, height: 1).Single();
+            TestAssert.True(pixel.AsSpan().SequenceEqual(new byte[] { 0, 255, 0 }),
+                "The cell picture must retain its authored green pixel.");
 
-        string pdf = File.ReadAllText(output, Encoding.ASCII);
-        const string number = @"(-?[0-9.]+)";
-        Match paint = Regex.Match(pdf,
-            $@"q\s+{number} {number} {number} {number} re W n\s+q\s+72 0 0 72 {number} {number} cm\s+/Im1 Do\s+Q\s+Q");
-        TestAssert.True(paint.Success, "The 72-point image must be painted inside the cell clip.");
-        double clipX = ReadCoordinate(1), clipY = ReadCoordinate(2);
-        double imageX = ReadCoordinate(5), imageY = ReadCoordinate(6);
-        TestAssert.True(imageX >= clipX && imageX + 72 <= clipX + ReadCoordinate(3) + .001d &&
-            imageY >= clipY && imageY + 72 <= clipY + ReadCoordinate(4) + .001d &&
-            imageX >= 0 && imageX + 72 <= 612 && imageY >= 0 && imageY + 72 <= 792,
-            "The whole authored picture must fit the cell clip and the page.");
+            string pdf = File.ReadAllText(output, Encoding.ASCII);
+            TestAssert.DoesNotContain("/FontFile", pdf);
+            const string number = @"(-?[0-9.]+)";
+            Match paint = Regex.Match(pdf,
+                $@"q\s+{number} {number} {number} {number} re W n\s+q\s+72 0 0 72 {number} {number} cm\s+/Im1 Do");
+            TestAssert.True(paint.Success, "The image must retain its 72-point frame and the cell clip.");
+            double clipX = ReadCoordinate(1), clipY = ReadCoordinate(2);
+            double clipHeight = ReadCoordinate(4);
+            double imageX = ReadCoordinate(5), imageY = ReadCoordinate(6);
+            TestAssert.True(imageX >= clipX && imageX + 72 <= clipX + ReadCoordinate(3) + .001d &&
+                imageX >= 0 && imageX + 72 <= 612 && imageY >= 0 && imageY + 72 <= 792,
+                "The image must fit the authored cell width and the page.");
+            if (rowProperties.Length == 0)
+                TestAssert.True(imageY >= clipY && imageY + 72 <= clipY + clipHeight + .001d,
+                    "An automatic row must reserve the full picture height without a font program.");
+            else
+                TestAssert.True(clipHeight == 18d && imageY + 72 > clipY && imageY < clipY + clipHeight,
+                    "An exact row must keep its authored 18-point clip.");
 
-        double ReadCoordinate(int group) => double.Parse(paint.Groups[group].Value, CultureInfo.InvariantCulture);
+            double ReadCoordinate(int group) => double.Parse(paint.Groups[group].Value, CultureInfo.InvariantCulture);
+        }
     }
 
     public static void DocxRendererEmitsFloatingTextBoxTableRows()

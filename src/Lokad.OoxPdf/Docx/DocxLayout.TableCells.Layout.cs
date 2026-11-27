@@ -85,7 +85,7 @@ internal sealed partial class DocxLayoutEngine
     private static DocxTableCellContentHeight MeasureTableCellContentHeight(
         DocxTableCell cell,
         double cellWidth,
-        IDocxTextMeasurer textMeasurer,
+        IDocxTextMeasurer? textMeasurer,
         double defaultTabStopPoints,
         double? rowTopPadding,
         DocxPageNumber? pageNumber,
@@ -104,11 +104,15 @@ internal sealed partial class DocxLayoutEngine
             MathEquations: mathEquations,
             CancellationToken: cancellationToken);
         IReadOnlyList<DocxBodyElement> bodyElements = DocxTableCellContent.GetBodyElements(cell);
-        IReadOnlyList<DocxParagraph> paragraphs = DocxBlockTraversal.EnumerateDirectParagraphs(bodyElements).ToArray();
-        if (bodyElements.Count == 0)
+        if (bodyElements.Count == 0 ||
+            (textMeasurer is null && !bodyElements.Any(element => element is DocxTableElement
+                or DocxParagraphElement { Paragraph.Images.Count: > 0 }
+                or DocxParagraphElement { Paragraph.InlineTextBoxes.Count: > 0 })))
         {
             return default;
         }
+
+        IReadOnlyList<DocxParagraph> paragraphs = DocxBlockTraversal.EnumerateDirectParagraphs(bodyElements).ToArray();
 
         double paddingLeft = ResolveTableCellHorizontalEdgeInset(cell, "left", cell.Margins.LeftPoints, paragraphSpacingScale);
         double paddingRight = ResolveTableCellHorizontalEdgeInset(cell, "right", cell.Margins.RightPoints, paragraphSpacingScale);
@@ -174,77 +178,82 @@ internal sealed partial class DocxLayoutEngine
             DocxParagraphSpacingProfile spacingProfile = ResolveParagraphSpacingProfile(previousParagraph, paragraph, pendingSpacingAfter, paragraphSpacingScale);
             contentHeight += spacingProfile.AppliedBeforeSpacing;
             pendingSpacingAfter = 0d;
-            if (TryGetStandaloneMath(paragraph, textWidth, paragraphSpacingScale, mathEquations, out var math))
-            {
-                contentHeight += math.LineHeight * paragraphSpacingScale;
-                containsMath = true;
-                pendingSpacingAfter = spacingProfile.ParagraphAfterSpacing;
-                previousParagraph = paragraph;
-                previousParagraphHasText = false;
-                previousParagraphHasTextLines = false;
-                continue;
-            }
-            double fontSize = GetParagraphFontSize(paragraph);
-            DocxLineHeightProfile lineHeightProfile = ResolveLineHeightProfile(paragraph, fontSize, textMeasurer);
-            double lineHeight = lineHeightProfile.LineHeight;
-            if (TryMeasureOrderedCellContent(cell, paragraph, paragraphs, measureContext, textWidth, fontSize, lineHeight,
-                out var orderedLines))
-            {
-                contentHeight += orderedLines.Sum(line => line.OccupiedHeight);
-                containsMath |= orderedLines.Any(line => line.Fragments.Any(fragment => fragment.Math is not null));
-                pendingSpacingAfter = spacingProfile.ParagraphAfterSpacing;
-                previousParagraph = paragraph;
-                previousParagraphHasText = true;
-                previousParagraphHasTextLines = true;
-                previousTextLineHeight = orderedLines[^1].OccupiedHeight;
-                continue;
-            }
-            IReadOnlyList<DocxTextSpan> textSpans = CreateTextSpans(paragraph.Runs, pageNumber, pageCount);
+            IReadOnlyList<DocxTextSpan> textSpans = [];
             DocxMidLinePlan? estimatePlan = null;
-            if (textSpans.Count != 0)
+            // The cell cursor still places owned drawings when no text can be measured.
+            if (textMeasurer is not null)
             {
-                double textStartOffset = GetParagraphFirstLineTextStartOffset(paragraph, fontSize, textMeasurer, paragraphSpacingScale, defaultTabStopPoints);
-                double firstParagraphWidth = ResolveTableCellTextWrapWidth(cell, textWidth - textStartOffset - GetParagraphRightInset(paragraph, paragraphSpacingScale));
-                double continuationParagraphWidth = ResolveTableCellTextWrapWidth(cell, textWidth - GetParagraphTextStartOffset(paragraph, paragraphSpacingScale) - GetParagraphRightInset(paragraph, paragraphSpacingScale));
-                DocxWrappedTextLine[] estimateLines = WrapTextLines(textSpans, firstParagraphWidth, continuationParagraphWidth, fontSize, textMeasurer, ScaleTabStopPositions(paragraph.EffectiveProperties.TabStops, paragraphSpacingScale), defaultTabStopPoints * paragraphSpacingScale, allowOverwideTokenBreaks: true, dynamicFieldPageNumber: pageNumber, inlineImageWidths: ResolveInlineImageWrapWidths(paragraph, textSpans, paragraphSpacingScale), sourceParagraph: paragraph).ToArray();
-                DocxMidLineMath? inlineMath = WrapTableInlineMath(paragraph, textSpans, ref estimateLines,
-                    firstParagraphWidth, continuationParagraphWidth, fontSize, measureContext);
-                containsMath |= inlineMath is not null;
-                int lineCount = estimateLines.Length;
-                lineHeight = QuantizeTableCellWrappedLineHeight(lineHeight, lineCount);
-                bool exactSpacing = IsExactLineSpacing(paragraph.EffectiveProperties);
-                double baselineOffset = DocxLineMetrics.ResolveTableCellBodyBaselineOffset(fontSize, lineHeight,
-                    exactSpacing, paragraphs, paragraph, textMeasurer);
-                estimatePlan = CreateMidLinePlan(paragraph, textSpans, estimateLines, firstParagraphWidth,
-                    continuationParagraphWidth, baselineOffset, paragraphSpacingScale, textMeasurer);
-                previousTextFontSize = fontSize;
-                previousTextLineHeight = lineHeight;
-                contentHeight += ResolveListLabelFirstLineExtraLeading(paragraph, fontSize, textMeasurer);
-                double minimumExcess = 0d;
-                if (lineHeightProfile.Source == DocxLineHeightSource.AtLeastLineSpacing &&
-                    estimatePlan is not null && estimatePlan.PlacedMask.All(placed => placed) &&
-                    textMeasurer is IDocxLineMetricsProvider metrics && paragraph.Runs.Count > 0)
+                if (TryGetStandaloneMath(paragraph, textWidth, paragraphSpacingScale, mathEquations, out var math))
                 {
-                    double natural = metrics.MeasureSingleLineHeight(paragraph.Runs[0], fontSize);
-                    if (double.IsFinite(natural) && natural > 0d)
-                        minimumExcess = Math.Max(0d, lineHeight - natural);
+                    contentHeight += math.LineHeight * paragraphSpacingScale;
+                    containsMath = true;
+                    pendingSpacingAfter = spacingProfile.ParagraphAfterSpacing;
+                    previousParagraph = paragraph;
+                    previousParagraphHasText = false;
+                    previousParagraphHasTextLines = false;
+                    continue;
                 }
-                for (int estimateLineIndex = 0; estimateLineIndex < estimateLines.Length; estimateLineIndex++)
+                double fontSize = GetParagraphFontSize(paragraph);
+                DocxLineHeightProfile lineHeightProfile = ResolveLineHeightProfile(paragraph, fontSize, textMeasurer);
+                double lineHeight = lineHeightProfile.LineHeight;
+                if (TryMeasureOrderedCellContent(cell, paragraph, paragraphs, measureContext, textWidth, fontSize, lineHeight,
+                    out var orderedLines))
                 {
-                    double estimateShift = exactSpacing ? 0d : (estimatePlan?.ShiftAboveHeights[estimateLineIndex] ?? 0d);
-                    var expansion = inlineMath?.LineIndex == estimateLineIndex
-                        ? ResolveTableInlineMathExpansion(inlineMath.Math, fontSize, lineHeight, exactSpacing,
-                            ResolveTableCellFirstBaselineInset(paragraphs, textMeasurer), baselineOffset, paragraphSpacingScale)
-                        : (Above: 0d, Below: 0d);
-                    contentHeight += lineHeight + Math.Max(estimateShift, expansion.Above) +
-                        Math.Max(expansion.Below, exactSpacing ? 0d : estimatePlan?.ExtraBelow(estimateLineIndex) ?? 0d);
-                    minimumPictureOverlap += ResolveMinimumPictureOverlap(minimumExcess, estimateShift);
+                    contentHeight += orderedLines.Sum(line => line.OccupiedHeight);
+                    containsMath |= orderedLines.Any(line => line.Fragments.Any(fragment => fragment.Math is not null));
+                    pendingSpacingAfter = spacingProfile.ParagraphAfterSpacing;
+                    previousParagraph = paragraph;
+                    previousParagraphHasText = true;
+                    previousParagraphHasTextLines = true;
+                    previousTextLineHeight = orderedLines[^1].OccupiedHeight;
+                    continue;
                 }
-            }
-            else if (paragraph.Images.Count == 0 && paragraph.InlineTextBoxes.Count == 0)
-            {
-                contentHeight += ResolveListLabelFirstLineExtraLeading(paragraph, fontSize, textMeasurer);
-                contentHeight += lineHeight;
+                textSpans = CreateTextSpans(paragraph.Runs, pageNumber, pageCount);
+                if (textSpans.Count != 0)
+                {
+                    double textStartOffset = GetParagraphFirstLineTextStartOffset(paragraph, fontSize, textMeasurer, paragraphSpacingScale, defaultTabStopPoints);
+                    double firstParagraphWidth = ResolveTableCellTextWrapWidth(cell, textWidth - textStartOffset - GetParagraphRightInset(paragraph, paragraphSpacingScale));
+                    double continuationParagraphWidth = ResolveTableCellTextWrapWidth(cell, textWidth - GetParagraphTextStartOffset(paragraph, paragraphSpacingScale) - GetParagraphRightInset(paragraph, paragraphSpacingScale));
+                    DocxWrappedTextLine[] estimateLines = WrapTextLines(textSpans, firstParagraphWidth, continuationParagraphWidth, fontSize, textMeasurer, ScaleTabStopPositions(paragraph.EffectiveProperties.TabStops, paragraphSpacingScale), defaultTabStopPoints * paragraphSpacingScale, allowOverwideTokenBreaks: true, dynamicFieldPageNumber: pageNumber, inlineImageWidths: ResolveInlineImageWrapWidths(paragraph, textSpans, paragraphSpacingScale), sourceParagraph: paragraph).ToArray();
+                    DocxMidLineMath? inlineMath = WrapTableInlineMath(paragraph, textSpans, ref estimateLines,
+                        firstParagraphWidth, continuationParagraphWidth, fontSize, measureContext);
+                    containsMath |= inlineMath is not null;
+                    int lineCount = estimateLines.Length;
+                    lineHeight = QuantizeTableCellWrappedLineHeight(lineHeight, lineCount);
+                    bool exactSpacing = IsExactLineSpacing(paragraph.EffectiveProperties);
+                    double baselineOffset = DocxLineMetrics.ResolveTableCellBodyBaselineOffset(fontSize, lineHeight,
+                        exactSpacing, paragraphs, paragraph, textMeasurer);
+                    estimatePlan = CreateMidLinePlan(paragraph, textSpans, estimateLines, firstParagraphWidth,
+                        continuationParagraphWidth, baselineOffset, paragraphSpacingScale, textMeasurer);
+                    previousTextFontSize = fontSize;
+                    previousTextLineHeight = lineHeight;
+                    contentHeight += ResolveListLabelFirstLineExtraLeading(paragraph, fontSize, textMeasurer);
+                    double minimumExcess = 0d;
+                    if (lineHeightProfile.Source == DocxLineHeightSource.AtLeastLineSpacing &&
+                        estimatePlan is not null && estimatePlan.PlacedMask.All(placed => placed) &&
+                        textMeasurer is IDocxLineMetricsProvider metrics && paragraph.Runs.Count > 0)
+                    {
+                        double natural = metrics.MeasureSingleLineHeight(paragraph.Runs[0], fontSize);
+                        if (double.IsFinite(natural) && natural > 0d)
+                            minimumExcess = Math.Max(0d, lineHeight - natural);
+                    }
+                    for (int estimateLineIndex = 0; estimateLineIndex < estimateLines.Length; estimateLineIndex++)
+                    {
+                        double estimateShift = exactSpacing ? 0d : (estimatePlan?.ShiftAboveHeights[estimateLineIndex] ?? 0d);
+                        var expansion = inlineMath?.LineIndex == estimateLineIndex
+                            ? ResolveTableInlineMathExpansion(inlineMath.Math, fontSize, lineHeight, exactSpacing,
+                                ResolveTableCellFirstBaselineInset(paragraphs, textMeasurer), baselineOffset, paragraphSpacingScale)
+                            : (Above: 0d, Below: 0d);
+                        contentHeight += lineHeight + Math.Max(estimateShift, expansion.Above) +
+                            Math.Max(expansion.Below, exactSpacing ? 0d : estimatePlan?.ExtraBelow(estimateLineIndex) ?? 0d);
+                        minimumPictureOverlap += ResolveMinimumPictureOverlap(minimumExcess, estimateShift);
+                    }
+                }
+                else if (paragraph.Images.Count == 0 && paragraph.InlineTextBoxes.Count == 0)
+                {
+                    contentHeight += ResolveListLabelFirstLineExtraLeading(paragraph, fontSize, textMeasurer);
+                    contentHeight += lineHeight;
+                }
             }
 
             for (int estimateImageIndex = 0; estimateImageIndex < paragraph.Images.Count; estimateImageIndex++)
