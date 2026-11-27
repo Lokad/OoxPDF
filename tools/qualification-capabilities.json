@@ -19504,7 +19504,7 @@
     "=PdfCrossReferencesAndStreamLengthsMatchFileContents"
   ],
   "docx-glyphless-anchors": [
-    "=DocxFixedCellTextSizingPreservesPicturesAndCaption",
+    "=DocxCellTextSizingPreservesPicturesAndCaption",
     "=DocxGlyphlessCellPicturesUseTheCellWidthWithTextSizing",
     "=DocxGlyphlessTextBoxChildPicturesUseTheAvailableLine",
     "DocxLayoutStageConsumesEmptyParagraphLineBox",

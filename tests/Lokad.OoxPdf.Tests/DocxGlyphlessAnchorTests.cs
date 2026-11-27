@@ -254,39 +254,42 @@ internal static class DocxGlyphlessAnchorTests
         }
     }
 
-    public static void DocxFixedCellTextSizingPreservesPicturesAndCaption()
+    public static void DocxCellTextSizingPreservesPicturesAndCaption()
     {
         const string caption = "<w:r><w:t>Visible label</w:t></w:r>";
-        string ordinary = WriteLinkedCellPictures("", caption);
-        string[] sources =
-        [
-            WriteLinkedCellPictures("<w:noWrap/>", caption),
-            WriteLinkedCellPictures("<w:tcFitText/>", caption)
-        ];
-        foreach (var (mode, geometry) in Views())
+        foreach (string layout in new[] { "fixed", "autofit" })
         {
-            var resolver = new EmptyProgramResolver();
-            PdfPage baseline = Render(ordinary, resolver, mode, geometry).Single();
-            foreach (string source in sources)
+            string ordinary = WriteLinkedCellPictures("", caption, layout);
+            string[] sources =
+            [
+                WriteLinkedCellPictures("<w:noWrap/>", caption, layout),
+                WriteLinkedCellPictures("<w:tcFitText/>", caption, layout)
+            ];
+            foreach (var (mode, geometry) in Views())
             {
-                PdfPage flagged = Render(source, resolver, mode, geometry).Single();
-                AssertStackedCellPictureLinks(flagged);
-                string text = new(FallbackFontMetricsTests.ReadGlyphs(flagged.Content)
-                    .Where(glyph => glyph.Code != ' ').Select(glyph => (char)glyph.Code).ToArray());
-                TestAssert.Equal("Visiblelabel", text);
-                TestAssert.Equal(baseline.Content, flagged.Content);
+                var resolver = new EmptyProgramResolver();
+                PdfPage baseline = Render(ordinary, resolver, mode, geometry).Single();
+                foreach (string source in sources)
+                {
+                    PdfPage flagged = Render(source, resolver, mode, geometry).Single();
+                    AssertStackedCellPictureLinks(flagged);
+                    string text = new(FallbackFontMetricsTests.ReadGlyphs(flagged.Content)
+                        .Where(glyph => glyph.Code != ' ').Select(glyph => (char)glyph.Code).ToArray());
+                    TestAssert.Equal("Visiblelabel", text);
+                    TestAssert.Equal(baseline.Content, flagged.Content);
+                }
             }
         }
     }
 
-    private static string WriteLinkedCellPictures(string textSizing, string trailingRun)
+    private static string WriteLinkedCellPictures(string textSizing, string trailingRun, string layout = "fixed")
     {
         const string documentPart = "word/document.xml";
         string picture = TestFixtures.DocxInlinePngRun;
         string blue = picture.Replace("rIdImage1", "rIdBlue", StringComparison.Ordinal);
         string table = $"""
             <w:tbl>
-              <w:tblPr><w:tblW w:w="2200" w:type="dxa"/><w:tblLayout w:type="fixed"/></w:tblPr>
+              <w:tblPr><w:tblW w:w="2200" w:type="dxa"/><w:tblLayout w:type="{layout}"/></w:tblPr>
               <w:tblGrid><w:gridCol w:w="2200"/></w:tblGrid>
               <w:tr><w:tc><w:tcPr><w:tcW w:w="2200" w:type="dxa"/>{textSizing}</w:tcPr>
                 <w:p>{picture}{blue}{trailingRun}</w:p></w:tc></w:tr>

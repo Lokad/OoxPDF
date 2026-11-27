@@ -156,7 +156,7 @@ internal sealed partial class DocxLayoutEngine
         // still needs a physical line slot, even when the line includes a caption.
         // Use measured items so hidden runs cannot change width admission.
         bool physicalWidth = cell.FitText && atoms.Fragments.Any(HasMediaFrame) ||
-            (cell.NoWrapAffectsLayout || cell.FitText) && paragraph.ListLabel is null &&
+            (cell.NoWrapSuppressesTextWrapping || cell.FitText) && paragraph.ListLabel is null &&
             atoms.Fragments.Count != 0 && atoms.Fragments.All(fragment =>
                 HasMediaFrame(fragment) || fragment.Source is DocxInlineBreak);
         double firstWidth = physicalWidth ? Math.Max(1d, firstFrameWidth) : ResolveTableCellTextWrapWidth(cell, firstFrameWidth);

@@ -169,6 +169,10 @@ internal sealed record DocxTableCell(
     public bool UsesFixedRowLayout { get; init; }
     // Keep the authored flag available to inspection. It affects layout only with autofit.
     public bool NoWrapAffectsLayout => NoWrap && !UsesFixedRowLayout;
+    // A fixed preferred cell width constrains autofit sizing. The resulting
+    // cell frame still owns line wrapping.
+    public bool NoWrapSuppressesTextWrapping => NoWrapAffectsLayout &&
+        (PreferredWidthKind != DocxTableWidthKind.Dxa || PreferredWidthPoints is not > 0d);
     public bool IsVerticalMergeRestart => HasVerticalMerge &&
         string.Equals(VerticalMergeValue, "restart", StringComparison.OrdinalIgnoreCase);
 
