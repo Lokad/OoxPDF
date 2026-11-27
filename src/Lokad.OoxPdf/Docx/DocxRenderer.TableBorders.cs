@@ -17,8 +17,8 @@ internal sealed partial class DocxRenderer
 {
     private static void RenderTableRowBorders(
         DocxTableRowLayout row,
-        DocxTableRowLayout? previousRow,
-        DocxTableRowLayout? nextRow,
+        bool hasPreviousRow,
+        bool hasNextRow,
         PdfGraphicsBuilder graphics,
         CancellationToken cancellationToken,
         RowPairBorderPlan? sharedPlan)
@@ -34,10 +34,10 @@ internal sealed partial class DocxRenderer
             }
 
             DocxTableCell visualCell = cellLayout.VisualCell;
-            if (paintsCell && previousRow is null && ShouldRenderTableRowEdge(row, top: true))
+            if (paintsCell && !hasPreviousRow && ShouldRenderTableRowEdge(row, top: true))
                 RenderHorizontalTableCellBorder(cellLayout, "top", graphics);
 
-            if (nextRow is null && OwnsHorizontalBottom(cellLayout) && ShouldRenderTableRowEdge(row, top: false))
+            if (!hasNextRow && OwnsHorizontalBottom(cellLayout) && ShouldRenderTableRowEdge(row, top: false))
                 RenderHorizontalTableCellBorder(cellLayout, "bottom", graphics);
 
             if (paintsCell && cellIndex == 0)

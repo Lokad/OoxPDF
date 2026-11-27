@@ -148,6 +148,7 @@ internal sealed partial class DocxRenderer
             .OrderByDescending(ResolveLayoutItemTop)
             .ToArray();
         RenderParagraphBackgrounds(items, graphics, markupContext, cancellationToken);
+        DocxTableRowLayout? nextRowGeometry = null;
         for (int itemIndex = 0; itemIndex < items.Length; itemIndex++)
         {
             cancellationToken.ThrowIfCancellationRequested();
@@ -162,7 +163,7 @@ internal sealed partial class DocxRenderer
                 diagnosticSink(new OoxPdfDiagnostic("DOCX_CLIPPED_NOTE_TABLE_ROW", OoxPdfSeverity.Warning,
                     "A note-table row exceeds its available frame; content is clipped. Row fragmentation for this content is unsupported.",
                     story.StoryLayout.Story.PartName, PageIndex: pageNumber.Physical, Feature: "note table row", Fallback: "Clipped"));
-            RenderLayoutItem(item, previousRow, nextRow, graphics, pageImages, fontResources, markupContext, diagnosticSink, pageNumber, pageCount, cancellationToken, imageCache, ref imageIndex,
+            RenderLayoutItem(item, previousRow, nextRow, ref nextRowGeometry, graphics, pageImages, fontResources, markupContext, diagnosticSink, pageNumber, pageCount, cancellationToken, imageCache, ref imageIndex,
                 storyNavigation.ClipTo(tableViewport ? tableClip : clip));
             if (tableViewport) SetClip(clip);
         }

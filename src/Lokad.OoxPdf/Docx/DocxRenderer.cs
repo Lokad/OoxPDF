@@ -2033,12 +2033,13 @@ internal sealed partial class DocxRenderer
         RgbColor? background = null)
     {
         RenderParagraphBackgrounds(items, graphics, markupContext, cancellationToken);
+        DocxTableRowLayout? nextRowGeometry = null;
         for (int i = 0; i < items.Count; i++)
         {
             cancellationToken.ThrowIfCancellationRequested();
             DocxTableRowLayout? previousRow = i > 0 ? items[i - 1] as DocxTableRowLayout : null;
             DocxTableRowLayout? nextRow = i + 1 < items.Count ? items[i + 1] as DocxTableRowLayout : null;
-            RenderLayoutItem(items[i], previousRow, nextRow, graphics, pageImages, fontResources, markupContext,
+            RenderLayoutItem(items[i], previousRow, nextRow, ref nextRowGeometry, graphics, pageImages, fontResources, markupContext,
                 diagnosticSink, pageNumber, pageCount, cancellationToken, imageCache, ref imageIndex, navigation, background);
         }
     }
@@ -2047,6 +2048,7 @@ internal sealed partial class DocxRenderer
         DocxLayoutItem item,
         DocxTableRowLayout? previousRow,
         DocxTableRowLayout? nextRow,
+        ref DocxTableRowLayout? nextRowGeometry,
         PdfGraphicsBuilder graphics,
         List<PdfImageResource> pageImages,
         DocxFontResources fontResources,
@@ -2075,7 +2077,8 @@ internal sealed partial class DocxRenderer
                 RenderInlineImage(PlaceInlineImageForPaint(image, markupContext), graphics, pageImages, diagnosticSink, cancellationToken, imageCache, ref imageIndex, fontResources, markupContext, navigation);
                 break;
             case DocxTableRowLayout row:
-                RenderTableRow(row, IsAdjacentTableRow(previousRow, row) ? previousRow : null, IsAdjacentTableRow(row, nextRow) ? nextRow : null, graphics, pageImages, fontResources, markupContext, diagnosticSink, pageNumber, pageCount, cancellationToken, imageCache, ref imageIndex, navigation, background);
+                RenderTableRow(row, IsAdjacentTableRow(previousRow, row) ? previousRow : null, IsAdjacentTableRow(row, nextRow) ? nextRow : null,
+                    ref nextRowGeometry, graphics, pageImages, fontResources, markupContext, diagnosticSink, pageNumber, pageCount, cancellationToken, imageCache, ref imageIndex, navigation, background);
                 break;
             case DocxInlineTextBoxLayout textBox:
                 RenderInlineTextBox(textBox, graphics, pageImages, fontResources, markupContext, diagnosticSink, pageNumber, pageCount, cancellationToken, imageCache, ref imageIndex, navigation, background: background);

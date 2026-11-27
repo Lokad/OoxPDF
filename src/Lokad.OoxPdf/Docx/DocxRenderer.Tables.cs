@@ -163,6 +163,7 @@ internal sealed partial class DocxRenderer
         DocxTableRowLayout row,
         DocxTableRowLayout? previousRow,
         DocxTableRowLayout? nextRow,
+        ref DocxTableRowLayout? nextRowGeometry,
         PdfGraphicsBuilder graphics,
         List<PdfImageResource> pageImages,
         DocxFontResources fontResources,
@@ -180,11 +181,14 @@ internal sealed partial class DocxRenderer
         // the first-pin emission shift moves text but table geometry was painted raw, so
         // cell text rendered a full offset below its rows and clips. Geometry follows the
         // same text offset (a no-op outside the Word-compatible profile, where it is 0).
+        cancellationToken.ThrowIfCancellationRequested();
         double geometryXOffset = ResolveTextEmissionXOffset(markupContext);
         double geometryYOffset = ResolveTextEmissionBaselineOffset(markupContext);
-        DocxTableRowLayout geometryRow = ResolveTablePaintGeometry(row, geometryXOffset, geometryYOffset);
-        DocxTableRowLayout? geometryPreviousRow = previousRow is null ? null : ResolveTablePaintGeometry(previousRow, geometryXOffset, geometryYOffset);
+        // Each sweep visits the immediate next item in order. Only an adjacent
+        // next row is projected, and it becomes the next iteration's current row.
+        DocxTableRowLayout geometryRow = nextRowGeometry ?? ResolveTablePaintGeometry(row, geometryXOffset, geometryYOffset);
         DocxTableRowLayout? geometryNextRow = nextRow is null ? null : ResolveTablePaintGeometry(nextRow, geometryXOffset, geometryYOffset);
+        nextRowGeometry = geometryNextRow;
         foreach (DocxTableCellLayout cellLayout in geometryRow.Cells)
         {
             cancellationToken.ThrowIfCancellationRequested();
@@ -200,12 +204,11 @@ internal sealed partial class DocxRenderer
         double printScale = row.ReviewBorderPrintScale;
         bool scaleBorders = DocxTableBorderGeometry.TryResolveReviewPaintScale(printScale, out double borderScale) &&
             geometryRow.Cells.Count != 0 &&
-            (HasVisibleBorder(geometryRow) || geometryPreviousRow is not null && HasVisibleBorder(geometryPreviousRow) ||
+            (HasVisibleBorder(geometryRow) || previousRow is not null && HasVisibleBorder(previousRow) ||
              geometryNextRow is not null && HasVisibleBorder(geometryNextRow));
         double borderOriginX = scaleBorders ? geometryRow.Cells[0].X : 0d;
         double borderOriginY = scaleBorders ? geometryRow.Y : 0d;
         DocxTableRowLayout borderRow = scaleBorders ? ProjectBorderGeometry(geometryRow) : geometryRow;
-        DocxTableRowLayout? borderPreviousRow = scaleBorders && geometryPreviousRow is not null ? ProjectBorderGeometry(geometryPreviousRow) : geometryPreviousRow;
         DocxTableRowLayout? borderNextRow = scaleBorders && geometryNextRow is not null ? ProjectBorderGeometry(geometryNextRow) : geometryNextRow;
         if (scaleBorders)
         {
@@ -213,8 +216,9 @@ internal sealed partial class DocxRenderer
             graphics.Transform(borderScale, 0d, 0d, borderScale, borderOriginX, borderOriginY);
         }
         RowPairBorderPlan? sharedBorderPlan = RowPairBorderPlan.TryBuild(borderRow, borderNextRow, cancellationToken);
-        RenderTableRowBorders(borderRow, borderPreviousRow, borderNextRow, graphics, cancellationToken, sharedBorderPlan);
-        RenderTableBorderJunctions(borderRow, borderPreviousRow, borderNextRow, graphics, cancellationToken, sharedBorderPlan);
+        bool hasPreviousRow = previousRow is not null, hasNextRow = nextRow is not null;
+        RenderTableRowBorders(borderRow, hasPreviousRow, hasNextRow, graphics, cancellationToken, sharedBorderPlan);
+        RenderTableBorderJunctions(borderRow, hasPreviousRow, hasNextRow, graphics, cancellationToken, sharedBorderPlan);
         if (scaleBorders) graphics.RestoreState();
         RenderTableRowMarkupIndicators(row, graphics, markupContext);
 
@@ -290,6 +294,7 @@ internal sealed partial class DocxRenderer
                     graphics.ClipRectangle(clip.X, clip.Y, clip.Width, clip.Height);
                 }
 
+                DocxTableRowLayout? nextNestedGeometry = null;
                 for (int nestedRowIndex = 0; nestedRowIndex < cellLayout.NestedRows.Count; nestedRowIndex++)
                 {
                     DocxTableRowLayout nestedRow = cellLayout.NestedRows[nestedRowIndex];
@@ -299,6 +304,7 @@ internal sealed partial class DocxRenderer
                         nestedRow,
                         IsAdjacentTableRow(previousNestedRow, nestedRow) ? previousNestedRow : null,
                         IsAdjacentTableRow(nestedRow, nextNestedRow) ? nextNestedRow : null,
+                        ref nextNestedGeometry,
                         graphics,
                         pageImages,
                         fontResources,
@@ -346,8 +352,8 @@ internal sealed partial class DocxRenderer
 
     private static void RenderTableBorderJunctions(
         DocxTableRowLayout row,
-        DocxTableRowLayout? previousRow,
-        DocxTableRowLayout? nextRow,
+        bool hasPreviousRow,
+        bool hasNextRow,
         PdfGraphicsBuilder graphics,
         CancellationToken cancellationToken,
         RowPairBorderPlan? sharedPlan)
@@ -363,23 +369,23 @@ internal sealed partial class DocxRenderer
         foreach (DocxTableCellLayout cellLayout in row.Cells)
         {
             cancellationToken.ThrowIfCancellationRequested();
-            if (previousRow is null && ShouldRenderTableCellVisualFragment(cellLayout) && ShouldRenderTableRowEdge(row, top: true))
+            if (!hasPreviousRow && ShouldRenderTableCellVisualFragment(cellLayout) && ShouldRenderTableRowEdge(row, top: true))
             {
                 RenderHorizontalBorderJunctions(cellLayout.X, cellLayout.X + cellLayout.Width, cellLayout.Y + cellLayout.Height, cellLayout.VisualCell, "top", rowBoundaryIndex.SliceRaw(cellLayout.X, cellLayout.X + cellLayout.Width, cancellationToken), graphics, emittedJunctions);
             }
 
-            if (nextRow is null && OwnsHorizontalBottom(cellLayout) && ShouldRenderTableRowEdge(row, top: false))
+            if (!hasNextRow && OwnsHorizontalBottom(cellLayout) && ShouldRenderTableRowEdge(row, top: false))
             {
                 RenderHorizontalBorderJunctions(cellLayout.X, cellLayout.X + cellLayout.Width, cellLayout.Y, cellLayout.VisualCell, "bottom", rowBoundaryIndex.SliceRaw(cellLayout.X, cellLayout.X + cellLayout.Width, cancellationToken), graphics, emittedJunctions);
             }
         }
 
-        if (previousRow is null && ShouldRenderTableRowEdge(row, top: true))
+        if (!hasPreviousRow && ShouldRenderTableRowEdge(row, top: true))
         {
             RenderOuterHorizontalFragmentCornerJunctions(row, rowBoundaries, "top", graphics);
         }
 
-        if (nextRow is null && ShouldRenderTableRowEdge(row, top: false))
+        if (!hasNextRow && ShouldRenderTableRowEdge(row, top: false))
         {
             RenderOuterHorizontalFragmentCornerJunctions(row, rowBoundaries, "bottom", graphics);
         }
