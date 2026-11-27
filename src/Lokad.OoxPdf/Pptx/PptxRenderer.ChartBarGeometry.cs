@@ -100,7 +100,7 @@ internal sealed partial class PptxRenderer
             }
         }
 
-        return Math.Max(1d, total);
+        return total == 0d ? 1d : total;
     }
 
     private static double[] GetCategoryPositiveTotals(IReadOnlyList<IReadOnlyList<double?>> series, int categoryCount, bool percentStacked)

@@ -3557,29 +3557,47 @@ internal static class PptxChartRenderingTests
         using var original = File.OpenRead(fixture);
         PdfPage page = Render(original);
         TestAssert.Equal("0%|10%|20%|30%|40%|50%|60%|70%|80%|90%|100%", Labels(page, "CVA"));
+        TestAssert.True(PptxChartPaletteTests.ReadColoredPaints(page.Content).Distinct().Count() >= 3,
+            "The control paints the three column series.");
+        PdfPage fractional = RenderChartVariant((chart, c) =>
+        {
+            foreach (var value in chart.Descendants(c + "ser").Elements(c + "val").Descendants(c + "pt").Elements(c + "v"))
+                value.Value = (decimal.Parse(value.Value, CultureInfo.InvariantCulture) / 1000m)
+                    .ToString(CultureInfo.InvariantCulture);
+        });
+        TestAssert.True(page.Content == fractional.Content,
+            "Scaling all values by the same factor preserves the complete percentage stacks.");
 
         // A percent sign painted by a category cannot stand in for the value-axis labels.
-        using var hiddenAxis = new MemoryStream();
-        original.Position = 0;
-        original.CopyTo(hiddenAxis);
-        hiddenAxis.Position = 0;
-        using (var archive = new ZipArchive(hiddenAxis, ZipArchiveMode.Update, leaveOpen: true))
+        PdfPage control = RenderChartVariant((chart, c) =>
         {
-            var entry = archive.GetEntry("ppt/charts/chart1.xml")!;
-            XDocument chart;
-            using (var input = entry.Open()) chart = XDocument.Load(input);
-            XNamespace c = chart.Root!.Name.Namespace;
             chart.Descendants(c + "valAx").Single().Element(c + "tickLblPos")!.SetAttributeValue("val", "none");
             foreach (var category in chart.Descendants(c + "cat"))
                 category.Descendants(c + "v").First().Value = "A%";
-            entry.Delete();
-            using var output = archive.CreateEntry("ppt/charts/chart1.xml").Open();
-            chart.Save(output);
-        }
-        hiddenAxis.Position = 0;
-        PdfPage control = Render(hiddenAxis);
+        });
         TestAssert.Equal("A%|B|C", Labels(control, "CCA"));
         TestAssert.Equal(string.Empty, Labels(control, "CVA"));
+
+        PdfPage RenderChartVariant(Action<XDocument, XNamespace> update)
+        {
+            const string chartPart = "ppt/charts/chart1.xml";
+            using var variant = new MemoryStream();
+            original.Position = 0;
+            original.CopyTo(variant);
+            variant.Position = 0;
+            using (var archive = new ZipArchive(variant, ZipArchiveMode.Update, leaveOpen: true))
+            {
+                var entry = archive.GetEntry(chartPart)!;
+                XDocument chart;
+                using (var input = entry.Open()) chart = XDocument.Load(input);
+                update(chart, chart.Root!.Name.Namespace);
+                entry.Delete();
+                using var output = archive.CreateEntry(chartPart).Open();
+                chart.Save(output);
+            }
+            variant.Position = 0;
+            return Render(variant);
+        }
 
         static PdfPage Render(Stream input)
         {
