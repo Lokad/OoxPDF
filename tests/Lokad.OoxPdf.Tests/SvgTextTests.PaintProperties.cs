@@ -707,6 +707,15 @@ internal static partial class SvgTextTests
             TestAssert.Contains("1 unsupported use element.", diagnostics.Single().Message);
         }
 
+        var foreignDiagnostics = new List<OoxPdfDiagnostic>();
+        var foreign = Paint(Reference("""
+            <foreignObject x="210" y="85" width="65" height="40">
+              <div xmlns="http://www.w3.org/1999/xhtml">Supplement</div>
+            </foreignObject>
+            """), foreignDiagnostics);
+        AssertEquivalentSvgPaint(literalPaint, foreign, "Embedded content preserves the neighboring shapes and their placement.");
+        TestAssert.Contains("1 unsupported foreignObject element.", foreignDiagnostics.Single().Message);
+
         var textDiagnostics = new List<OoxPdfDiagnostic>();
         var pathText = Paint(Reference("""<text x="12" y="72"><textPath href="#accent">NORTH</textPath></text>"""),
             textDiagnostics);

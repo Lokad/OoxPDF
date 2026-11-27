@@ -150,8 +150,8 @@ typography follow each use site. Nested paint definitions retain their source co
 Titles, descriptions and metadata preserve reuse of supported geometry.
 Inline `transform:none` overrides the geometry's presentation transform.
 Symbol targets and external documents retain the diagnosed fallback. A nested
-reference inside a reused group is diagnosed and skipped. Supported neighboring
-shapes and labels keep their paint.
+reference or `foreignObject` inside a reused group is diagnosed and skipped.
+Supported neighboring shapes and labels keep their paint.
 Supported user-space linear and radial gradients accept absolute CSS lengths.
 Zero-radius radial gradients use the final stop's color and opacity.
 SVG labels accept gradients that resolve to a single color and opacity.

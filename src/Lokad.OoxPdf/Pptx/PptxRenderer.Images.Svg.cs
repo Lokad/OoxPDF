@@ -2014,9 +2014,9 @@ internal sealed partial class PptxRenderer
             if (element.Name.Namespace != source.Name.Namespace) return null;
 
             long size = MeasureElement(element);
-            // Keep nested references as leaves for the omission diagnostic.
-            // Their targets are not needed to paint the surrounding geometry.
-            if (element.Name.LocalName == "use") return size;
+            // Keep nested references and embedded foreign content as leaves.
+            // The omission diagnostic still identifies each skipped element.
+            if (element.Name.LocalName is "use" or "foreignObject") return size;
 
             // Text is painted as one label. Its markup and character data are
             // copied with it and count against the same instance bound.
