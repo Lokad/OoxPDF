@@ -9,6 +9,7 @@ internal sealed partial class PptxRenderer
 
     private sealed record ChartBubbleGeometry(ChartLayout Layout, ChartValueExtents X, ChartValueExtents Y,
         ChartValueAxisRenderOptions XOptions, ChartValueAxisRenderOptions YOptions,
+        ChartAxisPlacement XPlacement, ChartAxisPlacement YPlacement,
         ChartBubbleSizing Sizing, ChartLegendBox? LegendBox);
 
     private static async ValueTask<ChartBubbleGeometry?> TryPrepareBubbleGeometryAsync(PptxTheme theme,
@@ -97,8 +98,8 @@ internal sealed partial class PptxRenderer
                 PptxChartMetricRules.AxisNiceTickTargetCount);
             xOptions = xOptions with { Units = xOptions.Units with { MajorUnit = xUnit }, TickPolicy = ChartAxisTickPolicy.SourceMinimumIntervals };
             yOptions = yOptions with { Units = yOptions.Units with { MajorUnit = yUnit }, TickPolicy = ChartAxisTickPolicy.SourceMinimumIntervals };
-            ChartAxisPlacement xPlacement = ReadChartAxisPlacement(xAxis.SceneAxis, y, yOptions.Reversed) ?? new(y.Min, 0d, false, false);
-            ChartAxisPlacement yPlacement = ReadChartAxisPlacement(yAxis.SceneAxis, x, xOptions.Reversed, horizontal: false) ?? new(x.Min, 0d, false, false);
+            ChartAxisPlacement xPlacement = ResolvePointChartAxisPlacement(xAxis, y, yOptions.Reversed);
+            ChartAxisPlacement yPlacement = ResolvePointChartAxisPlacement(yAxis, x, xOptions.Reversed, horizontal: false);
             double firstWidth = 0d, lastWidth = 0d, sideSlot = 0d;
             if (xLabels)
             {
@@ -129,7 +130,7 @@ internal sealed partial class PptxRenderer
                 ChartLayout layout = fallback with { PlotBox = admitted, PlotAreaBox = outer };
                 ChartLegendBox? legendBox = fallback.Legend.Visible && entries.Count != 0
                     ? await PrepareBubbleLegendAsync(frame, outer, entries, legendStyle, legendWidth, legendLine, measure).ConfigureAwait(false) : null;
-                return new(layout, x, y, xOptions, yOptions, sizing, legendBox);
+                return new(layout, x, y, xOptions, yOptions, xPlacement, yPlacement, sizing, legendBox);
             }
             (x, y, xUnit, yUnit) = (nextX, nextY, nextXUnit, nextYUnit);
         }
