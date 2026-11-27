@@ -10,9 +10,14 @@ The documentation describes the **0.3.0** API. See the
 
 ## Usage
 
-Install 0.3.0 with `dotnet add package Lokad.OoxPdf --version 0.3.0`. To test
-a staged package, point `--source` to the checkout's `artifacts/nuget/` folder.
-For the 0.2.0 API, specify `--version 0.2.0`.
+Install a staged 0.3.0 package from the checkout’s local feed. Replace `<checkout>`
+with the absolute path to the checkout.
+
+```powershell
+dotnet add package Lokad.OoxPdf --version 0.3.0 --source "<checkout>/artifacts/nuget"
+```
+
+For the published 0.2.0 package, run `dotnet add package Lokad.OoxPdf --version 0.2.0`.
 
 ```csharp
 using Lokad.OoxPdf;
