@@ -671,6 +671,7 @@
     "=SvgQuadraticCurvesMatchExplicitCubicsInBothFormats",
     "=SvgUnsupportedCommandsKeepOnlyTheDecodedStrokePrefix",
     "=SvgImportantInlinePaintMatchesExplicitPaintInBothFormats",
+    "=SvgCompetingMalformedHexPaintKeepsUsableColors",
     "=SvgTransparentFillKeepsTranslucentGradientStrokeInBothFormats",
     "=SvgUserSpaceGradientsFollowTranslatedAndUniformlyScaledGroups",
     "=SvgLinearGradientResourcesPreserveTranslatedAndUniformlyScaledPaint",

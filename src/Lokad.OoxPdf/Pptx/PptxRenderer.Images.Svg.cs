@@ -1587,15 +1587,14 @@ internal sealed partial class PptxRenderer
             if (declarations.TryGetValue(name, out string? previous))
             {
                 string property = name.ToLowerInvariant();
-                if (IsSvgInlineGeometryProperty(path, property))
+                if (IsUnusableCompetingSvgValue(path, property, value))
                 {
-                    // Validate competing geometry declarations before applying importance.
-                    if (!TryReadSvgGeometryValue(path, property, value, percentageBasis: null, out _)) continue;
-                    if (!important && importantNames?.Contains(name) == true &&
-                        !TryReadSvgGeometryValue(path, property, previous, percentageBasis: null, out _))
-                    {
-                        importantNames.Remove(name);
-                    }
+                    continue;
+                }
+                if (!important && importantNames?.Contains(name) == true &&
+                    IsUnusableCompetingSvgValue(path, property, previous))
+                {
+                    importantNames.Remove(name);
                 }
             }
 
@@ -1612,6 +1611,20 @@ internal sealed partial class PptxRenderer
         }
 
         return declarations;
+    }
+
+    private static bool IsUnusableCompetingSvgValue(XElement element, string property, string value)
+    {
+        if (IsSvgInlineGeometryProperty(element, property))
+        {
+            return !TryReadSvgGeometryValue(element, property, value, percentageBasis: null, out _);
+        }
+
+        // A plain CSS hash color has a fixed grammar. Escaped tokens and other
+        // paint forms keep the existing paint reader's diagnostics.
+        return property is ("fill" or "stroke" or "color" or "stop-color") &&
+            value.StartsWith('#') && !value.Contains('\\') &&
+            !RgbColor.TryParseCssColor(value, out _, out _);
     }
 
     private static bool IsSvgInlineGeometryProperty(XElement element, string name) => element.Name.LocalName switch
