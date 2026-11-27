@@ -651,6 +651,43 @@ internal static partial class SvgTextTests
             "1 0 0 rg", "0 1 0 rg", "0 0 1 rg", LabelColor);
     }
 
+    public static void SvgLocalShapeGroupsResolveNestedPaintServersFromTheirSource()
+    {
+        const string gradient = """
+            <linearGradient id="tone">
+              <stop stop-color="currentColor"/><stop offset=".5" stop-color="currentColor"/>
+              <stop offset="1" stop-color="white"/>
+            </linearGradient>
+            """;
+        const string artwork = """
+            <rect width="80" height="24" fill="url(#tone)"/>
+            <rect y="34" width="16" height="12" fill="currentColor"/>
+            """;
+        const string sibling = """<rect x="160" y="10" width="22" height="20" fill="lime"/>""";
+        string blueGradient = gradient.Replace("currentColor", "blue", StringComparison.Ordinal);
+        string literal = Svg($"""
+            <defs>{blueGradient}</defs>
+            <g transform="translate(12 15)" color="red">{artwork}</g>
+            {sibling}
+            """);
+        string Reference(string definitions, string additional = "") => Svg($"""
+            <defs color="blue"><g id="badge">{definitions}{artwork}{additional}</g></defs>
+            <use href="#badge" x="12" y="15" color="red"/>
+            {sibling}
+            """);
+        string nested = $"""
+            <defs>{gradient}<rect width="400" height="160" fill="magenta"/></defs>
+            """;
+        AssertSvgPaintInBothFormats(literal, [Reference(nested), Reference(gradient)], null,
+            "0 0 1 rg", "1 0 0 rg", "0 1 0 rg");
+
+        var diagnostics = new List<OoxPdfDiagnostic>();
+        var unsupported = Paint(Reference(nested, """<use href="#badge"/>"""), diagnostics);
+        AssertEquivalentSvgPaint(Paint(Svg(sibling)), unsupported,
+            "An unsupported graphical child omits its instance and preserves the visible sibling.");
+        TestAssert.Contains("1 unsupported use element.", diagnostics.Single().Message);
+    }
+
     public static void SvgDecreasingStopsKeepNativePaintAndOpacityInBothFormats()
     {
         string Picture(string last) => Svg($"""

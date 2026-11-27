@@ -1978,7 +1978,7 @@ internal sealed partial class PptxRenderer
             foreach (XElement child in element.Elements())
             {
                 cancellationToken.ThrowIfCancellationRequested();
-                if (IsSvgReferenceMetadata(child))
+                if (IsSvgNonPaintingReferenceChild(child))
                 {
                     // Only the child element is visited when making an instance.
                     size += 2L * child.Name.LocalName.Length + 5;
@@ -2003,15 +2003,21 @@ internal sealed partial class PptxRenderer
             foreach (XElement child in source.Elements())
             {
                 cancellationToken.ThrowIfCancellationRequested();
-                if (!IsSvgReferenceMetadata(child))
+                if (!IsSvgNonPaintingReferenceChild(child))
                     clone.Add(CloneSvgReferenceGeometry(child, cancellationToken));
             }
         }
         return clone;
     }
 
-    private static bool IsSvgReferenceMetadata(XElement element) =>
-        element.Name.Namespace == element.Parent?.Name.Namespace && IsSvgMetadataElement(element);
+    // Paint servers are resolved from the original SVG tree, which owns their
+    // inherited properties. The instance needs only its visible geometry.
+    private static bool IsSvgNonPaintingReferenceChild(XElement element) =>
+        element.Name.Namespace == element.Parent?.Name.Namespace &&
+        (element.Name.LocalName == "defs" || IsSvgPaintServerElement(element) || IsSvgMetadataElement(element));
+
+    private static bool IsSvgPaintServerElement(XElement element) =>
+        element.Name.LocalName is "linearGradient" or "radialGradient" or "pattern";
 
     private static string? ReadSvgFragmentReference(XElement element)
     {
@@ -2024,7 +2030,7 @@ internal sealed partial class PptxRenderer
     {
         foreach (var element in elements)
         {
-            if (element.Name.LocalName is "linearGradient" or "radialGradient" or "pattern" &&
+            if (IsSvgPaintServerElement(element) &&
                 (string?)element.Attribute("id") is { } id && !string.IsNullOrWhiteSpace(id))
                 yield return (id, element);
         }
