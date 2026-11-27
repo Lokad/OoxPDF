@@ -89,6 +89,7 @@ internal static partial class PptxColumnIntervalTests
                 color = new RgbColor(rgb[0], rgb[1], rgb[2]);
             }
             else if (line.EndsWith(" G", StringComparison.Ordinal)) color = default;
+            else if (line == "n" || line.EndsWith(" n", StringComparison.Ordinal)) path = "";
             else if (line.EndsWith(" m", StringComparison.Ordinal) || line.EndsWith(" l", StringComparison.Ordinal) || line.EndsWith(" S", StringComparison.Ordinal) || line == "S")
             {
                 path += line + " ";

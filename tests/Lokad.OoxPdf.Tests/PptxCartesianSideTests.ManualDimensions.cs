@@ -2,7 +2,6 @@ using System.Globalization;
 using System.IO.Compression;
 using System.Security.Cryptography;
 using System.Text.Json;
-using System.Text.RegularExpressions;
 using System.Xml.Linq;
 using Lokad.OoxPdf.Ooxml;
 using Lokad.OoxPdf.Pdf;
@@ -24,7 +23,19 @@ internal static partial class PptxCartesianSideTests
         foreach (string id in passive)
         {
             TestAssert.True(rows.TryGetValue(id, out var row), $"The manual chart reference is missing '{id}'.");
-            CheckManualRectangle(RenderManual(row), row);
+            PdfPage page = RenderManual(row);
+            CheckManualRectangle(page, row);
+            if (id == "inner-factor-edge-height")
+            {
+                // The outline paths remain in the content stream, but the
+                // separate axis strokes are discarded. Grid strokes remain.
+                var discardedAxes = page with
+                {
+                    Content = page.Content.ReplaceLineEndings("\n").Replace(" l S\n", " l n\n", StringComparison.Ordinal)
+                };
+                var missing = TestAssert.Throws<InvalidOperationException>(() => CheckManualRectangle(discardedAxes, row));
+                TestAssert.Contains("Both painted plot axes", missing.Message);
+            }
         }
     }
 
@@ -76,7 +87,7 @@ internal static partial class PptxCartesianSideTests
 
     private static void CheckManualRectangle(PdfPage page, JsonElement row)
     {
-        var actual = ManualPlotBounds(page);
+        var actual = ManualPlotBounds(page, requireAuthoredAxisColors: true);
         var expected = row.GetProperty("NativePlot");
         double left = expected.GetProperty("Left").GetDouble(), bottom = expected.GetProperty("Bottom").GetDouble();
         TestAssert.True(Math.Abs(actual.Left - left) <= .1d && Math.Abs(actual.Bottom - bottom) <= .1d &&
@@ -85,17 +96,18 @@ internal static partial class PptxCartesianSideTests
             row.GetProperty("Id").GetString() + ": source factor/edge geometry matches the independent Office rectangle.");
     }
 
-    private static (double Left, double Right, double Bottom, double Top) ManualPlotBounds(PdfPage page)
+    private static (double Left, double Right, double Bottom, double Top) ManualPlotBounds(PdfPage page, bool requireAuthoredAxisColors = false)
     {
-        // Include batched paths and both axes: an interior category-axis line
-        // alone does not define the top/bottom of its plot.
-        var lines = Regex.Matches(page.Content, @"([-\d.]+) ([-\d.]+) m\s+([-\d.]+) ([-\d.]+) l")
-            .Select(match => match.Groups.Cast<Group>().Skip(1).Select(group => double.Parse(group.Value, CultureInfo.InvariantCulture)).ToArray()).ToArray();
-        var horizontal = lines.Where(v => Math.Abs(v[1] - v[3]) < .001d && Math.Abs(v[0] - v[2]) > 100d).ToArray();
-        var vertical = lines.Where(v => Math.Abs(v[0] - v[2]) < .001d && Math.Abs(v[1] - v[3]) > 100d).ToArray();
-        TestAssert.True(horizontal.Length > 0 && vertical.Length > 0, "Both independent plot axes must be present.");
-        return (horizontal.Min(v => Math.Min(v[0], v[2])), horizontal.Max(v => Math.Max(v[0], v[2])),
-            vertical.Min(v => Math.Min(v[1], v[3])), vertical.Max(v => Math.Max(v[1], v[3])));
+        // The fixtures mark the horizontal axis green and the vertical axis
+        // red. Keep batched grid strokes in the rectangle calculation.
+        var lines = PptxColumnIntervalTests.Lines(page);
+        var horizontal = lines.Where(line => Math.Abs(line.V[1] - line.V[3]) < .001d && Math.Abs(line.V[0] - line.V[2]) > 100d).ToArray();
+        var vertical = lines.Where(line => Math.Abs(line.V[0] - line.V[2]) < .001d && Math.Abs(line.V[1] - line.V[3]) > 100d).ToArray();
+        TestAssert.True(horizontal.Length > 0 && vertical.Length > 0 &&
+            (!requireAuthoredAxisColors || horizontal.Any(line => line.Color == new RgbColor(0, 170, 0)) &&
+                vertical.Any(line => line.Color == new RgbColor(255, 0, 0))), "Both painted plot axes must be present.");
+        return (horizontal.Min(line => Math.Min(line.V[0], line.V[2])), horizontal.Max(line => Math.Max(line.V[0], line.V[2])),
+            vertical.Min(line => Math.Min(line.V[1], line.V[3])), vertical.Max(line => Math.Max(line.V[1], line.V[3])));
     }
 
     private static JsonDocument ReadManualControls() => JsonDocument.Parse(File.ReadAllText(Path.Combine(ManualCases, "office-frames.json")));
