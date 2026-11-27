@@ -1057,6 +1057,36 @@ internal static partial class SvgTextTests
             """);
     }
 
+    public static void SvgMalformedVisibilityKeywordsPreserveHiddenAndVisibleArtwork()
+    {
+        AssertSvgPaintInBothFormats(Picture(false), Picture(true), pdf =>
+        {
+            TestAssert.DoesNotContain("1 0 0 rg", pdf);
+            TestAssert.DoesNotContain("0 1 0 rg", pdf);
+            TestAssert.DoesNotContain("1 1 0 rg", pdf);
+            TestAssert.DoesNotContain("0 1 1 rg", pdf);
+            TestAssert.Equal(2, LabelPaths(pdf, LabelColor));
+        }, "1 0 1 rg", "0 0 1 rg");
+
+        static string Picture(bool invalid)
+        {
+            string Inline(string css) => invalid ? "style=\"" + css + "\"" : string.Empty;
+            string Visibility(string keyword) => invalid ? "visibility=\"" + keyword + "\"" : string.Empty;
+            string hide = invalid ? "visibility:hidden;visibility:typo !important" : "visibility:hidden";
+            string show = invalid ? "VISIBILITY:typo !important;visibility:visible" : "visibility:visible";
+            return Svg($"""
+                <rect x="12" y="18" width="36" height="36" fill="red" visibility="hidden" {Inline("visibility:typo !important")}/>
+                <g visibility="hidden"><rect x="65" y="18" width="36" height="36" fill="lime" {Visibility("typo")}/></g>
+                <rect x="118" y="18" width="36" height="36" fill="yellow" style="{hide}"/>
+                <defs><g id="reuse"><rect x="171" y="18" width="36" height="36" fill="cyan" visibility="hidden" {Inline("visibility:typo")}/></g></defs>
+                <use href="#reuse"/>
+                <g visibility="hidden"><rect x="224" y="18" width="36" height="36" fill="fuchsia" style="{show}"/></g>
+                <circle cx="312" cy="36" r="18" fill="blue"/>
+                <text x="12" y="106" font-size="16" fill="#114499">A<tspan visibility="hidden" {Inline("visibility:typo")}>B</tspan>C</text>
+                """);
+        }
+    }
+
     private static string CurveStrokeSvg(string solid, string gradient) => Svg($"""
         <defs><linearGradient id="ramp"><stop stop-color="blue"/>
           <stop offset="1" stop-color="purple"/></linearGradient></defs>

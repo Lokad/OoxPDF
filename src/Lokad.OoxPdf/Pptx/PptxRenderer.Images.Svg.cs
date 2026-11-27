@@ -1584,6 +1584,11 @@ internal sealed partial class PptxRenderer
                 }
             }
 
+            if (name.Equals("visibility", StringComparison.OrdinalIgnoreCase) && IsInvalidSvgVisibilityKeyword(value))
+            {
+                continue;
+            }
+
             if (declarations.TryGetValue(name, out string? previous))
             {
                 string property = name.ToLowerInvariant();
@@ -2403,7 +2408,28 @@ internal sealed partial class PptxRenderer
         {
             return styleValue;
         }
-        return (string?)path.Attribute(name);
+        string? value = (string?)path.Attribute(name);
+        return name == "visibility" && value is not null && IsInvalidSvgVisibilityKeyword(value) ? null : value;
+    }
+
+    private static bool IsInvalidSvgVisibilityKeyword(string value)
+    {
+        ReadOnlySpan<char> token = value.AsSpan().Trim();
+        // Plain unknown keywords can be ignored before the cascade. Escapes and
+        // functions retain the existing handling for values we do not interpret.
+        foreach (char character in token)
+        {
+            if (!char.IsAsciiLetter(character) && character != '-')
+            {
+                return false;
+            }
+        }
+        return !token.IsEmpty &&
+            !token.Equals("visible", StringComparison.OrdinalIgnoreCase) && !IsSvgVisibilityHidden(value) &&
+            !InheritsSvgPropertyValue(value) && !IsSvgInitialValue(token) &&
+            !token.Equals("revert", StringComparison.OrdinalIgnoreCase) &&
+            !token.Equals("revert-layer", StringComparison.OrdinalIgnoreCase) &&
+            !token.Equals("revert-rule", StringComparison.OrdinalIgnoreCase);
     }
     private static int ReadSvgLineCap(string? value, out bool invalid)
     {

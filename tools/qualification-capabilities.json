@@ -672,6 +672,7 @@
     "=SvgUnsupportedCommandsKeepOnlyTheDecodedStrokePrefix",
     "=SvgImportantInlinePaintMatchesExplicitPaintInBothFormats",
     "=SvgCompetingMalformedHexPaintKeepsUsableColors",
+    "=SvgMalformedVisibilityKeywordsPreserveHiddenAndVisibleArtwork",
     "=SvgTransparentFillKeepsTranslucentGradientStrokeInBothFormats",
     "=SvgUserSpaceGradientsFollowTranslatedAndUniformlyScaledGroups",
     "=SvgLinearGradientResourcesPreserveTranslatedAndUniformlyScaledPaint",
