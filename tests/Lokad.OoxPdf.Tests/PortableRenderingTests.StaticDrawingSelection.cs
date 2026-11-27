@@ -5,77 +5,58 @@ namespace Lokad.OoxPdf.Tests;
 
 internal static partial class PortableRenderingTests
 {
-    public static void PortableRenderingUnusedStaticDrawingsPreserveSelectedStoryFrames()
+    public static void PortableRenderingStaticDrawingSelectionKeepsPaintAndFooterInk()
     {
+        const string footer = "Public synthetic composition portfolio";
         foreach (var mode in new[] { OoxPdfDocxMarkupMode.Final, OoxPdfDocxMarkupMode.AllMarkup })
         {
             var document = DocxInlineCompositionTests.ReadMutation("Composition/report", mode, false, false);
             var baseline = RenderAlignmentProbe(document, mode);
+            var expectedFooters = baseline.Select(page => ReadPaintedSourceLabel(page, footer)).ToArray();
             var drawing = CreateStaticSelectionPicture(document);
-            foreach (bool header in new[] { true, false })
-            foreach (string variant in new[] { "first", "even" })
+            var inactive = document with
             {
-                var settings = document.PageSettings with { TitlePage = false, EvenAndOddHeaders = false };
-                var drawings = (header ? settings.HeaderFloatingDrawingsByType : settings.FooterFloatingDrawingsByType)
-                    .ToDictionary(pair => pair.Key, pair => pair.Value);
-                drawings[variant] = [drawing];
-                settings = header ? settings with { HeaderFloatingDrawingsByType = drawings } :
-                    settings with { FooterFloatingDrawingsByType = drawings };
-                var pages = RenderAlignmentProbe(document with { PageSettings = settings }, mode);
+                PageSettings = document.PageSettings with { TitlePage = false, EvenAndOddHeaders = false }
+            };
+            foreach (bool header in new[] { true, false })
+            {
+                foreach (string variant in new[] { "first", "even" })
+                {
+                    var unused = RenderAlignmentProbe(WithStaticSelectionDrawing(inactive, drawing, header, variant), mode);
+                    TestAssert.Equal(baseline.Length, unused.Length);
+                    for (int index = 0; index < unused.Length; index++)
+                    {
+                        TestAssert.Equal(baseline[index].Content, unused[index].Content);
+                        ReadPaintedSourceLabel(unused[index], footer);
+                    }
+                }
+
+                var pages = RenderAlignmentProbe(WithStaticSelectionDrawing(document, drawing, header, "default"), mode);
                 TestAssert.Equal(baseline.Length, pages.Length);
                 for (int index = 0; index < pages.Length; index++)
                 {
-                    TestAssert.Equal(baseline[index].Content, pages[index].Content);
-                    ReadPaintedSourceLabel(pages[index], "Public synthetic composition portfolio");
+                    var expected = expectedFooters[index];
+                    var actual = ReadPaintedSourceLabel(pages[index], footer);
+                    TestAssert.Equal(expected.Count, actual.Count);
+                    AssertSamePaintOrigin(expected[0], actual[0]);
+                    AssertStaticSelectionPictureFrame(pages[index]);
                 }
             }
         }
     }
 
-    public static void PortableRenderingHeaderDrawingKeepsCounterpartFooterVisible()
+    private static DocxDocument WithStaticSelectionDrawing(DocxDocument document, DocxFloatingDrawing drawing,
+        bool header, string variant)
     {
-        foreach (var mode in new[] { OoxPdfDocxMarkupMode.Final, OoxPdfDocxMarkupMode.AllMarkup })
+        var settings = document.PageSettings;
+        var drawings = (header ? settings.HeaderFloatingDrawingsByType : settings.FooterFloatingDrawingsByType)
+            .ToDictionary(pair => pair.Key, pair => pair.Value);
+        drawings[variant] = [drawing];
+        return document with
         {
-            var document = DocxInlineCompositionTests.ReadMutation("Composition/report", mode, false, false);
-            var baseline = RenderAlignmentProbe(document, mode);
-            var drawings = document.PageSettings.HeaderFloatingDrawingsByType.ToDictionary(pair => pair.Key, pair => pair.Value);
-            drawings["default"] = [CreateStaticSelectionPicture(document)];
-            var source = document with { PageSettings = document.PageSettings with { HeaderFloatingDrawingsByType = drawings } };
-            var pages = RenderAlignmentProbe(source, mode);
-            TestAssert.Equal(baseline.Length, pages.Length);
-            for (int index = 0; index < pages.Length; index++)
-            {
-                const string footer = "Public synthetic composition portfolio";
-                var expected = ReadPaintedSourceLabel(baseline[index], footer);
-                var actual = ReadPaintedSourceLabel(pages[index], footer);
-                TestAssert.Equal(expected.Count, actual.Count);
-                AssertSamePaintOrigin(expected[0], actual[0]);
-                AssertStaticSelectionPictureFrame(pages[index]);
-            }
-        }
-    }
-
-    public static void PortableRenderingFooterDrawingKeepsOwnTextAndAbsolutePictureFrame()
-    {
-        foreach (var mode in new[] { OoxPdfDocxMarkupMode.Final, OoxPdfDocxMarkupMode.AllMarkup })
-        {
-            var document = DocxInlineCompositionTests.ReadMutation("Composition/report", mode, false, false);
-            var baseline = RenderAlignmentProbe(document, mode);
-            var drawings = document.PageSettings.FooterFloatingDrawingsByType.ToDictionary(pair => pair.Key, pair => pair.Value);
-            drawings["default"] = [CreateStaticSelectionPicture(document)];
-            var source = document with { PageSettings = document.PageSettings with { FooterFloatingDrawingsByType = drawings } };
-            var pages = RenderAlignmentProbe(source, mode);
-            TestAssert.Equal(baseline.Length, pages.Length);
-            for (int index = 0; index < pages.Length; index++)
-            {
-                const string footer = "Public synthetic composition portfolio";
-                var expected = ReadPaintedSourceLabel(baseline[index], footer);
-                var actual = ReadPaintedSourceLabel(pages[index], footer);
-                TestAssert.Equal(expected.Count, actual.Count);
-                AssertSamePaintOrigin(expected[0], actual[0]);
-                AssertStaticSelectionPictureFrame(pages[index]);
-            }
-        }
+            PageSettings = header ? settings with { HeaderFloatingDrawingsByType = drawings } :
+                settings with { FooterFloatingDrawingsByType = drawings }
+        };
     }
 
     private static void AssertStaticSelectionPictureFrame(PdfPage page) =>

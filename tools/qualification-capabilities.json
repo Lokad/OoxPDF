@@ -169,9 +169,7 @@
     "XmlBooleanWhitespacePreservesSchemaValues",
     "BooleanReadersPreserveVocabularyUnknownsAndMissingValues",
     "FloatingDrawingPageIndexMatchesLegacyFiltering",
-    "PortableRenderingUnusedStaticDrawingsPreserveSelectedStoryFrames",
-    "PortableRenderingHeaderDrawingKeepsCounterpartFooterVisible",
-    "PortableRenderingFooterDrawingKeepsOwnTextAndAbsolutePictureFrame",
+    "PortableRenderingStaticDrawingSelectionKeepsPaintAndFooterInk",
     "DocxSvgImageRendersAnchoredPicturesAndHonorsCancellation",
     "PortableRenderingStaticPictureLinksRetainComposedFrames",
     "=PdfCrossReferencesAndStreamLengthsMatchFileContents"
@@ -555,8 +553,7 @@
   "managed-source-label-geometry": [
     "PortableRenderingBlankLeadingPageKeepsContinuationFooters",
     "PortableRenderingColumnFallbackKeepsBodyAndFooterInk",
-    "PortableRenderingFooterDrawingKeepsOwnTextAndAbsolutePictureFrame",
-    "PortableRenderingHeaderDrawingKeepsCounterpartFooterVisible",
+    "PortableRenderingStaticDrawingSelectionKeepsPaintAndFooterInk",
     "PortableRenderingJustifiedInlineBoxChildKeepsPreparedParentContent",
     "PortableRenderingJustifiedStaticParagraphsKeepFooterInkAndPhysicalFrames",
     "PortableRenderingLeadingBodyContainersKeepStaticFooterInk",
@@ -571,8 +568,7 @@
     "PortableRenderingSourceLabelOracleRejectsDisplacedAndAlternateGlyphs",
     "PortableRenderingSourceLabelOracleRejectsMissingClippedAndPartialGlyphs",
     "PortableRenderingStaticFallbackKeepsItsCounterpartVisible",
-    "PortableRenderingTableFractionsKeepFollowingNestedContentBelowTheirInk",
-    "PortableRenderingUnusedStaticDrawingsPreserveSelectedStoryFrames"
+    "PortableRenderingTableFractionsKeepFollowingNestedContentBelowTheirInk"
   ],
   "pptx-workbook-source-semantics": [
     "PptxWorkbook",
@@ -1860,9 +1856,7 @@
     "DocxInheritedStaticDrawingVariantsStayIndependent",
     "DocxInheritedStaticTextBoxesKeepActualFontsAndRefusals",
     "DocxFontPlanUsesEnabledAndInheritedStaticVariants",
-    "PortableRenderingUnusedStaticDrawingsPreserveSelectedStoryFrames",
-    "PortableRenderingHeaderDrawingKeepsCounterpartFooterVisible",
-    "PortableRenderingFooterDrawingKeepsOwnTextAndAbsolutePictureFrame",
+    "PortableRenderingStaticDrawingSelectionKeepsPaintAndFooterInk",
     "DocxDisabledStaticFontsStayInspectableWithoutResolverCalls",
     "DocxActiveStaticTextAndMathFontsRetainTerminalFailures",
     "DocxInheritedStaticFontsKeepTheirActualFaceAndFailures",
@@ -8829,9 +8823,7 @@
     "DocxFootnoteContinuationTakeChargesRuleOverhead"
   ],
   "docx-static-frame": [
-    "PortableRenderingFooterDrawingKeepsOwnTextAndAbsolutePictureFrame",
-    "PortableRenderingUnusedStaticDrawingsPreserveSelectedStoryFrames",
-    "PortableRenderingHeaderDrawingKeepsCounterpartFooterVisible",
+    "PortableRenderingStaticDrawingSelectionKeepsPaintAndFooterInk",
     "DocxSectionNavigationKeepsIndependentWordControlContent",
     "DocxSectionNavigationSelectsFirstThenDefaultAndEvenStories",
     "DocxSectionNavigationDoesNotBackfillAnUndefinedFirstHeader",
