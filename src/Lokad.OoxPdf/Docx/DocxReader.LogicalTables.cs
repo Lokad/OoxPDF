@@ -151,23 +151,14 @@ internal sealed partial class DocxReader
         // Word keeps positioned tables distinct even without a paragraph boundary.
         if (firstProperties?.Element(WordprocessingNamespace + "tblpPr") is not null ||
             secondProperties?.Element(WordprocessingNamespace + "tblpPr") is not null) return false;
-        string? styleId = StyleId(firstProperties);
-        if (!string.Equals(styleId, StyleId(secondProperties), StringComparison.Ordinal)) return false;
-        DocxTableStyle? style = styleId is not null && styles.TableStyles.TryGetValue(styleId, out var selected)
-            ? selected : styles.DefaultTableStyle;
+        var (styleId, style) = SelectTableStyle(ReadTableStyleId(firstProperties), styles);
+        var (secondStyleId, _) = SelectTableStyle(ReadTableStyleId(secondProperties), styles);
+        if (!string.Equals(styleId, secondStyleId, StringComparison.Ordinal)) return false;
         // Word keeps fixed and autofit tables separate. Matching modes join,
         // including differing widths and nested content (independent controls).
-        return IsFixed(firstProperties) == IsFixed(secondProperties);
-
-        bool IsFixed(XElement? properties) => string.Equals(
-            ReadTableLayoutValue(properties) ?? style?.Table.LayoutValue, "fixed", StringComparison.OrdinalIgnoreCase);
-
-        string? StyleId(XElement? properties)
-        {
-            string? id = (string?)properties?.Element(WordprocessingNamespace + "tblStyle")?
-                .Attribute(WordprocessingNamespace + "val");
-            return id is not null && styles.TableStyles.ContainsKey(id) ? id : styles.DefaultTableStyleId;
-        }
+        string? inheritedLayout = style?.Table.LayoutValue;
+        return IsFixedTableLayout(ReadTableLayoutValue(firstProperties, inheritedLayout)) ==
+            IsFixedTableLayout(ReadTableLayoutValue(secondProperties, inheritedLayout));
     }
 
     private static double[] ReadTableGrid(XElement table, CancellationToken token)

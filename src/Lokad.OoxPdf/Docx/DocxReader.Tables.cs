@@ -30,10 +30,7 @@ internal sealed partial class DocxReader
         DocxRevisionInfo? inheritedRevision = fragments is null || fragments.All(fragment => fragment.Revision == source.Revision)
             ? source.Revision : null;
         XElement? tableProperties = table.Element(WordprocessingNamespace + "tblPr");
-        string? layoutValue = ReadTableLayoutValue(tableProperties);
-        string? tableStyleId = (string?)tableProperties
-            ?.Element(WordprocessingNamespace + "tblStyle")
-            ?.Attribute(WordprocessingNamespace + "val");
+        string? tableStyleId = ReadTableStyleId(tableProperties);
         XElement? tableWidth = tableProperties
             ?.Element(WordprocessingNamespace + "tblW");
         XElement? tableIndent = tableProperties
@@ -44,9 +41,7 @@ internal sealed partial class DocxReader
         AddRevision(tableRevisions, inheritedRevision);
         AddRevisions(tableRevisions, ReadPropertyChangeRevisions(tableProperties));
         DocxTableLook tableLook = ReadTableLook(tableProperties);
-        DocxTableStyle? resolvedStyle = tableStyleId is not null && styles.TableStyles.TryGetValue(tableStyleId, out DocxTableStyle? parsedTableStyle)
-            ? parsedTableStyle
-            : styles.DefaultTableStyle;
+        var (_, resolvedStyle) = SelectTableStyle(tableStyleId, styles);
         DocxTableStyle tableStyle = resolvedStyle ?? DocxTableStyle.Empty;
         DocxTextAlignment alignment = ReadAlignment(ReadAlignmentValue(tableProperties)) ??
             tableStyle.Table.Alignment ?? DocxTextAlignment.Left;
@@ -109,7 +104,7 @@ internal sealed partial class DocxReader
         {
             cancellationToken.ThrowIfCancellationRequested();
             var part = parts[sourceIndex];
-            string? partLayoutValue = ReadTableLayoutValue(part.Properties) ?? tableStyle.Table.LayoutValue;
+            string? partLayoutValue = ReadTableLayoutValue(part.Properties, tableStyle.Table.LayoutValue);
             var leadingBookmarks = part.LeadingBookmarks;
             DocxTableCellMargins partMargins = ReadTableStyleCellMargins(part.Properties);
             IReadOnlyList<DocxTableCellBorder> partBorders = ReadTableBorders(part.Properties);
@@ -121,8 +116,7 @@ internal sealed partial class DocxReader
                 var rowElement = part.Rows[partRowIndex];
                 XElement row = rowElement.Element;
                 XElement? rowExceptions = row.Element(WordprocessingNamespace + "tblPrEx");
-                bool usesFixedRowLayout = string.Equals(ReadTableLayoutValue(rowExceptions) ?? partLayoutValue,
-                    "fixed", StringComparison.OrdinalIgnoreCase);
+                bool usesFixedRowLayout = IsFixedTableLayout(ReadTableLayoutValue(rowExceptions, partLayoutValue));
                 DocxTableLook rowLook = ReadRowTableLook(row, part.Properties);
                 IReadOnlyList<DocxTableCellBorder> rowTableBorders = ReadTableBorders(rowExceptions);
                 XElement? rowProperties = row.Element(WordprocessingNamespace + "trPr");
@@ -378,7 +372,7 @@ internal sealed partial class DocxReader
 
         var preferredWidth = ReadPreferredWidth(tableWidth) ?? tableStyle.Table.PreferredWidth;
         return new DocxTable(
-            layoutValue ?? tableStyle.Table.LayoutValue,
+            ReadTableLayoutValue(tableProperties, tableStyle.Table.LayoutValue),
             columns,
             rows,
             tableStyleId,
@@ -400,8 +394,19 @@ internal sealed partial class DocxReader
         };
     }
 
-    private static string? ReadTableLayoutValue(XElement? properties) =>
-        (string?)properties?.Element(WordprocessingNamespace + "tblLayout")?.Attribute(WordprocessingNamespace + "type");
+    private static string? ReadTableStyleId(XElement? properties) =>
+        (string?)properties?.Element(WordprocessingNamespace + "tblStyle")?.Attribute(WordprocessingNamespace + "val");
+
+    private static (string? Id, DocxTableStyle? Style) SelectTableStyle(string? authoredId, DocxStyleSet styles) =>
+        authoredId is not null && styles.TableStyles.TryGetValue(authoredId, out var style)
+            ? (authoredId, style)
+            : (styles.DefaultTableStyleId, styles.DefaultTableStyle);
+
+    private static string? ReadTableLayoutValue(XElement? properties, string? inherited = null) =>
+        (string?)properties?.Element(WordprocessingNamespace + "tblLayout")?.Attribute(WordprocessingNamespace + "type") ?? inherited;
+
+    private static bool IsFixedTableLayout(string? value) =>
+        string.Equals(value, "fixed", StringComparison.OrdinalIgnoreCase);
 
     private static Dictionary<string, int> ReadColumnBookmarkEndRows(XElement table,
         IReadOnlyList<DocxRevisionScopedElement> rows, CancellationToken cancellationToken)
