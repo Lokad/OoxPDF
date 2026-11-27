@@ -320,7 +320,8 @@ internal sealed partial class DocxLayoutEngine
                 GetParagraphFirstLineIndentOffset(paragraph, paragraphSpacingScale) != 0d ||
                 GetParagraphTextStartOffset(paragraph, paragraphSpacingScale) != 0d ||
                 GetParagraphRightInset(paragraph, paragraphSpacingScale) != 0d);
-            if (textMeasurer is not null &&
+            if (HasFontlessMediaComposition(paragraph) && textMeasurer is null ||
+                textMeasurer is not null &&
                 (paragraph.Equations.Count != 0 || paragraph.ListLabel is not null && paragraph.Images.Count == 0 ||
                  paragraph.InlineTextBoxes.Count != 0 || needsInlineFrame ||
                  sourcePictures && (!pictureOnly || unscaledLineMetrics is not null)))

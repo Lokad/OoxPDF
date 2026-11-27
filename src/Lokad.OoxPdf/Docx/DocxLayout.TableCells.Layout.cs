@@ -180,34 +180,33 @@ internal sealed partial class DocxLayoutEngine
             pendingSpacingAfter = 0d;
             IReadOnlyList<DocxTextSpan> textSpans = [];
             DocxMidLinePlan? estimatePlan = null;
-            // The cell cursor still places owned drawings when no text can be measured.
+            if (textMeasurer is not null && TryGetStandaloneMath(paragraph, textWidth, paragraphSpacingScale, mathEquations, out var math))
+            {
+                contentHeight += math.LineHeight * paragraphSpacingScale;
+                containsMath = true;
+                pendingSpacingAfter = spacingProfile.ParagraphAfterSpacing;
+                previousParagraph = paragraph;
+                previousParagraphHasText = false;
+                previousParagraphHasTextLines = false;
+                continue;
+            }
+            double fontSize = GetParagraphFontSize(paragraph);
+            DocxLineHeightProfile lineHeightProfile = ResolveLineHeightProfile(paragraph, fontSize, textMeasurer);
+            double lineHeight = lineHeightProfile.LineHeight;
+            if (TryMeasureOrderedCellContent(cell, paragraph, paragraphs, measureContext, textWidth, fontSize, lineHeight,
+                out var orderedLines))
+            {
+                contentHeight += orderedLines.Sum(line => line.OccupiedHeight);
+                containsMath |= orderedLines.Any(line => line.Fragments.Any(fragment => fragment.Math is not null));
+                pendingSpacingAfter = spacingProfile.ParagraphAfterSpacing;
+                previousParagraph = paragraph;
+                previousParagraphHasText = textMeasurer is not null;
+                previousParagraphHasTextLines = textMeasurer is not null;
+                previousTextLineHeight = orderedLines[^1].OccupiedHeight;
+                continue;
+            }
             if (textMeasurer is not null)
             {
-                if (TryGetStandaloneMath(paragraph, textWidth, paragraphSpacingScale, mathEquations, out var math))
-                {
-                    contentHeight += math.LineHeight * paragraphSpacingScale;
-                    containsMath = true;
-                    pendingSpacingAfter = spacingProfile.ParagraphAfterSpacing;
-                    previousParagraph = paragraph;
-                    previousParagraphHasText = false;
-                    previousParagraphHasTextLines = false;
-                    continue;
-                }
-                double fontSize = GetParagraphFontSize(paragraph);
-                DocxLineHeightProfile lineHeightProfile = ResolveLineHeightProfile(paragraph, fontSize, textMeasurer);
-                double lineHeight = lineHeightProfile.LineHeight;
-                if (TryMeasureOrderedCellContent(cell, paragraph, paragraphs, measureContext, textWidth, fontSize, lineHeight,
-                    out var orderedLines))
-                {
-                    contentHeight += orderedLines.Sum(line => line.OccupiedHeight);
-                    containsMath |= orderedLines.Any(line => line.Fragments.Any(fragment => fragment.Math is not null));
-                    pendingSpacingAfter = spacingProfile.ParagraphAfterSpacing;
-                    previousParagraph = paragraph;
-                    previousParagraphHasText = true;
-                    previousParagraphHasTextLines = true;
-                    previousTextLineHeight = orderedLines[^1].OccupiedHeight;
-                    continue;
-                }
                 textSpans = CreateTextSpans(paragraph.Runs, pageNumber, pageCount);
                 if (textSpans.Count != 0)
                 {
@@ -563,65 +562,65 @@ internal sealed partial class DocxLayoutEngine
             double paragraphTop = cursorY + cellFirstBaselineInset;
             IReadOnlyList<DocxTextSpan> textSpans = [];
             DocxMidLinePlan? midLinePlan = null;
+            if (measurer is not null && TryGetStandaloneMath(paragraph, textWidth, context.ParagraphSpacingScale, context.MathEquations, out var math))
+            {
+                // Preserve a nominal paragraph fallback when the model has no
+                // recorded cell anchor; parsed empty runs normally carry it.
+                double mathBaselineAnchor = cellFirstBaselineInset > 0d ? cellFirstBaselineInset
+                    : DocxLineMetrics.ResolveBodyBaselineOffset(math.Equation.ParentFontSize ?? GetParagraphFontSize(paragraph),
+                        math.LineHeight, false);
+                lines.Add(CreateStandaloneMathLine(paragraph, math, cellX + paddingLeft, textWidth,
+                    cursorY + cellFirstBaselineInset, context.ParagraphSpacingScale, paragraphIndex, spacingProfile, HasFollowingParagraphShading(bodyElements, elementIndex),
+                    ResolveParagraphShadingBeforeSpacing(previousParagraph, paragraph, spacingProfile), mathBaselineAnchor));
+                cursorY -= math.LineHeight * context.ParagraphSpacingScale;
+                RecordDrawingAnchors();
+                pendingSpacingAfter = spacingProfile.ParagraphAfterSpacing;
+                previousParagraph = paragraph;
+                previousParagraphHasText = false;
+                paragraphIndex++;
+                continue;
+            }
+            double fontSize = GetParagraphFontSize(paragraph);
+            DocxLineHeightProfile lineHeightProfile = ResolveLineHeightProfile(paragraph, fontSize, measurer);
+            double lineHeight = lineHeightProfile.LineHeight;
+            if (TryMeasureOrderedCellContent(cell, paragraph, paragraphs, context, textWidth, fontSize, lineHeight,
+                out var orderedLines))
+            {
+                for (int index = 0; index < orderedLines.Count; index++)
+                {
+                    context.CancellationToken.ThrowIfCancellationRequested();
+                    var line = orderedLines[index];
+                    double inset = index == 0
+                        ? GetParagraphFirstLineTextStartOffset(paragraph, fontSize, measurer, context.ParagraphSpacingScale, context.DefaultTabStopPoints)
+                        : GetParagraphTextStartOffset(paragraph, context.ParagraphSpacingScale);
+                    double available = Math.Max(1d, textWidth - inset - GetParagraphRightInset(paragraph, context.ParagraphSpacingScale));
+                    double align = ResolveOrderedInlineAlignment(line, paragraph.Alignment, available);
+                    var placed = PlaceOrderedInlineLine(paragraph, line, cellX + paddingLeft + inset + align, cellX + paddingLeft,
+                        cursorY + cellFirstBaselineInset, fontSize, context.ParagraphSpacingScale, pageIndex,
+                        null, paragraphIndex, index, DocxStoryId.TableCell());
+                    lines.Add(placed.Line with { SingleLineHeight = lineHeightProfile.SingleLineHeight,
+                        ParagraphShadingFrame = CreateParagraphShadingFrame(paragraph, HasFollowingParagraphShading(bodyElements, elementIndex), cellX + paddingLeft, textWidth, placed.Line.X,
+                            line.BaselineInset, line.OccupiedHeight, context.ParagraphSpacingScale,
+                            index == orderedLines.Count - 1 ? spacingProfile.ParagraphAfterSpacing : 0d,
+                            index == 0 ? ResolveParagraphShadingBeforeSpacing(previousParagraph, paragraph, spacingProfile) : 0d),
+                        AppliedBeforeSpacing = index == 0 ? spacingProfile.AppliedBeforeSpacing : 0d,
+                        ParagraphAfterSpacing = index == orderedLines.Count - 1 ? spacingProfile.ParagraphAfterSpacing : 0d });
+                    placedImages.AddRange(placed.Images);
+                    placedBoxes.AddRange(placed.TextBoxes);
+                    cursorY -= line.OccupiedHeight;
+                }
+                pendingSpacingAfter = spacingProfile.ParagraphAfterSpacing;
+                previousParagraph = paragraph;
+                previousParagraphHasText = paragraph.Runs.Any(run => !string.IsNullOrWhiteSpace(run.Text)) &&
+                    paragraph.Images.Count == 0 && paragraph.InlineTextBoxes.Count == 0;
+                previousTextBaselineY = lines[^1].BaselineY;
+                previousTextFontSize = lines[^1].FontSize;
+                paragraphIndex++;
+                RecordDrawingAnchors();
+                continue;
+            }
             if (measurer is not null)
             {
-                if (TryGetStandaloneMath(paragraph, textWidth, context.ParagraphSpacingScale, context.MathEquations, out var math))
-                {
-                    // Preserve a nominal paragraph fallback when the model has no
-                    // recorded cell anchor; parsed empty runs normally carry it.
-                    double mathBaselineAnchor = cellFirstBaselineInset > 0d ? cellFirstBaselineInset
-                        : DocxLineMetrics.ResolveBodyBaselineOffset(math.Equation.ParentFontSize ?? GetParagraphFontSize(paragraph),
-                            math.LineHeight, false);
-                    lines.Add(CreateStandaloneMathLine(paragraph, math, cellX + paddingLeft, textWidth,
-                        cursorY + cellFirstBaselineInset, context.ParagraphSpacingScale, paragraphIndex, spacingProfile, HasFollowingParagraphShading(bodyElements, elementIndex),
-                        ResolveParagraphShadingBeforeSpacing(previousParagraph, paragraph, spacingProfile), mathBaselineAnchor));
-                    cursorY -= math.LineHeight * context.ParagraphSpacingScale;
-                    RecordDrawingAnchors();
-                    pendingSpacingAfter = spacingProfile.ParagraphAfterSpacing;
-                    previousParagraph = paragraph;
-                    previousParagraphHasText = false;
-                    paragraphIndex++;
-                    continue;
-                }
-                double fontSize = GetParagraphFontSize(paragraph);
-                DocxLineHeightProfile lineHeightProfile = ResolveLineHeightProfile(paragraph, fontSize, measurer);
-                double lineHeight = lineHeightProfile.LineHeight;
-                if (TryMeasureOrderedCellContent(cell, paragraph, paragraphs, context, textWidth, fontSize, lineHeight,
-                    out var orderedLines))
-                {
-                    for (int index = 0; index < orderedLines.Count; index++)
-                    {
-                        context.CancellationToken.ThrowIfCancellationRequested();
-                        var line = orderedLines[index];
-                        double inset = index == 0
-                            ? GetParagraphFirstLineTextStartOffset(paragraph, fontSize, measurer, context.ParagraphSpacingScale, context.DefaultTabStopPoints)
-                            : GetParagraphTextStartOffset(paragraph, context.ParagraphSpacingScale);
-                        double available = Math.Max(1d, textWidth - inset - GetParagraphRightInset(paragraph, context.ParagraphSpacingScale));
-                        double align = ResolveOrderedInlineAlignment(line, paragraph.Alignment, available);
-                        var placed = PlaceOrderedInlineLine(paragraph, line, cellX + paddingLeft + inset + align, cellX + paddingLeft,
-                            cursorY + cellFirstBaselineInset, fontSize, context.ParagraphSpacingScale, pageIndex,
-                            null, paragraphIndex, index, DocxStoryId.TableCell());
-                        lines.Add(placed.Line with { SingleLineHeight = lineHeightProfile.SingleLineHeight,
-                            ParagraphShadingFrame = CreateParagraphShadingFrame(paragraph, HasFollowingParagraphShading(bodyElements, elementIndex), cellX + paddingLeft, textWidth, placed.Line.X,
-                                line.BaselineInset, line.OccupiedHeight, context.ParagraphSpacingScale,
-                                index == orderedLines.Count - 1 ? spacingProfile.ParagraphAfterSpacing : 0d,
-                                index == 0 ? ResolveParagraphShadingBeforeSpacing(previousParagraph, paragraph, spacingProfile) : 0d),
-                            AppliedBeforeSpacing = index == 0 ? spacingProfile.AppliedBeforeSpacing : 0d,
-                            ParagraphAfterSpacing = index == orderedLines.Count - 1 ? spacingProfile.ParagraphAfterSpacing : 0d });
-                        placedImages.AddRange(placed.Images);
-                        placedBoxes.AddRange(placed.TextBoxes);
-                        cursorY -= line.OccupiedHeight;
-                    }
-                    pendingSpacingAfter = spacingProfile.ParagraphAfterSpacing;
-                    previousParagraph = paragraph;
-                    previousParagraphHasText = paragraph.Runs.Any(run => !string.IsNullOrWhiteSpace(run.Text)) &&
-                        paragraph.Images.Count == 0 && paragraph.InlineTextBoxes.Count == 0;
-                    previousTextBaselineY = lines[^1].BaselineY;
-                    previousTextFontSize = lines[^1].FontSize;
-                    paragraphIndex++;
-                    RecordDrawingAnchors();
-                    continue;
-                }
                 textSpans = CreateTextSpans(paragraph.Runs, context.PageNumber, context.PageCount);
                 if (textSpans.Count == 0)
                 {

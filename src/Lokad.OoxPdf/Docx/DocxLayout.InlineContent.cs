@@ -36,7 +36,7 @@ internal readonly record struct DocxInlineSourceCursor(int AtomIndex, int TextOf
     public bool IsComplete(DocxMeasuredInlineAtoms atoms) => AtomIndex == atoms.Fragments.Count + 1 && TextOffset == 0;
 }
 internal sealed record DocxMeasuredInlineAtoms(DocxParagraph Paragraph,
-    IReadOnlyList<DocxMeasuredInlineFragment> Fragments, IDocxTextMeasurer Measurer,
+    IReadOnlyList<DocxMeasuredInlineFragment> Fragments, IDocxTextMeasurer? Measurer,
     double FontSize, double BaselineInset, double LineHeight, double Scale, double DefaultTabStopPoints,
     IReadOnlyList<DocxTabStop> TabStops, IReadOnlyList<int> CounterFragmentIndices)
 {
@@ -51,6 +51,10 @@ internal sealed partial class DocxLayoutEngine
 {
     private static bool HasCapturedOrdinaryInlineContent(DocxParagraph paragraph) =>
         paragraph.InlineContent is not null && paragraph.Equations.Count == 0 && paragraph.InlineTextBoxes.Count == 0;
+
+    private static bool HasFontlessMediaComposition(DocxParagraph paragraph) =>
+        paragraph.InlineContent is not null && paragraph.ListLabel is null &&
+        paragraph.Images.Count + paragraph.InlineTextBoxes.Count > 1;
 
     private static double ResolveOrderedInlineAlignment(DocxMeasuredInlineLine line,
         DocxTextAlignment alignment, double available) =>
@@ -79,10 +83,10 @@ internal sealed partial class DocxLayoutEngine
 
     private static (DocxMeasuredInlineLine Line, DocxLineHeightProfile? Profile, double FontSize)
         ResolveOrderedBodyLine(DocxParagraph paragraph, DocxMeasuredInlineLine line,
-            IDocxTextMeasurer measurer, double scale, double paragraphInset)
+            IDocxTextMeasurer? measurer, double scale, double paragraphInset)
     {
         double size = GetParagraphFontSize(paragraph);
-        if (line.ListLabelSegments.Count == 0 && line.Fragments.Count != 0 &&
+        if (measurer is not null && line.ListLabelSegments.Count == 0 && line.Fragments.Count != 0 &&
             line.Fragments.All(fragment => fragment.Source is DocxInlineText or DocxInlineTab) &&
             GetBodyTextLineMetricParagraph(paragraph,
                 line.Fragments.SelectMany(fragment => fragment.Source is DocxInlineTab tab
@@ -130,10 +134,10 @@ internal sealed partial class DocxLayoutEngine
         [NotNullWhen(true)] out IReadOnlyList<DocxMeasuredInlineLine>? lines)
     {
         lines = null;
-        if (context.TextMeasurer is null) return false;
+        if (context.TextMeasurer is null && !HasFontlessMediaComposition(paragraph)) return false;
         if (!DocxMathParagraphPolicy.NeedsOrderedInlineLayout(paragraph, context.MathEquations)) return false;
         double scale = context.ParagraphSpacingScale;
-        double paragraphInset = DocxLineMetrics.ResolveTableCellBodyBaselineOffset(fontSize, lineHeight,
+        double paragraphInset = context.TextMeasurer is null ? 0d : DocxLineMetrics.ResolveTableCellBodyBaselineOffset(fontSize, lineHeight,
             IsExactLineSpacing(paragraph.EffectiveProperties), paragraphs, paragraph, context.TextMeasurer);
         // Ordered measurements own a physical line frame, including its text
         // strut. The nominal first-cell inset belongs to the legacy path.
@@ -147,7 +151,8 @@ internal sealed partial class DocxLayoutEngine
             firstWidth, nextWidth, baselineInset, lineHeight, scale, context.CancellationToken, out lines,
             physicalTextBaselineInset: DocxPlainBodyFrame.HasFixedLineFlow(paragraph) ? baselineInset : null,
             defaultTabStopPoints: context.DefaultTabStopPoints, pageNumber: context.PageNumber, pageCount: context.PageCount,
-            leadingDecimalTab: ResolveImplicitCellDecimalStop(cell, paragraph, scale, context.CancellationToken) is { } stop
+            leadingDecimalTab: context.TextMeasurer is not null &&
+                ResolveImplicitCellDecimalStop(cell, paragraph, scale, context.CancellationToken) is { } stop
                 ? (stop, firstFrameWidth) : null);
     }
 
@@ -259,7 +264,7 @@ internal sealed partial class DocxLayoutEngine
 
     internal static bool TryMeasureOrderedInlineContent(DocxParagraph paragraph,
         IReadOnlyDictionary<DocxEquation, DocxPreparedMathParagraph>? equations,
-        IDocxTextMeasurer measurer, double fontSize, double firstWidth, double nextWidth,
+        IDocxTextMeasurer? measurer, double fontSize, double firstWidth, double nextWidth,
         double baselineInset, double lineHeight, double scale, CancellationToken token,
         [NotNullWhen(true)] out IReadOnlyList<DocxMeasuredInlineLine>? lines,
         double? physicalTextBaselineInset = null, double defaultTabStopPoints = WordDefaultTabStopPoints,
@@ -276,12 +281,13 @@ internal sealed partial class DocxLayoutEngine
 
     internal static bool TryMeasureOrderedInlineAtoms(DocxParagraph paragraph,
         IReadOnlyDictionary<DocxEquation, DocxPreparedMathParagraph>? equations,
-        IDocxTextMeasurer measurer, double fontSize, double baselineInset, double lineHeight, double scale,
+        IDocxTextMeasurer? measurer, double fontSize, double baselineInset, double lineHeight, double scale,
         CancellationToken token, [NotNullWhen(true)] out DocxMeasuredInlineAtoms? atoms,
         double defaultTabStopPoints = WordDefaultTabStopPoints, DocxPageNumber? pageNumber = null, int? pageCount = null,
         bool allowStaticFallback = false, double? physicalTextBaselineInset = null, bool includeInlineTextBoxes = true)
     {
         atoms = null;
+        if (measurer is null && !HasFontlessMediaComposition(paragraph)) return false;
         bool hasActualFieldInputs = (pageNumber is not null || pageCount is not null) &&
             paragraph.FieldReferences.All(field => !field.UsesPlaceholder || !field.Kind.IsDynamic() ||
                 DocxFieldText.CanResolve(field.Kind, pageNumber, pageCount)) &&
@@ -375,7 +381,7 @@ internal sealed partial class DocxLayoutEngine
                 case DocxInlineTab tab when tab.Run.EffectiveProperties.Hidden:
                 case DocxInlineBreak lineBreak when lineBreak.Run.EffectiveProperties.Hidden:
                     break;
-                case DocxInlineText text when text.Run.FieldKind is { } kind && kind.IsDynamic():
+                case DocxInlineText text when measurer is not null && text.Run.FieldKind is { } kind && kind.IsDynamic():
                     // The owned placeholder is atomic. Resolve only with actual
                     // page inputs; retain the original run/item for annotations.
                     if (!runIndices.TryGetValue(text.Run, out int fieldRunIndex) ||
@@ -388,7 +394,7 @@ internal sealed partial class DocxLayoutEngine
                     measured.Add(new(text, fieldWidth, baselineInset, Math.Max(lineHeight, baselineInset), [fieldSpan])
                         { TextSegments = fieldSegments, CounterDependencies = DocxFieldText.Dependencies(kind) });
                     break;
-                case DocxInlineText text:
+                case DocxInlineText text when measurer is not null:
                     int start = text.Start, end = start + text.Length;
                     while (start < end)
                     {
@@ -419,7 +425,7 @@ internal sealed partial class DocxLayoutEngine
                         start = stop;
                     }
                     break;
-                case DocxInlineEquation math:
+                case DocxInlineEquation math when measurer is not null:
                     if (equations is null || !equations.TryGetValue(math.Equation, out var prepared))
                     {
                         // A trusted ordered paragraph keeps its prepared items
@@ -467,7 +473,7 @@ internal sealed partial class DocxLayoutEngine
                     measured.Add(new(item, frame.BoxWidth, frame.BoxHeight, frame.BoxHeight, [])
                         { TextBox = frame, CounterDependencies = boxDependencies });
                     break;
-                case DocxInlineTab:
+                case DocxInlineTab when measurer is not null:
                 case DocxInlineBreak:
                     measured.Add(new(item, 0d, baselineInset, Math.Max(lineHeight, baselineInset), []));
                     break;
@@ -627,7 +633,7 @@ internal sealed partial class DocxLayoutEngine
                 continue;
             }
             if (fragment.Source is not DocxInlineText { Run.FieldKind: { } kind } source || !kind.IsDynamic()) continue;
-            if (fragment.Text.Count != 1 || !DocxFieldText.TryResolve(source.Run,
+            if (atoms.Measurer is null || fragment.Text.Count != 1 || !DocxFieldText.TryResolve(source.Run,
                 source.Run.Text.Substring(source.Start, source.Length), pageNumber, pageCount, out string value)) return false;
             var span = fragment.Text[0];
             if (span.Text == value) continue;
@@ -669,7 +675,9 @@ internal sealed partial class DocxLayoutEngine
         if (!double.IsFinite(firstWidth) || !double.IsFinite(nextWidth) || firstWidth <= 0d || nextWidth <= 0d) return false;
         var paragraph = atoms.Paragraph;
         var measured = atoms.Fragments;
-        var measurer = atoms.Measurer;
+        // Preparation admits text, tabs and labels only with text metrics.
+        IDocxTextMeasurer RequireTextMeasurer() =>
+            atoms.Measurer ?? throw new InvalidOperationException("A measured text fragment requires text metrics.");
         double fontSize = atoms.FontSize, baselineInset = atoms.BaselineInset, lineHeight = atoms.LineHeight,
             scale = atoms.Scale, defaultTabStopPoints = atoms.DefaultTabStopPoints;
         var tabStops = atoms.TabStops;
@@ -686,7 +694,7 @@ internal sealed partial class DocxLayoutEngine
             var span = original.Text[0] with { Text = fullValue[cursor.TextOffset..],
                 SourceTextOffsetInRun = original.Text[0].SourceTextOffsetInRun + cursor.TextOffset };
             var segments = CreateTextSegments(NormalizeHiddenBreakSpans([span], false),
-                0d, fontSize, measurer, [], 36d);
+                0d, fontSize, RequireTextMeasurer(), [], 36d);
             double partWidth = segments.Count == 0 ? 0d : segments[^1].X + segments[^1].Width;
             if (!double.IsFinite(partWidth) || partWidth < 0d) return false;
             partial = original with
@@ -816,7 +824,7 @@ internal sealed partial class DocxLayoutEngine
                             if (offset < 0 || offset > span.StyleRun.Text.Length) return false;
                             source = new(span.StyleRun, offset, Math.Min(span.Text.Length, span.StyleRun.Text.Length - offset));
                         }
-                        var segments = CreateTextSegments([span], 0d, fontSize, measurer, [], 36d);
+                        var segments = CreateTextSegments([span], 0d, fontSize, RequireTextMeasurer(), [], 36d);
                         double partWidth = segments.Count == 0 ? 0d : segments[^1].X + segments[^1].Width;
                         if (!double.IsFinite(partWidth) || partWidth < 0d) return false;
                         var part = new DocxMeasuredInlineFragment(source, partWidth, baselineInset, Math.Max(lineHeight, baselineInset), [span])
@@ -934,7 +942,7 @@ internal sealed partial class DocxLayoutEngine
 
         DocxWrappedTextLine[] WrapGroup(DocxTextSpan[] spans, double width, bool firstLineHasContent = false)
         {
-            var wrapped = WrapTextLines(spans, width, nextWidth, fontSize, measurer, [], 36d,
+            var wrapped = WrapTextLines(spans, width, nextWidth, fontSize, RequireTextMeasurer(), [], 36d,
                 ShouldAllowCharacterLevelWordWrap(paragraph), dynamicFieldPageNumber: null,
                 cancellationToken: token, firstLineHasContent: firstLineHasContent);
             // Cursor mode needs the next source offset, not every later line.
@@ -958,7 +966,7 @@ internal sealed partial class DocxLayoutEngine
                     if (separator >= 0)
                     {
                         var prefix = NormalizeHiddenBreakSpans([span with { Text = span.Text[..separator] }], false);
-                        decimalOffset = width + MeasureTextFieldSpans(prefix, fontSize, measurer).Width;
+                        decimalOffset = width + MeasureTextFieldSpans(prefix, fontSize, RequireTextMeasurer()).Width;
                     }
                 }
                 width += fragment.Advance;
@@ -1059,7 +1067,7 @@ internal sealed partial class DocxLayoutEngine
             System.Text.Rune.DecodeFromUtf16(after.Text, out var first, out _);
             string lastText = last.ToString(), firstText = first.ToString();
             double Measure(string value) => MeasureTextSpansForLayout([before with { Text = value }],
-                fontSize, measurer, [], 36d, null);
+                fontSize, RequireTextMeasurer(), [], 36d, null);
             return Measure(lastText + firstText) - Measure(lastText) - Measure(firstText);
         }
         void Flush(DocxInlineSourceCursor endCursor)
@@ -1114,7 +1122,7 @@ internal sealed partial class DocxLayoutEngine
                         for (int spanIndex = 0; spanIndex < fragment.Text.Count; spanIndex++)
                         {
                             var span = fragment.Text[spanIndex];
-                            segmentX = AddJustifiedSpanSegments(span, segmentX, extraPerSpace, fontSize, measurer, segments);
+                            segmentX = AddJustifiedSpanSegments(span, segmentX, extraPerSpace, fontSize, RequireTextMeasurer(), segments);
                             if (spanIndex + 1 < fragment.Text.Count)
                                 segmentX += DocxTextSpacing.BoundarySpacing(span.StyleRun, span.Text, fragment.Text[spanIndex + 1].Text);
                         }
@@ -1189,9 +1197,9 @@ internal sealed partial class DocxLayoutEngine
                 var style = paragraph.Runs.FirstOrDefault() ?? paragraph.ParagraphMarkRun ??
                     new DocxTextRun(string.Empty, fontSize, null, false, false, false, null, null);
                 labelSegments = CreateListLabelSegments(label, style, fontSize,
-                    GetParagraphLabelStartOffset(paragraph, scale), measurer,
-                    GetParagraphFirstLineTextStartOffset(paragraph, fontSize, measurer, scale, defaultTabStopPoints));
-                above += ResolveListLabelFirstLineExtraLeading(paragraph, fontSize, measurer);
+                    GetParagraphLabelStartOffset(paragraph, scale), RequireTextMeasurer(),
+                    GetParagraphFirstLineTextStartOffset(paragraph, fontSize, RequireTextMeasurer(), scale, defaultTabStopPoints));
+                above += ResolveListLabelFirstLineExtraLeading(paragraph, fontSize, RequireTextMeasurer());
             }
             // A prepared display row already owns its automatic expansion;
             // retain the ordinary expanded strut as a floor, without charging

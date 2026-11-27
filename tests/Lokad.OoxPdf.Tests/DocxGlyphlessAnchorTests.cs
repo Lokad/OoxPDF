@@ -123,6 +123,69 @@ internal static class DocxGlyphlessAnchorTests
         }
     }
 
+    public static void DocxGlyphlessInlinePicturesAndBoxesFollowSourceOrder()
+    {
+        var parts = ReadParts(TestFixtures.WriteDocxInlinePng(PictureBoxParagraph(floating: false, height: 90),
+            TestFixtures.CreateRgbPng(1, 1, [0, 255, 0])));
+        XNamespace w = OoxNamespaces.WordprocessingNamespace;
+        XNamespace a = OoxNamespaces.DrawingNamespace;
+        XNamespace r = OoxNamespaces.RelationshipsNamespace;
+        XNamespace rel = OoxNamespaces.PackageRelationshipsNamespace;
+        const string documentPart = "word/document.xml";
+        const string relationshipsPart = "word/_rels/document.xml.rels";
+        XElement relationships = XElement.Parse(System.Text.Encoding.UTF8.GetString(parts[relationshipsPart]));
+        relationships.Add(new XElement(rel + "Relationship",
+            new XAttribute("Id", "rIdBlue"), new XAttribute("Type", r.NamespaceName + "/image"),
+            new XAttribute("Target", "media/blue.png")));
+        parts[relationshipsPart] = TestFixtures.Utf8(relationships.ToString(SaveOptions.DisableFormatting));
+        parts["word/media/blue.png"] = TestFixtures.CreateRgbPng(1, 1, [0, 0, 255]);
+        XElement seed = XElement.Parse(System.Text.Encoding.UTF8.GetString(parts[documentPart]));
+        foreach (var (boxFirst, width) in new[] { (true, 0), (false, 0), (true, 4000), (false, 4000), (true, 2800) })
+        {
+            var document = new XElement(seed);
+            var host = document.Element(w + "body")!.Element(w + "p")!;
+            var box = host.Element(w + "r")!;
+            var picture = new XElement(box.Descendants(w + "txbxContent").Single().Element(w + "p")!.Element(w + "r")!);
+            picture.Descendants(a + "blip").Single().SetAttributeValue(r + "embed", "rIdBlue");
+            if (boxFirst) box.AddAfterSelf(picture);
+            else box.AddBeforeSelf(picture);
+            if (width != 0)
+                host.ReplaceWith(new XElement(w + "tbl",
+                    new XElement(w + "tblGrid", new XElement(w + "gridCol", new XAttribute(w + "w", width))),
+                    new XElement(w + "tr", new XElement(w + "tc", host))));
+            parts[documentPart] = TestFixtures.Utf8(document.ToString(SaveOptions.DisableFormatting));
+            string input = TestFixtures.WriteTempPackage(".docx", parts);
+            foreach (var (mode, geometry) in Views())
+            {
+                PdfPage page = Render(input, new EmptyProgramResolver(), mode, geometry).Single();
+                TestAssert.Equal(0, page.Fonts.Count);
+                var frames = new Dictionary<int, double[]>();
+                foreach (PdfImageResource image in page.Images)
+                {
+                    using var compressed = new MemoryStream(image.Image.Bytes);
+                    using var rgb = new ZLibStream(compressed, CompressionMode.Decompress);
+                    TestAssert.Equal(0, rgb.ReadByte());
+                    int green = rgb.ReadByte(), blue = rgb.ReadByte();
+                    TestAssert.True((green, blue) is (255, 0) or (0, 255), "Each authored picture color is distinct.");
+                    frames.Add(green, PaintedFrame(page, image));
+                }
+                double[] boxed = frames[255], direct = frames[0];
+                TestAssert.Equal(72d, boxed[0]);
+                TestAssert.Equal(72d, direct[0]);
+                if (width == 2800)
+                {
+                    TestAssert.True(boxed[3] >= direct[3] + direct[1], "The later picture wraps below the source-first box.");
+                }
+                else
+                {
+                    TestAssert.True(Math.Abs(boxed[3] - direct[3]) < 72d, "Both pictures fit the same line.");
+                    TestAssert.True(boxFirst ? boxed[2] + boxed[0] <= direct[2] : direct[2] + direct[0] <= boxed[2],
+                        "The pictured objects follow the authored run order.");
+                }
+            }
+        }
+    }
+
     private static string PictureBoxParagraph(bool floating, int height)
     {
         string placement = floating ? "anchor" : "inline";
@@ -505,9 +568,10 @@ internal static class DocxGlyphlessAnchorTests
         return new DocxRenderer(resolver, mode, geometry).RenderPagesAsync(document, null, default).ToBlockingEnumerable().ToArray();
     }
 
-    private static double[] PaintedFrame(PdfPage page)
+    private static double[] PaintedFrame(PdfPage page) => PaintedFrame(page, page.Images.Single());
+
+    private static double[] PaintedFrame(PdfPage page, PdfImageResource image)
     {
-        var image = page.Images.Single();
         var draw = Regex.Match(page.Content, @"([-\d.]+) 0 0 ([-\d.]+) ([-\d.]+) ([-\d.]+) cm\s+/" + Regex.Escape(image.ResourceName) + @" Do");
         TestAssert.True(draw.Success, "The picture resource must be painted.");
         return Enumerable.Range(1, 4).Select(i => double.Parse(draw.Groups[i].Value, CultureInfo.InvariantCulture)).ToArray();

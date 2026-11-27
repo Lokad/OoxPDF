@@ -1713,12 +1713,14 @@ internal sealed partial class DocxLayoutEngine
                 }
             }
 
-            if (textMeasurer is not null && DocxMathParagraphPolicy.NeedsOrderedInlineLayout(paragraph, mathEquations))
+            if ((textMeasurer is not null || HasFontlessMediaComposition(paragraph)) &&
+                DocxMathParagraphPolicy.NeedsOrderedInlineLayout(paragraph, mathEquations))
             {
                 double firstInset = GetParagraphFirstLineTextStartOffset(paragraph, paragraphFontSize, textMeasurer, paragraphSpacingScale, defaultTabStopPoints);
                 double nextInset = GetParagraphTextStartOffset(paragraph, paragraphSpacingScale);
                 double rightInset = GetParagraphRightInset(paragraph, paragraphSpacingScale);
-                double baseInset = ResolveOrderedBodyBaselineInset(paragraph, paragraphFontSize, baselineLineHeight, textMeasurer);
+                double baseInset = textMeasurer is null ? 0d :
+                    ResolveOrderedBodyBaselineInset(paragraph, paragraphFontSize, baselineLineHeight, textMeasurer);
                 double anchorInset = 0d;
                 if (scaleBaselineOffsetTransitions)
                 {

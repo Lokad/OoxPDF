@@ -727,9 +727,9 @@ internal sealed partial class DocxLayoutEngine
         return Math.Max(0d, paragraph.ResolveLeftIndent(paragraph.ListLabel?.Indent).Points ?? 0d) * fixedScale;
     }
 
-    private static double GetParagraphFirstLineTextStartOffset(DocxParagraph paragraph, double fontSize, IDocxTextMeasurer textMeasurer, double fixedScale, double defaultTabStopPoints)
+    private static double GetParagraphFirstLineTextStartOffset(DocxParagraph paragraph, double fontSize, IDocxTextMeasurer? textMeasurer, double fixedScale, double defaultTabStopPoints)
     {
-        if (paragraph.ListLabel is null)
+        if (paragraph.ListLabel is null || textMeasurer is null)
         {
             return GetParagraphFirstLineIndentOffset(paragraph, fixedScale);
         }
