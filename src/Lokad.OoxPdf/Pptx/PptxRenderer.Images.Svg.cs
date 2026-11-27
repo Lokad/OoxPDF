@@ -1908,7 +1908,7 @@ internal sealed partial class PptxRenderer
         while (node is not null)
         {
             cancellationToken.ThrowIfCancellationRequested();
-            if (node is XElement element && element.Name.Namespace == ns && !IsSvgMetadataElement(element))
+            if (node is XElement element && IsSvgContentElement(element, ns))
             {
                 if (!ReferenceEquals(element, root)) yield return element;
                 if (element.Name.LocalName is not ("style" or "foreignObject" or "use") && element.FirstNode is { } child)
@@ -1929,6 +1929,9 @@ internal sealed partial class PptxRenderer
             node = node.NextNode;
         }
     }
+
+    private static bool IsSvgContentElement(XElement element, XNamespace? svgNamespace) =>
+        element.Name.Namespace == svgNamespace && !IsSvgMetadataElement(element);
 
     private static IEnumerable<XElement> EnumerateSvgPaintElements(IEnumerable<XElement> elements, double viewWidth,
         double viewHeight, bool hasStylesheet, HashSet<XElement>? admittedElements,
@@ -2120,11 +2123,9 @@ internal sealed partial class PptxRenderer
     // inherited properties. The instance needs only its visible geometry.
     private static long? MeasureNonPaintingSvgReferenceChild(XElement element)
     {
-        if (element.Name.Namespace != element.Parent?.Name.Namespace)
-            return null;
-
         long size = 2L * element.Name.LocalName.Length + 5;
-        if (element.Name.LocalName == "defs" || IsSvgPaintServerElement(element) || IsSvgMetadataElement(element))
+        if (!IsSvgContentElement(element, element.Parent?.Name.Namespace) ||
+            element.Name.LocalName == "defs" || IsSvgPaintServerElement(element))
             return size;
 
         var style = ReadSvgStyleDeclarations(element);

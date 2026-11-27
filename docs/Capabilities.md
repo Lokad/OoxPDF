@@ -147,7 +147,8 @@ Local SVG gradient templates reuse the authored stops and their source colors.
 Same-document SVG `use` references can reuse supported shapes, labels and groups,
 including artwork inside link wrappers. Placement, inherited paint and label
 typography follow each use site. Nested paint definitions retain their source colors.
-Titles, descriptions and metadata preserve reuse of supported geometry.
+Titles, descriptions, metadata and foreign namespace elements preserve reuse
+of neighboring supported geometry.
 Inline `transform:none` overrides the geometry's presentation transform.
 Symbol targets and external documents retain the diagnosed fallback. A nested
 reference or `foreignObject` inside a reused group is diagnosed and skipped.

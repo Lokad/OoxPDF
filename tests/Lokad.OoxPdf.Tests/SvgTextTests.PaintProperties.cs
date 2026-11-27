@@ -667,7 +667,14 @@ internal static partial class SvgTextTests
               <style>* { display: none }</style>
             </note:entry></metadata>
             """, "<desc>First marker</desc>");
-        AssertSvgPaintInBothFormats(literal, [reference, described], null, "1 0 0 rg", "0 0 1 rg");
+        string extension = Reference("""
+            <note:rect xmlns:note="urn:public-test" width="400" height="160" fill="magenta"/>
+            <note:entry xmlns:note="urn:public-test">
+              <rect width="400" height="160" fill="magenta"/>
+              <style>* { display: none }</style>
+            </note:entry>
+            """, "");
+        AssertSvgPaintInBothFormats(literal, [reference, described, extension], null, "1 0 0 rg", "0 0 1 rg");
     }
 
     public static void SvgLocalShapeGroupsKeepPaintBesideUnpaintedChildren()
