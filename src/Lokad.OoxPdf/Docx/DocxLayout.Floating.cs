@@ -1128,7 +1128,7 @@ internal sealed partial class DocxLayoutEngine
         double EndCursorY,
         double EndPendingAfterSpacing)
     {
-        public double? MappedFooterContentTop { get; init; }
+        public double? BodyFooterContentTop { get; init; }
         public double? PhysicalFooterFrameTop { get; init; }
         public double? PhysicalHeaderFrameBottom { get; init; }
         public IReadOnlyDictionary<DocxParagraphDrawingOwner, DocxPlacedDrawingAnchor>? DrawingAnchors { get; init; }

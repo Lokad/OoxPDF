@@ -330,12 +330,13 @@ internal sealed partial class DocxLayoutEngine
                 bool FollowsBodyParagraph() => fittingEndnoteBoundaries || measuredEndnoteStart ||
                     CanUseTrailingParagraphEndnoteStart(activePage,
                     activePlacedStories, documentEndSeparatorLayout, printScale, documentEndStories);
+                bool followsBodyParagraph = FollowsBodyParagraph();
                 // Only the admitted source-owned note flow shares the body's
                 // physical origin. Rich/fragmented fallback stories retain
                 // their independently qualified legacy placement and bands.
                 double cursorTop = ResolveEndnoteStartTop(activePage, activePlacedStories, printScale,
-                    FollowsBodyParagraph() ? bodyBoundaryToNoteDesign : null, activePageIndex);
-                if (FollowsBodyParagraph() || CanUseNominalNoteSeparatorFlow(activePage, documentEndSeparatorLayout, printScale, documentEndStories))
+                    followsBodyParagraph ? bodyBoundaryToNoteDesign : null, activePageIndex);
+                if (followsBodyParagraph || CanUseNominalNoteSeparatorFlow(activePage, documentEndSeparatorLayout, printScale, documentEndStories))
                 {
                     cursorTop -= ResolveTrailingBodyBoundarySpacing(activePage);
                 }
@@ -383,10 +384,11 @@ internal sealed partial class DocxLayoutEngine
                     {
                         MoveToRelatedStoryContinuationPage(outputPages, ref activePageIndex, ref activePage, ref activePlacedStories, ref cursorTop, insertContinuationAfterActivePage: false, headerKeepOut);
                     }
-                    deferredMixedEndnoteSource = mixedEndnoteSourceFrame is not null && activePageIndex != endnoteSourcePageIndex;
+                    bool separatorMoved = activePageIndex != endnoteSourcePageIndex;
+                    deferredMixedEndnoteSource = mixedEndnoteSourceFrame is not null && separatorMoved;
                     double? nominalSeparatorHeight = deferredMixedEndnoteSource
                         ? ResolvePlainNoteSeparatorHeight(documentEndSeparatorLayout, mixedEndnoteSourceFrame!, separatorMeasurer, documentEndStories, printScale)
-                        : FollowsBodyParagraph()
+                        : (separatorMoved ? FollowsBodyParagraph() : followsBodyParagraph)
                             ? ResolveParagraphBoundarySeparatorHeight(documentEndSeparatorLayout, activePage, separatorMeasurer, documentEndStories)
                             : CanUseNominalNoteSeparatorFlow(activePage, documentEndSeparatorLayout, printScale, documentEndStories)
                             ? ResolvePlainNoteSeparatorHeight(documentEndSeparatorLayout, activePage, separatorMeasurer, documentEndStories, printScale) : null;

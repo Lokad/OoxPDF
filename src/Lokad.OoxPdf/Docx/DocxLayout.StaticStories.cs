@@ -69,10 +69,10 @@ internal sealed partial class DocxLayoutEngine
     private static double ResolveStaticFooterContentTop(DocxStaticStoryLayoutResult footerLayout,
         IDocxLineMetricsProvider? unscaledLineMetrics)
     {
-        if (footerLayout.MappedFooterContentTop is { } mappedTop) { return mappedTop; }
+        if (footerLayout.BodyFooterContentTop is { } top) { return top; }
         double footerContentTop = double.NegativeInfinity;
         DocxTextLineLayout? firstFooterLine = footerLayout.TextLines.FirstOrDefault();
-        if (HasVisibleStaticContent(footerLayout) && firstFooterLine?.SourceParagraph is DocxParagraph firstFooterParagraph)
+        if (firstFooterLine?.SourceParagraph is DocxParagraph firstFooterParagraph)
         {
             if (firstFooterLine.InlineFrame is { } frame)
                 footerContentTop = firstFooterLine.BaselineY + frame.BaselineInset;
@@ -202,10 +202,8 @@ internal sealed partial class DocxLayoutEngine
             headerBottomCursors[pageIndex] = headerHasVisibleContent
                 ? headerLayout.EndCursorY - headerLayout.EndPendingAfterSpacing
                 : double.PositiveInfinity;
-            // Footer content top bounds the body frame from below (w48 multi-line footer
-            // plus long body, Word-COM rendered: body breaks before footer content instead
-            // of overlapping it). Text-only stories expose their first line top under the
-            // body baseline rule; stories without text lines constrain nothing.
+            // The footer's occupied edge bounds the body frame from below.
+            // Text uses the first line's top under the body baseline rule.
             double footerContentTop = ResolveStaticFooterContentTop(footerLayout, unscaledLineMetrics);
 
             footerTopEdges[pageIndex] = footerContentTop;

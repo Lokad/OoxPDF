@@ -101,7 +101,11 @@ internal sealed partial class DocxLayoutEngine
             if (!isHeader && scale == 1d && CanUseStaticStoryFrame(story, width, mathEquations, token))
             {
                 double top = ResolveStaticFooterContentTop(layout, unscaledLineMetrics);
-                layout = layout with { PhysicalFooterFrameTop = double.IsFinite(top) ? top : null };
+                layout = layout with
+                {
+                    BodyFooterContentTop = top,
+                    PhysicalFooterFrameTop = double.IsFinite(top) ? top : null
+                };
                 return PlaceFooterTableDrawingFrames(layout, page.MarginBottom, token);
             }
             return layout;
@@ -237,7 +241,7 @@ internal sealed partial class DocxLayoutEngine
             InlineTextBoxes = source.InlineTextBoxes.Select(MapBox).ToArray(),
             EndCursorY = frameAnchor + (source.EndCursorY - frameAnchor) * scale,
             EndPendingAfterSpacing = source.EndPendingAfterSpacing * scale,
-            MappedFooterContentTop = isHeader ? null : frameAnchor + (footerTop - frameAnchor) * scale,
+            BodyFooterContentTop = isHeader ? null : frameAnchor + (footerTop - frameAnchor) * scale,
             PhysicalFooterFrameTop = double.IsFinite(footerTop) ? center + (footerTop - center) * scale : null,
             PhysicalHeaderFrameBottom = isHeader
                 ? center + (source.EndCursorY - source.EndPendingAfterSpacing - center) * scale : null,
