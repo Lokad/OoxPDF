@@ -4,6 +4,7 @@ using System.Xml.Linq;
 using Lokad.OoxPdf.Diagnostics;
 using Lokad.OoxPdf.Docx;
 using Lokad.OoxPdf.Fonts;
+using static Lokad.OoxPdf.Ooxml.OoxNamespaces;
 
 namespace Lokad.OoxPdf.Tests;
 
@@ -56,6 +57,41 @@ internal static partial class DocxInlineCompositionTests
                 double[] actual = [link.X, page.Height - link.Y - link.Height, link.X + link.Width, page.Height - link.Y];
                 for (int index = 0; index < actual.Length; index++)
                     TestAssert.True(Math.Abs(actual[index] - rect[index].GetDouble()) <= 1d, "Final URI bounds retain the original Word geometry gate.");
+            }
+        }
+    }
+
+    public static void DocxInlinePictureLinksUseSelectedPictureClickWhenFrameHasNoClick()
+    {
+        const string uri = "https://example.invalid/public-picture";
+        var resolver = new PortableRenderingTests.PinnedResolver();
+        foreach (string container in new[] { "body", "cell" })
+        foreach (var mode in new[] { OoxPdfDocxMarkupMode.Final, OoxPdfDocxMarkupMode.AllMarkup })
+        {
+            string input = "InlineBoxMath/inline-picture-link-properties-" + container;
+            var geometry = mode == OoxPdfDocxMarkupMode.Final ? OoxPdfDocxMarkupGeometryMode.PreserveDocumentLayout :
+                OoxPdfDocxMarkupGeometryMode.WordCompatibleAllMarkup;
+            var renderer = new DocxRenderer(resolver, mode, geometry);
+            var control = renderer.RenderPagesAsync(ReadMutation(input, mode, false, false), null, default)
+                .ToBlockingEnumerable().Single();
+            var expected = control.Annotations.Single(link => link.Uri == uri);
+            foreach (bool move in new[] { true, false })
+            {
+                var source = ReadMutation(input, mode, false, false, (xml, _, _) =>
+                {
+                    var click = xml.Descendants(WordprocessingDrawingNamespace + "docPr")
+                        .Elements(DrawingNamespace + "hlinkClick").Single();
+                    var properties = xml.Descendants(PictureNamespace + "pic")
+                        .Elements(PictureNamespace + "nvPicPr").Elements(PictureNamespace + "cNvPr").Single();
+                    var pictureClick = new XElement(click);
+                    if (move) click.Remove();
+                    else pictureClick.SetAttributeValue(RelationshipsNamespace + "id", "missing");
+                    properties.AddFirst(pictureClick);
+                });
+                var page = renderer.RenderPagesAsync(source, null, default).ToBlockingEnumerable().Single();
+                TestAssert.Equal(control.Content, page.Content);
+                TestAssert.Equal(1, page.Images.Count);
+                TestAssert.Equal(expected, page.Annotations.Single(link => link.Uri is not null));
             }
         }
     }

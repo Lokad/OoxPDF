@@ -251,10 +251,18 @@ internal sealed partial class DocxReader
         XElement? sourceRectangle = previewBlip?.Parent?.Element(DrawingNamespace + "srcRect");
         var crop = new DocxPictureCrop(ReadCropFraction("l"), ReadCropFraction("t"),
             ReadCropFraction("r"), ReadCropFraction("b"));
-        XElement? pictureTransform = EnumerateDrawingOwnedElements(drawing, XName.Get("spPr", "http://schemas.openxmlformats.org/drawingml/2006/picture"), cancellationToken)
+        XElement? pictureTransform = EnumerateDrawingOwnedElements(drawing, PictureNamespace + "spPr", cancellationToken)
             .FirstOrDefault()?.Element(DrawingNamespace + "xfrm");
         XElement? pictureExtent = pictureTransform?.Element(DrawingNamespace + "ext");
         XElement? click = drawing.Element(WordprocessingDrawingNamespace + "docPr")?.Element(DrawingNamespace + "hlinkClick");
+        // The existing frame click takes precedence. The selected blip binds
+        // a picture-level click to the picture that will actually paint.
+        if (click is null && previewBlip?.Parent is { Parent: { } picture } fill &&
+            fill.Name == PictureNamespace + "blipFill" && picture.Name == PictureNamespace + "pic")
+        {
+            click = picture.Element(PictureNamespace + "nvPicPr")?.Element(PictureNamespace + "cNvPr")
+                ?.Element(DrawingNamespace + "hlinkClick");
+        }
         string? clickTarget = null;
         if (string.IsNullOrEmpty((string?)click?.Attribute("action")) &&
             (string?)click?.Attribute(RelationshipsNamespace + "id") is { } clickId &&

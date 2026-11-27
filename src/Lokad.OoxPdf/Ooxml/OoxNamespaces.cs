@@ -11,6 +11,7 @@ internal static class OoxNamespaces
 {
     public static readonly XNamespace DrawingNamespace = "http://schemas.openxmlformats.org/drawingml/2006/main";
     public static readonly XNamespace DrawingSvgNamespace = "http://schemas.microsoft.com/office/drawing/2016/SVG/main";
+    public static readonly XNamespace PictureNamespace = "http://schemas.openxmlformats.org/drawingml/2006/picture";
     public static readonly XNamespace PresentationNamespace = "http://schemas.openxmlformats.org/presentationml/2006/main";
     public static readonly XNamespace ChartNamespace = "http://schemas.openxmlformats.org/drawingml/2006/chart";
     public static readonly XNamespace DiagramNamespace = "http://schemas.openxmlformats.org/drawingml/2006/diagram";

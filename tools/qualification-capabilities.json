@@ -308,6 +308,7 @@
     "DocxPictureLinksKeepHeaderVectorsAndSelectedRasterFallback",
     "DocxPictureLinksKeepFailedZeroRotatedAndClippedVectorsUnlinked",
     "DocxInlinePictureLinksFollowPaintedFramesAndPreserveParentContent",
+    "DocxInlinePictureLinksUseSelectedPictureClickWhenFrameHasNoClick",
     "DocxInlinePictureLinksKeepUnsupportedActionsAndTransformsUnlinked",
     "DocxInlinePictureLinksRequireDecodedAndUnclippedPaint",
     "DocxStaticPictureLinksReuseIndependentCompoundFrames",

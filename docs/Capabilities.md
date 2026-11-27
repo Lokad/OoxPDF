@@ -33,6 +33,8 @@ table and supported static-story containers. Bookmarks, links and supported
 revision metadata preserve their owners. Inline bidirectional embeddings and
 overrides retain supported children in source order with an approximation warning,
 including when Word writes the wrapper inside an equation.
+External picture clicks can use the drawing frame or the selected picture's
+nonvisual properties. Click regions follow the supported painted frame.
 Other combinations of supported objects can still have layout limitations.
 
 Table-wide center and right alignment use the owning container for ordinary
