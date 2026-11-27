@@ -49,6 +49,9 @@ and `docx-math-portable`, plus shared DOCX and balloon tests.
 only by a fast group appear under `GroupOnlySkips`. Use `-ExpectedSkip` with exact
 method names for the primary selection, including methods also in a fast group.
 Qualification requires at least one passing primary method.
+Reports list selected, passed, failed and skipped counts for each named
+capability. A fully skipped capability is reported as unqualified even
+when the combined run passes.
 Bind direct console runs to a caller-owned temporary parent under `artifacts/`.
 The console creates and cleans its own child directory. The qualification command
 supplies a fresh parent and removes it when empty after a passing gate. Failed

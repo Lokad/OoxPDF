@@ -161,13 +161,19 @@ try {
     $checks+=@{Case=$case;GatePassed=$false;Error=$caught;RawReportSha256=$rawHash;RunnerInvocations=$global:ooxPdfAffectedReportCalls}
 
     $manifest=Join-Path $root 'union-capabilities.json'
-    @{union=@('=ReportAlpha','ReportExplicitSlow')} | ConvertTo-Json | Set-Content -LiteralPath $manifest -Encoding unicode
+    @{union=@('=ReportAlpha','ReportExplicitSlow'); 'skip-only'=@('=ReportAlpha')} |
+        ConvertTo-Json | Set-Content -LiteralPath $manifest -Encoding unicode
     $manifestHash=(Get-FileHash -LiteralPath $manifest).Hash
-    foreach($case in @('union','group-skip','capability-skip','group-and-capability-skip','all-primary-skips','unknown-group','slow-only-group','list-only')) {
+    foreach($case in @('union','group-skip','capability-skip','group-and-capability-skip','partial-capability-coverage','all-primary-skips','unknown-group','slow-only-group','list-only')) {
         $global:ooxPdfAffectedReportFault=$case
         $global:ooxPdfAffectedReportCalls=0
         $output=Join-Path $root $case
         $parameters=@{RunnerPath=$runner;OutputDirectory=$output;Capability='union';SelectionManifest=$manifest;FastGroup=@('fixture','auxiliary','fixture')}
+        if($case -eq 'partial-capability-coverage') {
+            $global:ooxPdfAffectedReportFault='group-and-capability-skip'
+            $parameters.Capability=@('skip-only','union')
+            $parameters.ExpectedSkip=@('ReportAlpha')
+        }
         if($case -eq 'group-and-capability-skip') {$parameters.ExpectedSkip=@('ReportAlpha')}
         if($case -eq 'all-primary-skips') {$parameters.ExpectedSkip=@('ReportAlpha','ReportExplicitSlow')}
         if($case -eq 'unknown-group') {$parameters.FastGroup=@('missing')}
@@ -178,7 +184,7 @@ try {
         try {& (Join-Path $PSScriptRoot 'RunDocxAffectedTests.ps1') @parameters *> (Join-Path $root ($case+'.log'))}
         catch {$caught=$_.Exception.Message}
         if([Environment]::GetEnvironmentVariable('TMPDIR') -cne $beforeTmpDir) {throw 'Union did not restore TMPDIR'}
-        $shouldPass=$case -in @('union','group-skip','group-and-capability-skip','list-only')
+        $shouldPass=$case -in @('union','group-skip','group-and-capability-skip','partial-capability-coverage','list-only')
         if($shouldPass -eq ($null -ne $caught)) {throw ($case+': unexpected union gate outcome '+$caught)}
         $preflight=$case -in @('unknown-group','slow-only-group')
         $calls=if($preflight -or $case -eq 'list-only') {0} else {1}
@@ -196,10 +202,10 @@ try {
             }
             else {
                 $report=Get-Content -LiteralPath (Join-Path $output 'affected-tests.json') -Raw | ConvertFrom-Json
-                $groupSkips=if($case -in @('group-skip','group-and-capability-skip')) {@('ReportGroupOnly')} else {@()}
+                $groupSkips=if($case -in @('group-skip','group-and-capability-skip','partial-capability-coverage')) {@('ReportGroupOnly')} else {@()}
                 $primaryPasses=switch ($case) {
                     'all-primary-skips' {0}
-                    {$_ -in @('capability-skip','group-and-capability-skip')} {1}
+                    {$_ -in @('capability-skip','group-and-capability-skip','partial-capability-coverage')} {1}
                     default {2}
                 }
                 if ($case -eq 'all-primary-skips' -and ($report.passed -ne 2 -or $caught -notlike 'No primary qualification test passed.*')) {
@@ -214,6 +220,18 @@ try {
                     @($report.provenance.GroupOnlySkips | Where-Object { $_ -cnotin $groupSkips }).Count -or
                     $report.provenance.UnexpectedSkips.Count -ne $(if($case -eq 'capability-skip') {1} else {0})) {
                     throw 'Union skip contracts or outcomes changed'
+                }
+                if($case -eq 'partial-capability-coverage') {
+                    $coverage=$report.provenance.CapabilityCoverage
+                    $skipped=@($coverage | Where-Object Name -CEQ 'skip-only')
+                    $union=@($coverage | Where-Object Name -CEQ 'union')
+                    if($coverage.Count -ne 2 -or $skipped.Count -ne 1 -or $union.Count -ne 1 -or
+                        $skipped[0].Selected -ne 1 -or $skipped[0].Skipped -ne 1 -or $skipped[0].Qualified -or
+                        $union[0].Selected -ne 2 -or $union[0].Passed -ne 1 -or $union[0].Skipped -ne 1 -or
+                        !$union[0].Qualified -or
+                        !(Select-String -LiteralPath (Join-Path $root ($case+'.log')) -SimpleMatch 'All selected methods skipped for: skip-only' -Quiet)) {
+                        throw 'A capability pass from another selection must not qualify a fully skipped capability'
+                    }
                 }
             }
         }

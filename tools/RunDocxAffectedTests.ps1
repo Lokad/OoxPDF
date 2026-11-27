@@ -123,6 +123,7 @@ if ($AllDocx) {
     foreach ($test in $docxMembers) { $null = $selected.Add($test.Name) }
 }
 $exactNames = [Collections.Generic.HashSet[string]]::new([string[]]$catalog.Name, [StringComparer]::Ordinal)
+$methodsByFilter = [Collections.Generic.Dictionary[string,string[]]]::new([StringComparer]::Ordinal)
 # Search the catalogue in native string code instead of a PowerShell loop over
 # every selector/test pair. Newlines delimit names and cannot occur in a name.
 $catalogNames = [string]::Join("`n", [string[]]$catalog.Name) + "`n"
@@ -131,19 +132,22 @@ foreach ($filter in $filters) {
         $name = $filter.Substring(1)
         if (!$exactNames.Contains($name)) { throw ('Empty capability selector: ' + $filter) }
         $null = $selected.Add($name)
+        $methodsByFilter[$filter] = @($name)
         continue
     }
-    $found = $false
+    $methodNames = [Collections.Generic.List[string]]::new()
     $offset = 0
     while (!$filter.Contains("`n") -and
         ($match = $catalogNames.IndexOf($filter, $offset, [StringComparison]::OrdinalIgnoreCase)) -ge 0) {
         $first = $catalogNames.LastIndexOf([char]10, $match) + 1
         $last = $catalogNames.IndexOf([char]10, $match)
-        $null = $selected.Add($catalogNames.Substring($first, $last - $first))
-        $found = $true
+        $name = $catalogNames.Substring($first, $last - $first)
+        $null = $selected.Add($name)
+        $methodNames.Add($name)
         $offset = $last + 1
     }
-    if (!$found) { throw ('Empty capability selector: ' + $filter) }
+    if (!$methodNames.Count) { throw ('Empty capability selector: ' + $filter) }
+    $methodsByFilter[$filter] = $methodNames.ToArray()
 }
 # Capabilities retain their strict skip contract. Added fast groups preserve
 # ordinary --group/--skip-slow behavior; their environment skips stay reported.
@@ -210,18 +214,18 @@ if (!(Test-Path -LiteralPath $path -PathType Leaf)) { throw 'Test runner did not
 $reportSource = Read-QualificationJsonSource $path
 $report = ConvertFrom-Json -InputObject $reportSource.Text
 $rows = @($report.tests)
-$seen = [Collections.Generic.HashSet[string]]::new([StringComparer]::Ordinal)
 $counts = @{ passed = 0; failed = 0; skipped = 0 }
+$outcomes = [Collections.Generic.Dictionary[string,string]]::new([StringComparer]::Ordinal)
 $primaryPassed = 0
 foreach ($row in $rows) {
-    if ($row.name -isnot [string] -or !$selected.Contains($row.name) -or !$seen.Add($row.name) -or
-        $row.outcome -isnot [string] -or !$counts.ContainsKey($row.outcome)) {
+    if ($row.name -isnot [string] -or !$selected.Contains($row.name) -or
+        $row.outcome -isnot [string] -or !$counts.ContainsKey($row.outcome) -or !$outcomes.TryAdd($row.name, $row.outcome)) {
         throw ('Incomplete affected report: ' + $path)
     }
     $counts[$row.outcome]++
     if ($row.outcome -eq 'passed' -and $skipValidated.Contains($row.name)) { $primaryPassed++ }
 }
-if ($seen.Count -ne $selected.Count -or $counts.passed -ne $report.passed -or
+if ($outcomes.Count -ne $selected.Count -or $counts.passed -ne $report.passed -or
     $counts.failed -ne $report.failed -or $counts.skipped -ne $report.skipped) {
     throw ('Incomplete affected report: ' + $path)
 }
@@ -262,6 +266,27 @@ if ($FastGroup.Count) {
 }
 $runnerAccepted = $exitCode -eq 0 -and $report.failed -eq 0 -and !$inventory.UnexpectedSkips.Count
 $inventory.GatePassed = $runnerAccepted -and $primaryPassed -gt 0
+if ($Capability) {
+    $unexpected = [Collections.Generic.HashSet[string]]::new([string[]]$inventory.UnexpectedSkips, [StringComparer]::Ordinal)
+    $inventory.CapabilityCoverage = @(foreach ($key in ($Capability | Select-Object -Unique)) {
+        $methods = [Collections.Generic.HashSet[string]]::new([StringComparer]::Ordinal)
+        foreach ($filter in $manifest[$key]) { $methods.UnionWith($methodsByFilter[$filter]) }
+        $capabilityCounts = @{ passed = 0; failed = 0; skipped = 0 }
+        $hasUnexpectedSkip = $methods.Overlaps($unexpected)
+        foreach ($name in $methods) { $capabilityCounts[$outcomes[$name]]++ }
+        [ordered]@{
+            Name = $key
+            Selected = $methods.Count
+            Passed = $capabilityCounts.passed
+            Failed = $capabilityCounts.failed
+            Skipped = $capabilityCounts.skipped
+            Qualified = $exitCode -eq 0 -and $capabilityCounts.passed -gt 0 -and
+                !$capabilityCounts.failed -and !$hasUnexpectedSkip
+        }
+    })
+    $fullySkipped = @($inventory.CapabilityCoverage | Where-Object { $_.Skipped -eq $_.Selected } | ForEach-Object Name)
+    if ($fullySkipped.Count) { Write-Warning ('All selected methods skipped for: ' + ($fullySkipped -join ', ')) }
+}
 Assert-SelectionManifest
 if ((Get-FileHash -LiteralPath $path).Hash -cne $reportSource.Hash) {
     throw 'The raw test report changed during qualification'
