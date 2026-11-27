@@ -2070,15 +2070,17 @@ internal static partial class PptxImagesTests
         const string blue = "<path d=\"M0 0H100V50H0Z\" fill=\"#0000FF\"/>";
         const string hidden = "<text>Unused content</text><path d=\"M0 0H100V50H0Z\" fill=\"url(#g)\"/><path d=\"M10 5H90V45H10Z\" fill=\"#FF0000\" stroke=\"#00FF00\"/>";
         string Wrap(string contents, string attributes = "") => "<svg xmlns=\"http://www.w3.org/2000/svg\" viewBox=\"0 0 100 50\" " + attributes + "><defs><linearGradient id=\"g\"><stop offset=\"0\" stop-color=\"#FF0000\" stop-opacity=\"0.25\"/><stop offset=\"1\" stop-color=\"#0000FF\"/></linearGradient></defs>" + contents + "</svg>";
-        foreach ((string actual, string expected) in new[]
+        byte[] emptyControl = RenderSvgOpacityTest(Wrap(""));
+        byte[] blueControl = RenderSvgOpacityTest(Wrap(blue));
+        foreach ((string actual, byte[] expected) in new[]
         {
-            (Wrap(blue + hidden, "opacity=\"0\""), Wrap("")),
-            (Wrap(blue + "<g opacity=\"0.0\">" + hidden + "</g>"), Wrap(blue)),
-            (Wrap(blue + "<g opacity=\"0\"><g opacity=\"1\">" + hidden + "</g></g>"), Wrap(blue))
+            (Wrap(blue + hidden, "opacity=\"0\""), emptyControl),
+            (Wrap(blue + "<g opacity=\"0.0\">" + hidden + "</g>"), blueControl),
+            (Wrap(blue + "<g opacity=\"0\"><g opacity=\"1\">" + hidden + "</g></g>"), blueControl)
         })
         {
             var diagnostics = new List<OoxPdfDiagnostic>();
-            TestAssert.True(RenderSvgOpacityTest(actual, diagnostics).AsSpan().SequenceEqual(RenderSvgOpacityTest(expected)),
+            TestAssert.True(RenderSvgOpacityTest(actual, diagnostics).AsSpan().SequenceEqual(expected),
                 "Zero-opacity containers must match removal of their contents, including nested unit-opacity descendants.");
             TestAssert.True(!diagnostics.Any(d => d.Id == "SVG_UNSUPPORTED_CONTENT" || d.Id == "PPTX_NODE_RENDER_FAILED"),
                 "Invisible containers must not activate unsupported-content or used-gradient diagnostics.");
