@@ -822,8 +822,6 @@ internal sealed partial class DocxRenderer
                             wordCompatibleCommentBody,
                             anchorLine.BaselineY,
                             ResolveCommentAnchorX(anchorLine, anchorTextLines, paragraph, reference, markupContext),
-                            anchorLine.X - 2d,
-                            anchorLine.X + Math.Max(0d, anchorLine.Width) + 2d,
                             sequence++,
                             commentFillRgb,
                             commentStrokeRgb,
@@ -1289,8 +1287,6 @@ internal sealed partial class DocxRenderer
                 ? group.Select(candidate => candidate.AnchorConnectorX).DefaultIfEmpty(group[0].AnchorConnectorX).Average()
                 // Office: connectors attach at the range end, i.e. the last range line (lowest anchor).
                 : (group.MinBy(candidate => candidate.AnchorY)?.AnchorConnectorX ?? group[0].AnchorConnectorX),
-            AnchorLeftX = group.Min(candidate => candidate.AnchorLeftX),
-            AnchorRightX = group.Max(candidate => candidate.AnchorRightX),
             CandidateCount = group.Sum(candidate => candidate.CandidateCount),
             CommentCandidateCount = group.Sum(candidate => candidate.CommentCandidateCount),
             RevisionCandidateCount = group.Sum(candidate => candidate.RevisionCandidateCount),
