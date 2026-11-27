@@ -9,10 +9,11 @@ dotnet build Lokad.OoxPdf.slnx -c Release
 $testTemp = (New-Item -ItemType Directory -Force artifacts/test-tmp).FullName
 $env:TMP = $env:TEMP = $env:TMPDIR = $testTemp
 dotnet run --no-build --project tests/Lokad.OoxPdf.Tests -c Release -f net11.0 -- --skip-slow
-dotnet pack src/Lokad.OoxPdf/Lokad.OoxPdf.csproj -c Release --no-build
+dotnet pack src/Lokad.OoxPdf/Lokad.OoxPdf.csproj -c Release --no-build -o artifacts/development-pack/
 ```
 
-Release packages/symbols/checksums go directly to ignored `artifacts/nuget/`.
+The example writes development packages to `artifacts/development-pack/`.
+Release packages, symbols and checksums go directly to ignored `artifacts/nuget/`.
 CI covers Windows and Ubuntu. Native validation tools are never library dependencies. Restore PDFium from the
 tracked `tools/vendor/pdfium/win-x64/` version and checksum pins; do not substitute
 an unpinned latest binary.
