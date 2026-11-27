@@ -200,7 +200,6 @@ internal static class DocxGlyphlessAnchorTests
         foreach (var (floating, width, blueFirst) in new[] { (true, 180, false), (true, 180, true), (false, 180, false), (true, 110, false) })
         {
             var parts = ReadParts(TestFixtures.WriteDocxInlinePng(PictureBoxParagraph(floating, height: 78), png));
-            AddBluePicturePart(parts);
             var document = XElement.Parse(System.Text.Encoding.UTF8.GetString(parts[documentPart]));
             document.Descendants(wp + "extent").First().SetAttributeValue("cx", width * 12700);
             var green = document.Descendants(w + "txbxContent").Single().Element(w + "p")!.Element(w + "r")!;
@@ -208,6 +207,7 @@ internal static class DocxGlyphlessAnchorTests
             blue.Descendants(a + "blip").Single().SetAttributeValue(r + "embed", "rIdBlue");
             if (blueFirst) green.AddBeforeSelf(blue);
             else green.AddAfterSelf(blue);
+            AddBluePicturePart(parts, document);
             parts[documentPart] = TestFixtures.Utf8(document.ToString(SaveOptions.DisableFormatting));
             string input = TestFixtures.WriteTempPackage(".docx", parts);
             foreach (var (mode, geometry) in Views())
@@ -220,11 +220,14 @@ internal static class DocxGlyphlessAnchorTests
                 var first = images[blueFirst ? 0 : 255];
                 var second = images[blueFirst ? 255 : 0];
                 TestAssert.True(PictureFitsViewport(first), "The first 72pt picture retains its full paint.");
+                TestAssert.Equal(width == 180 ? 2 : 1, page.Annotations.Count);
+                AssertPictureLink(page, blueFirst ? "blue" : "green", first);
                 if (width == 180)
                 {
                     TestAssert.True(PictureFitsViewport(second), "The second 72pt picture fits inside the same viewport.");
                     TestAssert.Equal(first.Transform.M32, second.Transform.M32);
                     TestAssert.Equal(first.Transform.M31 + 72f, second.Transform.M31);
+                    AssertPictureLink(page, blueFirst ? "green" : "blue", second);
                 }
                 else
                 {
@@ -238,6 +241,7 @@ internal static class DocxGlyphlessAnchorTests
 
     public static void DocxGlyphlessCellPicturesUseTheCellWidthWithTextSizing()
     {
+        const string documentPart = "word/document.xml";
         byte[] green = TestFixtures.CreateRgbPng(1, 1, [0, 255, 0]);
         string picture = TestFixtures.DocxInlinePngRun;
         string blue = picture.Replace("rIdImage1", "rIdBlue", StringComparison.Ordinal);
@@ -253,7 +257,9 @@ internal static class DocxGlyphlessAnchorTests
                 </w:tbl>
                 """;
             var parts = ReadParts(TestFixtures.WriteDocxInlinePng(table, green));
-            AddBluePicturePart(parts);
+            var document = XElement.Parse(System.Text.Encoding.UTF8.GetString(parts[documentPart]));
+            AddBluePicturePart(parts, document);
+            parts[documentPart] = TestFixtures.Utf8(document.ToString(SaveOptions.DisableFormatting));
             string input = TestFixtures.WriteTempPackage(".docx", parts);
             foreach (var (mode, geometry) in Views())
             {
@@ -268,6 +274,9 @@ internal static class DocxGlyphlessAnchorTests
                     "The automatic row retains the full paint of both 72pt pictures.");
                 TestAssert.True(second.Transform.M32 + 72f <= first.Transform.M32,
                     "The source-second picture wraps within the physical cell width.");
+                TestAssert.Equal(2, page.Annotations.Count);
+                AssertPictureLink(page, "green", first);
+                AssertPictureLink(page, "blue", second);
             }
         }
     }
@@ -278,7 +287,16 @@ internal static class DocxGlyphlessAnchorTests
         paint.Transform.M31 + 72f <= paint.Clip.X + paint.Clip.Width &&
         paint.Transform.M32 + 72f <= paint.Clip.Y + paint.Clip.Height;
 
-    private static void AddBluePicturePart(Dictionary<string, byte[]> parts)
+    private static void AssertPictureLink(PdfPage page, string color, DocxNoteClippingTests.PhysicalPaintFrame paint)
+    {
+        var link = page.Annotations.Single(annotation => annotation.Uri == "https://example.invalid/" + color);
+        TestAssert.True(Math.Abs(link.X - paint.Transform.M31) < .001d &&
+            Math.Abs(link.Y - paint.Transform.M32) < .001d &&
+            Math.Abs(link.Width - paint.Transform.M11) < .001d && Math.Abs(link.Height - paint.Transform.M22) < .001d,
+            "Each click target follows its own picture's complete paint frame.");
+    }
+
+    private static void AddBluePicturePart(Dictionary<string, byte[]> parts, XElement? document = null)
     {
         const string relationshipsPart = "word/_rels/document.xml.rels";
         XNamespace rel = OoxNamespaces.PackageRelationshipsNamespace;
@@ -287,6 +305,23 @@ internal static class DocxGlyphlessAnchorTests
         relationships.Add(new XElement(rel + "Relationship",
             new XAttribute("Id", "rIdBlue"), new XAttribute("Type", r.NamespaceName + "/image"),
             new XAttribute("Target", "media/blue.png")));
+        if (document is not null)
+        {
+            XNamespace wp = "http://schemas.openxmlformats.org/drawingml/2006/wordprocessingDrawing";
+            XNamespace a = OoxNamespaces.DrawingNamespace;
+            foreach ((string embed, string color, int index) in new[] { ("rIdImage1", "green", 10), ("rIdBlue", "blue", 11) })
+            {
+                string linkId = "rIdClick" + color;
+                XElement blip = document.Descendants(a + "blip").Single(element => (string?)element.Attribute(r + "embed") == embed);
+                XElement inline = blip.Ancestors(wp + "inline").First();
+                inline.Element(wp + "extent")!.AddAfterSelf(new XElement(wp + "docPr",
+                    new XAttribute("id", index), new XAttribute("name", color),
+                    new XElement(a + "hlinkClick", new XAttribute(r + "id", linkId))));
+                relationships.Add(new XElement(rel + "Relationship", new XAttribute("Id", linkId),
+                    new XAttribute("Type", r.NamespaceName + "/hyperlink"),
+                    new XAttribute("Target", "https://example.invalid/" + color), new XAttribute("TargetMode", "External")));
+            }
+        }
         parts[relationshipsPart] = TestFixtures.Utf8(relationships.ToString(SaveOptions.DisableFormatting));
         parts["word/media/blue.png"] = TestFixtures.CreateRgbPng(1, 1, [0, 0, 255]);
     }
