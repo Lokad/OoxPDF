@@ -7,31 +7,47 @@ namespace Lokad.OoxPdf.Tests;
 
 internal static partial class DocxInlineCompositionTests
 {
-    public static void DocxMinimumBookmarksMatchIndependentWordBaselinesAndPageFrames()
+    public static void DocxMinimumBookmarkBodyFramesMatchWord() =>
+        CheckWordMinimumFrames("minimum-bookmark-office.json");
+
+    public static void DocxMinimumBookmarkStaticFramesMatchWord() =>
+        CheckWordMinimumFrames("minimum-bookmark-static-office.json");
+
+    public static void DocxMinimumNavigationFramesMatchWord() =>
+        CheckWordMinimumFrames("minimum-navigation-office.json");
+
+    public static void DocxMinimumPaintFramesMatchWord() =>
+        CheckWordMinimumFrames("minimum-paint-office.json");
+
+    public static void DocxLocalMinimumLeadingFramesMatchWord() =>
+        CheckWordMinimumFrames("minimum-local-leading-office.json");
+
+    private static void CheckWordMinimumFrames(string manifest,
+        Action<string, OoxPdfDocxMarkupMode, PdfPage[], (string Text, double Y)[]>? checkAdditional = null)
     {
-        if (!OperatingSystem.IsWindows()) TestAssert.Skip("Independent minimum/bookmark controls use installed Windows fonts.");
-        foreach (string name in new[] { "minimum-bookmark-office.json", "minimum-bookmark-static-office.json", "minimum-navigation-office.json", "minimum-paint-office.json", "minimum-local-leading-office.json" })
+        if (!OperatingSystem.IsWindows()) TestAssert.Skip("Independent Word minimum frames use installed Windows fonts.");
+        using var gold = JsonDocument.Parse(File.ReadAllText(NestedMathCasePath(manifest)));
+        foreach (var row in gold.RootElement.GetProperty("Rows").EnumerateArray())
         {
-            using var gold = JsonDocument.Parse(File.ReadAllText(NestedMathCasePath(name)));
-            foreach (var row in gold.RootElement.GetProperty("Rows").EnumerateArray())
+            string id = row.GetProperty("Id").GetString()!;
+            string path = StaticNoteAdmissionCasePath(row.GetProperty("Input").GetString()!);
+            TestAssert.Equal(row.GetProperty("InputSha256").GetString(), Convert.ToHexString(SHA256.HashData(File.ReadAllBytes(path))));
+            bool final = row.GetProperty("Mode").GetString() == "final-preserve";
+            var mode = final ? OoxPdfDocxMarkupMode.Final : OoxPdfDocxMarkupMode.AllMarkup;
+            var source = DocxTests.ReadDocx(path, mode);
+            var pages = new DocxRenderer(null, mode, final ? OoxPdfDocxMarkupGeometryMode.PreserveDocumentLayout
+                : OoxPdfDocxMarkupGeometryMode.WordCompatibleAllMarkup).RenderPagesAsync(source, null, default).ToBlockingEnumerable().ToArray();
+            TestAssert.Equal(row.GetProperty("Pages").GetInt32(), pages.Length);
+            var shows = pages.SelectMany(page => DocxCommentsTests.ReadEmbeddedGlyphTextShows(page, usePageCoordinates: true))
+                .Select(show => (show.Text, show.Y)).ToArray();
+            foreach (var anchor in row.GetProperty("Anchors").EnumerateArray())
             {
-                string path = StaticNoteAdmissionCasePath(row.GetProperty("Input").GetString()!);
-                TestAssert.Equal(row.GetProperty("InputSha256").GetString(), Convert.ToHexString(SHA256.HashData(File.ReadAllBytes(path))));
-                bool final = row.GetProperty("Mode").GetString() == "final-preserve";
-                var mode = final ? OoxPdfDocxMarkupMode.Final : OoxPdfDocxMarkupMode.AllMarkup;
-                var source = DocxTests.ReadDocx(path, mode);
-                var pages = new DocxRenderer(null, mode, final ? OoxPdfDocxMarkupGeometryMode.PreserveDocumentLayout
-                    : OoxPdfDocxMarkupGeometryMode.WordCompatibleAllMarkup).RenderPagesAsync(source, null, default).ToBlockingEnumerable().ToArray();
-                TestAssert.Equal(row.GetProperty("Pages").GetInt32(), pages.Length);
-                var shows = pages.SelectMany(page => DocxCommentsTests.ReadEmbeddedGlyphTextShows(page, usePageCoordinates: true)).ToArray();
-                foreach (var anchor in row.GetProperty("Anchors").EnumerateArray())
-                {
-                    string text = anchor.GetProperty("Text").GetString()!;
-                    var show = shows.Single(show => show.Text.Contains(text, StringComparison.Ordinal));
-                    TestAssert.True(Math.Abs(show.Y - anchor.GetProperty("Y").GetDouble()) < .5d,
-                        $"Neutral metadata and requested Final/Word modes retain the qualified source frame: {row.GetProperty("Id").GetString()}/{mode}/{text}/{show.Y}.");
-                }
+                string text = anchor.GetProperty("Text").GetString()!;
+                var show = shows.Single(show => show.Text.Contains(text, StringComparison.Ordinal));
+                TestAssert.True(Math.Abs(show.Y - anchor.GetProperty("Y").GetDouble()) < .5d,
+                    $"The baseline must match the independent Word frame: {id}/{mode}/{text}/{show.Y}.");
             }
+            checkAdditional?.Invoke(id, mode, pages, shows);
         }
     }
 

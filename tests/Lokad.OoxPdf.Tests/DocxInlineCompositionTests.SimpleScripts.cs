@@ -1,5 +1,3 @@
-using System.Security.Cryptography;
-using System.Text.Json;
 using Lokad.OoxPdf.Docx;
 
 namespace Lokad.OoxPdf.Tests;
@@ -15,38 +13,16 @@ internal static partial class DocxInlineCompositionTests
         ("minimum-simple-script-latin-noted12", "note-marked-minimum-line-20.docx", "Alph\u00e1")
     ];
 
-    public static void DocxSimpleScriptNeighborsMatchIndependentWordMinimumFrames()
-    {
-        if (!OperatingSystem.IsWindows()) TestAssert.Skip("Independent simple-script controls use installed Windows fonts.");
-        using var gold = JsonDocument.Parse(File.ReadAllText(NestedMathCasePath("minimum-simple-script-office.json")));
-        foreach (var row in gold.RootElement.GetProperty("Rows").EnumerateArray())
+    public static void DocxSimpleScriptNeighborsMatchIndependentWordMinimumFrames() =>
+        CheckWordMinimumFrames("minimum-simple-script-office.json", (id, mode, pages, shows) =>
         {
-            string? id = row.GetProperty("Id").GetString();
             var fixture = SimpleScriptCases.Single(fixture => fixture.Id == id);
-            string path = StaticNoteAdmissionCasePath(row.GetProperty("Input").GetString()!);
-            TestAssert.Equal(row.GetProperty("InputSha256").GetString(), Convert.ToHexString(SHA256.HashData(File.ReadAllBytes(path))));
-            bool final = row.GetProperty("Mode").GetString() == "final-preserve";
-            var mode = final ? OoxPdfDocxMarkupMode.Final : OoxPdfDocxMarkupMode.AllMarkup;
-            var source = DocxTests.ReadDocx(path, mode);
-            var pages = new DocxRenderer(null, mode, final ? OoxPdfDocxMarkupGeometryMode.PreserveDocumentLayout
-                : OoxPdfDocxMarkupGeometryMode.WordCompatibleAllMarkup).RenderPagesAsync(source, null, default).ToBlockingEnumerable().ToArray();
-            TestAssert.Equal(row.GetProperty("Pages").GetInt32(), pages.Length);
-            var shows = pages.SelectMany(page => DocxCommentsTests.ReadEmbeddedGlyphTextShows(page, usePageCoordinates: true)).ToArray();
-            foreach (var anchor in row.GetProperty("Anchors").EnumerateArray())
-            {
-                string text = anchor.GetProperty("Text").GetString()!;
-                var show = shows.Single(show => show.Text.Contains(text, StringComparison.Ordinal));
-                TestAssert.True(Math.Abs(show.Y - anchor.GetProperty("Y").GetDouble()) < .5d,
-                    $"A supported simple-script neighbor preserves independent minimum frames: {id}/{mode}/{text}/{show.Y}.");
-            }
-
             var ink = PortableRenderingTests.ReadPaintedSourceLabel(pages[0], fixture.Neighbor + " public body before note");
             double top = shows.Single(show => show.Text.StartsWith("Public minimum Top.", StringComparison.Ordinal)).Y;
             double bottom = shows.Single(show => show.Text.StartsWith("Public minimum AfterAlpha.", StringComparison.Ordinal)).Y;
             TestAssert.True(ink.All(glyph => glyph.Origin.Y < top && glyph.Origin.Y > bottom),
                 $"The authored neighbor must paint between the two minimum paragraphs: {id}/{mode}.");
-        }
-    }
+        });
 
     public static void DocxSimpleScriptNeighborsKeepUnchangedParagraphGeometry()
     {
