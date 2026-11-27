@@ -626,10 +626,7 @@ internal sealed partial class DocxLayoutEngine
                     pageNumber ?? 0, token, mathEquations: atoms.MathEquations, pageCount: pageCount);
                 if (frame is null) return false;
                 changed ??= atoms.Fragments.ToArray();
-                changed[index] = fragment with { Advance = frame.BoxWidth, BaselineInset = frame.BoxHeight,
-                    OccupiedHeight = frame.BoxHeight, TextBox = frame,
-                    VisibleSourceExtent = fragment.VisibleSourceExtent is { } visible
-                        ? visible with { EndOffset = frame.BoxWidth, AboveBaseline = frame.BoxHeight } : null };
+                changed[index] = WithInlineBoxFrame(fragment, frame);
                 continue;
             }
             if (fragment.Source is not DocxInlineText { Run.FieldKind: { } kind } source || !kind.IsDynamic()) continue;
@@ -647,6 +644,11 @@ internal sealed partial class DocxLayoutEngine
         rebound = changed is null ? atoms : atoms with { Fragments = changed, BoundPageNumber = pageNumber, BoundPageCount = pageCount };
         return true;
     }
+
+    private static DocxMeasuredInlineFragment WithInlineBoxFrame(DocxMeasuredInlineFragment fragment, DocxInlineTextBoxLayout frame) =>
+        fragment with { Advance = frame.BoxWidth, BaselineInset = frame.BoxHeight, OccupiedHeight = frame.BoxHeight,
+            TextBox = frame, VisibleSourceExtent = fragment.VisibleSourceExtent is { } visible
+                ? visible with { EndOffset = frame.BoxWidth, AboveBaseline = frame.BoxHeight } : null };
 
     internal static bool TryWrapOrderedInlineAtoms(DocxMeasuredInlineAtoms atoms, double firstWidth, double nextWidth,
         CancellationToken token, [NotNullWhen(true)] out IReadOnlyList<DocxMeasuredInlineLine>? lines,
@@ -767,7 +769,9 @@ internal sealed partial class DocxLayoutEngine
             }
             int end = index + 1;
             bool space = IsBreakableSpace(index);
-            bool text = Atom(index).Source is DocxInlineText;
+            DocxInlineItem sourceItem = Atom(index).Source;
+            bool text = sourceItem is DocxInlineText;
+            var fontlessBox = atoms.Measurer is null ? sourceItem as DocxInlineBox : null;
             // A formatting/run boundary is not a word-break opportunity.
             if (!space && text)
                 while (end < measured.Count && Atom(end).Source is DocxInlineText && !IsBreakableSpace(end)) end++;
@@ -778,7 +782,7 @@ internal sealed partial class DocxLayoutEngine
             // A moved word must fit the continuation frame. A wider first
             // line cannot make a word on a hanging continuation fit.
             double emptyLineWidth = text && (wraps || output.Count > 0) ? nextWidth : Math.Max(firstWidth, nextWidth);
-            bool overwide = !FitsLineWidth(groupWidth, emptyLineWidth);
+            bool overwide = fontlessBox is null && !FitsLineWidth(groupWidth, emptyLineWidth);
             DocxWrappedTextLine[]? wrapped = null;
             DocxTextSpan[]? spans = null;
             if (wraps && !space && remainingWidth > 0d && text &&
@@ -854,9 +858,21 @@ internal sealed partial class DocxLayoutEngine
                 if (stopAfterFirstLine) { lines = output; return true; }
                 groupWidth = MeasureGroup(index, end).Advance;
             }
-            if (current.Count == 0 && !FitsLineWidth(groupWidth, output.Count == 0 ? firstWidth : nextWidth))
+            DocxMeasuredInlineFragment? fittedBox = null;
+            double lineWidth = output.Count == 0 ? firstWidth : nextWidth;
+            if (current.Count == 0 && !FitsLineWidth(groupWidth, lineWidth))
             {
-                if (output.Count == 0 && FitsLineWidth(groupWidth, nextWidth))
+                if (fontlessBox is not null)
+                {
+                    // Fit the whole box after choosing its line. A box that
+                    // follows another item wraps before its children reflow.
+                    var frame = CreateInlineTextBoxLayout(fontlessBox.Box, null, 0d, lineWidth, 0d,
+                        DocxTextAlignment.Left, null, defaultTabStopPoints, scale, atoms.BoundPageNumber ?? 0,
+                        token, mathEquations: atoms.MathEquations, pageCount: atoms.BoundPageCount);
+                    if (frame is null) return false;
+                    fittedBox = WithInlineBoxFrame(Atom(index), frame);
+                }
+                else if (output.Count == 0 && FitsLineWidth(groupWidth, nextWidth))
                 {
                     if (Atom(index).Math is { Box.AllowsInlineRelocation: false }) return false;
                     Flush(new(index));
@@ -867,7 +883,8 @@ internal sealed partial class DocxLayoutEngine
             if (space && current.Count == 0 && !authoredLineStart) { index = end; continue; }
             for (; index < end; index++)
             {
-                var fragment = Atom(index) with { LeadingAdvance = BoundaryBefore(Atom(index)) };
+                var atom = fittedBox ?? Atom(index);
+                var fragment = atom with { LeadingAdvance = BoundaryBefore(atom) };
                 current.Add(fragment); advance += fragment.LeadingAdvance + fragment.Advance;
                 above = Math.Max(above, fragment.BaselineInset);
                 below = Math.Max(below, fragment.OccupiedHeight - fragment.BaselineInset);

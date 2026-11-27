@@ -118,8 +118,9 @@ internal static class DocxGlyphlessAnchorTests
             double[] frame = ReadGreenPictureFrame(page);
             TestAssert.Equal(145d, frame[2]);
             TestAssert.Equal(page.Height - 217d, frame[3]);
-            string clip = FormattableString.Invariant($"145 {page.Height - 143d - height} 94 {height - 2} re W n");
-            TestAssert.Contains(clip, page.Content);
+            string imagePaint = "/" + page.Images.Single().ResourceName + " Do";
+            var paint = DocxNoteClippingTests.ReadPhysicalPaintFrames(page).Single(item => item.Block == imagePaint);
+            TestAssert.Equal(new PdfRectangle(145d, page.Height - 143d - height, 94d, height - 2d), paint.Clip);
         }
     }
 
@@ -128,6 +129,7 @@ internal static class DocxGlyphlessAnchorTests
         var parts = ReadParts(TestFixtures.WriteDocxInlinePng(PictureBoxParagraph(floating: false, height: 90),
             TestFixtures.CreateRgbPng(1, 1, [0, 255, 0])));
         XNamespace w = OoxNamespaces.WordprocessingNamespace;
+        XNamespace wp = "http://schemas.openxmlformats.org/drawingml/2006/wordprocessingDrawing";
         XNamespace a = OoxNamespaces.DrawingNamespace;
         XNamespace r = OoxNamespaces.RelationshipsNamespace;
         XNamespace rel = OoxNamespaces.PackageRelationshipsNamespace;
@@ -140,11 +142,22 @@ internal static class DocxGlyphlessAnchorTests
         parts[relationshipsPart] = TestFixtures.Utf8(relationships.ToString(SaveOptions.DisableFormatting));
         parts["word/media/blue.png"] = TestFixtures.CreateRgbPng(1, 1, [0, 0, 255]);
         XElement seed = XElement.Parse(System.Text.Encoding.UTF8.GetString(parts[documentPart]));
-        foreach (var (boxFirst, width) in new[] { (true, 0), (false, 0), (true, 4000), (false, 4000), (true, 2800) })
+        var cases = new[]
+        {
+            (true, 0, 96, 0, false), (false, 0, 96, 0, false),
+            (true, 4000, 96, 0, false), (false, 4000, 96, 0, false),
+            (true, 2800, 96, 0, true),
+            (true, 3600, 216, 0, true), (false, 3600, 216, 0, true),
+            (true, 3600, 162, 720, true), (false, 3600, 162, 720, true)
+        };
+        foreach (var (boxFirst, width, boxWidth, firstLineIndent, wraps) in cases)
         {
             var document = new XElement(seed);
             var host = document.Element(w + "body")!.Element(w + "p")!;
             var box = host.Element(w + "r")!;
+            box.Descendants(wp + "extent").First().SetAttributeValue("cx", boxWidth * 12700);
+            if (firstLineIndent != 0)
+                host.AddFirst(new XElement(w + "pPr", new XElement(w + "ind", new XAttribute(w + "firstLine", firstLineIndent))));
             var picture = new XElement(box.Descendants(w + "txbxContent").Single().Element(w + "p")!.Element(w + "r")!);
             picture.Descendants(a + "blip").Single().SetAttributeValue(r + "embed", "rIdBlue");
             if (boxFirst) box.AddAfterSelf(picture);
@@ -172,9 +185,11 @@ internal static class DocxGlyphlessAnchorTests
                 double[] boxed = frames[255], direct = frames[0];
                 TestAssert.Equal(72d, boxed[0]);
                 TestAssert.Equal(72d, direct[0]);
-                if (width == 2800)
+                if (wraps)
                 {
-                    TestAssert.True(boxed[3] >= direct[3] + direct[1], "The later picture wraps below the source-first box.");
+                    double[] first = boxFirst ? boxed : direct, next = boxFirst ? direct : boxed;
+                    TestAssert.True(first[3] >= next[3] + next[1],
+                        "The later picture wraps below the source-first item in the current line frame.");
                 }
                 else
                 {
