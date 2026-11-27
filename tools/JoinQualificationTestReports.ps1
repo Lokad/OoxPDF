@@ -22,7 +22,15 @@ function Pin([string] $Path) { [ordered]@{Path=$Path;Sha256=(Get-FileHash -Liter
 $fixtureDirectory='tests/Lokad.OoxPdf.Tests/Cases'
 function Get-BoundInputSnapshot([string] $Artifact, $Identity) {
     $declared=$Identity.InputSnapshot
-    if ($declared -isnot [string] -or ![IO.Path]::IsPathFullyQualified($declared)) { return }
+    if ($declared -isnot [string]) { return }
+    if (![IO.Path]::IsPathFullyQualified($declared)) {
+        # A snapshot frozen on the other host keeps its original absolute path.
+        # Only the local canonical tree and the actual fixture link can bind it here.
+        $tree=$Identity.InputTree
+        if ($tree -cnotmatch '^(?:[0-9a-f]{40}|[0-9a-f]{64})$' -or
+            $declared -cnotmatch ('^(?:[A-Za-z]:[\\/]|/).*git-'+$tree+'$')) { return }
+        $declared=Join-Path $repo ('artifacts/qualification-inputs/git-'+$tree)
+    }
     $entry=Get-Item -LiteralPath (Join-Path $Artifact $fixtureDirectory) -Force -ErrorAction Ignore
     if ($entry -isnot [IO.DirectoryInfo] -or !$entry.LinkType) { return }
     try {

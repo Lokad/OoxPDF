@@ -205,11 +205,13 @@ $otherInput=Join-Path (Join-Path $repo 'artifacts/other-inputs') $inputName
 Write-Text $snapshotInput 'same public input'
 Write-Text $otherInput 'changed public input'
 $linkType=if ($IsWindows) {'Junction'} else {'SymbolicLink'}
-function Write-SnapshotArtifact([string] $Name, [string] $From, [string] $InputTarget) {
+function Write-SnapshotArtifact([string] $Name, [string] $From, [string] $InputTarget,
+    [string] $DeclaredSnapshot=$snapshot, [string] $InputTree='') {
     $source=Join-Path $repo ('artifacts/'+$From)
     $directory=Join-Path $repo ('artifacts/'+$Name)
     $pin=Get-Content -LiteralPath (Join-Path $source 'identity.json') -Raw | ConvertFrom-Json -AsHashtable
-    $pin.InputSnapshot=$snapshot
+    $pin.InputSnapshot=$DeclaredSnapshot
+    if ($InputTree) { $pin.InputTree=$InputTree }
     foreach ($asset in $pin.Assets.Keys) {
         $file=Join-Path $directory $asset
         New-Item -ItemType Directory -Force -Path (Split-Path -Parent $file) | Out-Null
@@ -229,16 +231,26 @@ Write-SnapshotArtifact 'linked-first' 'before' $snapshotInput
 Write-SnapshotArtifact 'linked-repair' 'after' $snapshotInput
 Write-SnapshotArtifact 'standalone' 'after' ''
 Write-SnapshotArtifact 'retargeted' 'after' $otherInput
+$portableTree='a'*40
+$portableInput=Join-Path $repo ("artifacts/qualification-inputs/git-$portableTree/"+$inputName)
+$foreignSnapshot=if ($IsWindows) { "/foreign/repo/artifacts/qualification-inputs/git-$portableTree" }
+    else { "D:\repo\artifacts\qualification-inputs\git-$portableTree" }
+Write-Text $portableInput 'same public input'
+Write-SnapshotArtifact 'portable-first' 'before' $portableInput $foreignSnapshot $portableTree
+Write-SnapshotArtifact 'portable-repair' 'after' $portableInput $foreignSnapshot $portableTree
+Write-SnapshotArtifact 'portable-retargeted' 'after' $otherInput $foreignSnapshot $portableTree
 $snapshotChecks=@()
-foreach ($repair in 'linked-repair','standalone','retargeted') {
+foreach ($repair in 'linked-repair','standalone','retargeted','portable-repair','portable-retargeted') {
+    $portable=$repair.StartsWith('portable-', [StringComparison]::Ordinal)
+    $firstArtifact=if ($portable) { 'portable-first' } else { 'linked-first' }
     $linkConfig=$config.Clone()
-    $linkConfig.Initial=@{Artifact='repo/artifacts/linked-first';Report='initial.json'}
+    $linkConfig.Initial=@{Artifact='repo/artifacts/'+$firstArtifact;Report='initial.json'}
     $linkConfig.FinalArtifact='repo/artifacts/'+$repair
     $linkConfig.Repairs=@(@{Artifact=$linkConfig.FinalArtifact;Report='repair.json'})
     $linkManifest=Join-Path $root ($repair+'-manifest.json')
     Write-Json $linkManifest $linkConfig
-    if ($repair -eq 'retargeted') {
-        Reject 'retargeted-fixture-link' 'A pinned public input differs' $linkManifest
+    if ($repair.EndsWith('retargeted', [StringComparison]::Ordinal)) {
+        Reject "$repair-fixture-link" 'A pinned public input differs' $linkManifest
         continue
     }
     $reads=[Collections.Generic.List[string]]::new()
@@ -250,7 +262,8 @@ foreach ($repair in 'linked-repair','standalone','retargeted') {
         }
         $null=& $join -Manifest $linkManifest -OutputPath $linkOutput
     }
-    $expectedReads=@($snapshotInput)
+    $expectedReads=if ($portable) { @($portableInput) } else { @($snapshotInput) }
+    $expectedReads=@($expectedReads)
     if ($repair -eq 'standalone') { $expectedReads+=Join-Path $repo ('artifacts/standalone/'+$inputName) }
     $linked=Get-Content -LiteralPath $linkOutput -Raw | ConvertFrom-Json
     if ($reads.Count -ne $expectedReads.Count -or @(Compare-Object $expectedReads $reads -CaseSensitive).Count -or
