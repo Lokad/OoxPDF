@@ -142,9 +142,10 @@ Complex SVG text, filters, masks/blends and
 unsupported constructs retain limitations. TrueType outlines embed; CFF faces
 require an embeddable fallback. Missing glyphs use diagnosed replacement.
 Local SVG gradient templates reuse the authored stops and their source colors.
-Same-document SVG `use` references can reuse a direct shape or a group
-containing supported shapes, with placement and inherited paint at each use
-site. Titles, descriptions and metadata preserve reuse of supported geometry.
+Same-document SVG `use` references can reuse supported shapes and groups,
+including artwork inside link wrappers. Shape placement and inherited paint
+follow each use site. Nested paint definitions retain their source colors.
+Titles, descriptions and metadata preserve reuse of supported geometry.
 Inline `transform:none` overrides the geometry's presentation transform.
 Symbol targets, external documents and chained references retain the diagnosed
 fallback.
