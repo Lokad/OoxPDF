@@ -88,6 +88,52 @@ internal static class DocxGlyphlessAnchorTests
         }
     }
 
+    public static void DocxGlyphlessMergedPictureAppearsOnceAcrossPages()
+    {
+        string picture = TestFixtures.DocxInlinePngRun.Replace("cy=\"914400\"", "cy=\"457200\"", StringComparison.Ordinal);
+        byte[] png = TestFixtures.CreateRgbPng(1, 1, [0, 255, 0]);
+        string plain = WriteTable(merge: false);
+        string merged = WriteTable(merge: true);
+
+        var resolver = new EmptyProgramResolver();
+        foreach (var (mode, geometry) in Views())
+        {
+            PdfPage[] control = Render(plain, resolver, mode, geometry);
+            PdfPage[] pages = Render(merged, resolver, mode, geometry);
+            TestAssert.Equal(3, control.Length);
+            TestAssert.Equal(3, pages.Length);
+            TestAssert.True(pages.All(page => page.Fonts.Count == 0), "The picture-only table needs no font program.");
+            TestAssert.True(PaintedFrame(control[0]).SequenceEqual(PaintedFrame(pages[0])),
+                "The merged restart paints the whole source picture in the same frame as the ordinary cell.");
+            TestAssert.Equal(1, pages[0].Images.Count);
+            TestAssert.True(pages.Skip(1).All(page => page.Images.Count == 0),
+                "Following pages keep the merge continuation without replaying the source picture.");
+        }
+
+        string WriteTable(bool merge)
+        {
+            string rows = string.Concat(Enumerable.Range(0, 3).Select(index => $$"""
+                <w:tr><w:trPr><w:cantSplit/><w:trHeight w:val="1600" w:hRule="exact"/></w:trPr>
+                  <w:tc><w:tcPr>{{(merge ? index == 0 ? "<w:vMerge w:val=\"restart\"/>" : "<w:vMerge/>" : "")}}</w:tcPr>
+                    <w:p>{{(index == 0 ? picture : "")}}</w:p>
+                  </w:tc>
+                </w:tr>
+                """));
+            var parts = ReadParts(TestFixtures.WriteDocxInlinePng($"""
+                <w:tbl><w:tblPr><w:tblLayout w:type="fixed"/></w:tblPr>
+                  <w:tblGrid><w:gridCol w:w="2400"/></w:tblGrid>{rows}
+                </w:tbl>
+                """, png));
+            XNamespace w = OoxNamespaces.WordprocessingNamespace;
+            XElement document = XElement.Parse(System.Text.Encoding.UTF8.GetString(parts["word/document.xml"]));
+            XElement section = document.Descendants(w + "sectPr").Single();
+            section.Element(w + "pgSz")!.SetAttributeValue(w + "h", "3160");
+            section.Add(new XElement(w + "pgMar", new XAttribute(w + "top", 480), new XAttribute(w + "bottom", 480)));
+            parts["word/document.xml"] = TestFixtures.Utf8(document.ToString(SaveOptions.DisableFormatting));
+            return TestFixtures.WriteTempPackage(".docx", parts);
+        }
+    }
+
     public static void DocxGlyphlessInlineBoxPicturesSurviveWithoutFontPrograms()
     {
         byte[] png = TestFixtures.CreateRgbPng(1, 1, [0, 255, 0]);

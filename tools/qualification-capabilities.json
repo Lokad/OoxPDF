@@ -16458,6 +16458,7 @@
     "PortableRenderingLinkedMixedNoteFramesRetainSourceAndInk"
   ],
   "docx-merged-source-consumption": [
+    "=DocxGlyphlessMergedPictureAppearsOnceAcrossPages",
     "=DocxMergedCellOnOnePagePaintsItsSourceAndShadingOnce",
     "=DocxMergedSharedBordersRetainEachNeighborRow",
     "=DocxMergedBottomBorderMeetsNextRowAtPhysicalEdge",
@@ -19526,6 +19527,7 @@
     "=DocxGlyphlessTextBoxChildPicturesUseTheAvailableLine",
     "DocxLayoutStageConsumesEmptyParagraphLineBox",
     "=DocxGlyphlessTablePicturesSurviveNestedCellsAndHeaders",
+    "=DocxGlyphlessMergedPictureAppearsOnceAcrossPages",
     "=DocxGlyphlessInlineBoxPicturesSurviveWithoutFontPrograms",
     "=DocxGlyphlessFloatingBoxPicturesKeepTheirViewport",
     "=DocxGlyphlessInlinePicturesAndBoxesFollowSourceOrder",

@@ -402,10 +402,12 @@ internal sealed partial class DocxLayoutEngine
         foreach (var image in images)
         {
             token.ThrowIfCancellationRequested();
-            // Ordered pictures already share their measured line owner. An
-            // additional legacy picture frame must fit as well when present.
-            if (image.LineFrame is { } frame && (!frame.IsUsable || frame.Bottom < bottom - roundoff ||
-                frame.Bottom + frame.Height > top + roundoff)) return false;
+            // A picture without text metrics can own a complete frame by itself.
+            // Legacy rotations still need a measured line to prove containment.
+            if (image.LineFrame is null && image.Image.RotationDegrees != 0d) return false;
+            DocxPictureLineFrame frame = image.LineFrame ?? new(image.Y, image.Height);
+            if (!frame.IsUsable || frame.Bottom < bottom - roundoff ||
+                frame.Bottom + frame.Height > top + roundoff) return false;
         }
         return true;
     }
@@ -2504,7 +2506,8 @@ internal sealed partial class DocxLayoutEngine
             // Complete measured source content already admitted by its restart
             // row is consumed once. Continuations retain the visual cell for
             // shading/borders, without resetting that source at another origin.
-            if (verticalMergeOwner is { } sourceOwner && cellTextLines.Count != 0 &&
+            if (verticalMergeOwner is { } sourceOwner &&
+                (cellTextLines.Count != 0 || cellPlacedImages.Count != 0) &&
                 IsStaticTopAlignedMergeSource(contentCell) &&
                 cellPlacedBoxes.Count == 0 &&
                 HasAdmittedMergeSourceFrame(table, tableContext, sourceOwner, rowHeights,
