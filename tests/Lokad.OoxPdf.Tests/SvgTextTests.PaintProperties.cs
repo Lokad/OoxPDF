@@ -293,8 +293,8 @@ internal static partial class SvgTextTests
             <line x1="75%" y1="60%" x2="90%" y2="80%" stroke="fuchsia" stroke-width="4"/>
             """;
         const string inline = """
-            <rect x="900" style="x:10% !important;x:95%;y:20%;width:20%;height:40%;rx:4%;ry:8%" fill="red"/>
-            <circle style="cx:40%;cy:40%;r:10%" fill="blue"/>
+            <rect x="900" style="x:10% !important;x:95%;y:20%;width:20%;height:40%;rx:4%;ry:8%;WIDTH:nonsense !important" fill="red"/>
+            <circle style="cx:40%;cy:40%;r:nonsense !important;r:10%" fill="blue"/>
             <ellipse cx="110.5" style="cx:invalid;cy:40%;rx:8%;ry:15%" fill="lime"/>
             <line x1="75%" y1="60%" x2="90%" y2="80%" stroke="fuchsia" stroke-width="4"/>
             """;
@@ -740,12 +740,14 @@ internal static partial class SvgTextTests
         const string blue = """<rect width="20" height="12" fill="blue"/>""";
         const string label = """<text x="200" y="65" font-size="16" fill="#112233">NORTH</text>""";
         const string reset = """transform="translate(1500 0)" style="transform:NoNe !important;transform:translate(10px)" """;
+        string resetUse = reset.Replace("transform:translate(10px)", "transform:translate(10px);x:120px;x:nonsense !important",
+            StringComparison.Ordinal);
         string literal = Svg($"""{red}{green}<g transform="translate(120 18)">{blue}</g>{label}""");
         string variant = Svg($"""
             {red.Insert(6, reset)}
             <g {reset}>{green}</g>
             <defs>{blue.Insert(6, """id="tile" """)}</defs>
-            <use href="#tile" x="120" y="18" {reset}/>
+            <use href="#tile" y="18" {resetUse}/>
             {label.Insert(6, reset)}
             """);
         AssertSvgPaintInBothFormats(literal, variant, pdf => TestAssert.Equal(5, LabelPaths(pdf)),
@@ -1911,7 +1913,8 @@ internal static partial class SvgTextTests
         AssertSvgPaintInBothFormats(fixedViewport,
             [
                 Picture("width=\"300\" height=\"150\" style=\"width:nonsense\""),
-                Picture("width=\"600\" height=\"150\" style=\"width:300px;height:nonsense\"")
+                Picture("width=\"600\" height=\"150\" style=\"width:300px;height:nonsense\""),
+                Picture("style=\"width:300px;height:150px;width:nonsense;height:bad !important\"")
             ],
             pdf => TestAssert.Equal(1, LabelPaths(pdf)), "1 0 0 rg", "0 0 1 RG");
     }

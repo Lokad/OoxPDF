@@ -1574,14 +1574,33 @@ internal sealed partial class PptxRenderer
             }
 
             int marker = value.LastIndexOf('!');
-            if (marker >= 0 && value.AsSpan(marker + 1).Trim().Equals("important", StringComparison.OrdinalIgnoreCase))
+            bool important = marker >= 0 && value.AsSpan(marker + 1).Trim().Equals("important", StringComparison.OrdinalIgnoreCase);
+            if (important)
             {
                 value = value[..marker].TrimEnd();
                 if (value.Length == 0)
                 {
                     continue;
                 }
+            }
 
+            if (declarations.TryGetValue(name, out string? previous))
+            {
+                string property = name.ToLowerInvariant();
+                if (IsSvgInlineGeometryProperty(path, property))
+                {
+                    // Validate competing geometry declarations before applying importance.
+                    if (!TryReadSvgGeometryValue(path, property, value, percentageBasis: null, out _)) continue;
+                    if (!important && importantNames?.Contains(name) == true &&
+                        !TryReadSvgGeometryValue(path, property, previous, percentageBasis: null, out _))
+                    {
+                        importantNames.Remove(name);
+                    }
+                }
+            }
+
+            if (important)
+            {
                 (importantNames ??= new(StringComparer.OrdinalIgnoreCase)).Add(name);
             }
             else if (importantNames?.Contains(name) == true)
@@ -1594,6 +1613,16 @@ internal sealed partial class PptxRenderer
 
         return declarations;
     }
+
+    private static bool IsSvgInlineGeometryProperty(XElement element, string name) => element.Name.LocalName switch
+    {
+        "svg" when element.Parent is null => name is "width" or "height",
+        "rect" => name is "x" or "y" or "width" or "height" or "rx" or "ry",
+        "circle" => name is "cx" or "cy" or "r",
+        "ellipse" => name is "cx" or "cy" or "rx" or "ry",
+        "use" => name is "x" or "y",
+        _ => false,
+    };
 
     private static IEnumerable<string> EnumerateSvgStyleDeclarations(string style)
     {
@@ -3380,28 +3409,30 @@ internal sealed partial class PptxRenderer
         IReadOnlyDictionary<string, string>? style, out double? length)
     {
         bool pairedRadius = name is "rx" or "ry";
-        bool allowsAuto = pairedRadius || name is "width" or "height";
-        if (style is not null && style.TryGetValue(name, out string? declaration) && TryRead(declaration, out length) &&
-            (percentageBasis is null || !(allowsAuto || name == "r") || length.GetValueOrDefault() >= 0d))
+        if (style is not null && style.TryGetValue(name, out string? declaration) &&
+            TryReadSvgGeometryValue(element, name, declaration, percentageBasis, out length) &&
+            (percentageBasis is null || name is not ("rx" or "ry" or "width" or "height" or "r") || length is null or >= 0d))
         {
             return true;
         }
 
         string? attribute = (string?)element.Attribute(name);
         length = null;
-        return attribute is null || (!pairedRadius && string.IsNullOrWhiteSpace(attribute)) || TryRead(attribute, out length);
+        return attribute is null || (!pairedRadius && string.IsNullOrWhiteSpace(attribute)) ||
+            TryReadSvgGeometryValue(element, name, attribute, percentageBasis, out length);
+    }
 
-        bool TryRead(string text, out double? value)
-        {
-            value = null;
-            ReadOnlySpan<char> token = text.AsSpan().Trim();
-            if (allowsAuto && token.Equals("auto", StringComparison.OrdinalIgnoreCase)) return true;
-            // A percentage can own the dimension without a known basis to resolve it.
-            if (percentageBasis is null && token.EndsWith('%')) return TryReadSvgPercentage(token, out _);
-            if (!TryReadSvgViewportLength(element, token, percentageBasis.GetValueOrDefault(), out double number)) return false;
-            value = number;
-            return true;
-        }
+    private static bool TryReadSvgGeometryValue(XElement element, string name, string text, double? percentageBasis, out double? value)
+    {
+        value = null;
+        ReadOnlySpan<char> token = text.AsSpan().Trim();
+        bool allowsAuto = name is "rx" or "ry" or "width" or "height";
+        if (allowsAuto && token.Equals("auto", StringComparison.OrdinalIgnoreCase)) return true;
+        // A percentage can own the dimension without a known basis to resolve it.
+        if (percentageBasis is null && token.EndsWith('%')) return TryReadSvgPercentage(token, out _);
+        if (!TryReadSvgViewportLength(element, token, percentageBasis.GetValueOrDefault(), out double number)) return false;
+        value = number;
+        return true;
     }
 
     private static bool TryReadSvgViewportLength(XElement element, ReadOnlySpan<char> text, double percentageBasis, out double value)

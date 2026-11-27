@@ -190,6 +190,9 @@ These lengths and fixed viewport dimensions also accept absolute CSS units.
 Rectangle, circle and ellipse geometry accepts these lengths in inline styles.
 For an SVG root without a viewBox, a fixed width or height attribute can supply
 the dimension when its inline value cannot be parsed.
+An unparseable duplicate inline geometry declaration leaves an earlier usable
+value in effect. An unparseable declaration also cannot gain precedence through
+`!important`.
 Supported SVG labels accept viewport percentages, em and absolute units in
 single-value x, y, dx and dy attributes. A dx or dy list can supply one initial
 offset followed by zeros. Later absolute positions or nonzero relative offsets
