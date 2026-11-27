@@ -9,39 +9,50 @@ namespace Lokad.OoxPdf.Tests;
 
 internal static partial class PptxScatterIntervalTests
 {
+    private const string RequiredIntegerDigitsFormat = "0000000000";
+
     public static void PptxScatterRequiredIntegerDigitsReachNumericCaptions()
     {
-        foreach (AutoCase sample in AutoCases().Where(c => c.NumberFormat == "0000000000"))
+        AutoCase[] cases = AutoCases().Where(c => c.NumberFormat == RequiredIntegerDigitsFormat).ToArray();
+        TestAssert.Equal(2, cases.Length);
+        foreach (AutoCase sample in cases)
         {
-            string[] actual = AutoLabels(RenderAuto(sample, AutoChart(sample)));
-            string[] expected = sample.Id == "auto-x-width-360-long-format"
-                ? ["0000000000", "0000000002", "0000000004", "0000000006", "0000000008", "0000000010", "7", "32", "57", "82"]
-                : ["0000000000", "0000000001", "0000000002", "0000000003", "0000000004", "0000000005", "0000000006", "0000000007", "0000000008", "0000000009", "7", "32", "57", "82"];
-            TestAssert.Equal(string.Join(",", expected), string.Join(",", actual));
+            string[] actual = AssertAutomaticIntervalGeometry(sample);
+            string expected = sample.Id switch
+            {
+                "auto-x-width-360-long-format" => "0000000000,0000000002,0000000004,0000000006,0000000008,0000000010,7,32,57,82",
+                "auto-x-width-720-long-format" => "0000000000,0000000001,0000000002,0000000003,0000000004,0000000005,0000000006,0000000007,0000000008,0000000009,7,32,57,82",
+                _ => throw new InvalidOperationException("Missing padded caption expectation for " + sample.Id)
+            };
+            TestAssert.Equal(expected, string.Join(",", actual));
         }
     }
 
     public static void PptxScatterAutomaticIntervalsMatchIndependentOfficeGeometry()
     {
-        foreach (AutoCase sample in AutoCases())
-        {
-            PdfPage page = RenderAuto(sample, AutoChart(sample));
-            double[] expected = Enumerable.Range(0, (int)Math.Round((sample.ExpectedMaximum - sample.ExpectedMinimum) / sample.ExpectedUnit) + 1)
-                .Select(i => sample.ExpectedMinimum + i * sample.ExpectedUnit).ToArray();
-            string[] labels = AutoLabels(page);
-            TestAssert.True(labels.Length == expected.Length + 4, sample.Id + ": label count differs: " + labels.Length);
-            TestAssert.True(labels.Take(expected.Length).Select(text => double.Parse(text, CultureInfo.InvariantCulture))
-                .Zip(expected).All(pair => Math.Abs(pair.First - pair.Second) < 1e-9d), sample.Id + ": numeric labels must use the independent Office scale.");
-            var lines = PptxColumnIntervalTests.Lines(page);
-            double[] axis = lines.Single(line => line.Color == default && Math.Abs(line.V[1] - line.V[3]) < .001d &&
-                Math.Abs(line.V[0] - line.V[2]) > 100d).V;
-            double[] ticks = lines.Where(line => line.Color == new RgbColor(0, 255, 0) &&
-                Math.Abs(line.V[0] - line.V[2]) < .001d && Math.Abs(line.V[1] - line.V[3]) < 20d).Select(line => line.V[0]).ToArray();
-            TestAssert.True(ticks.Length == expected.Length, sample.Id + ": tick count differs: " + ticks.Length);
-            TestAssert.True(ticks.Zip(expected).All(pair => Math.Abs(pair.First - (axis[0] + (axis[2] - axis[0]) *
-                (pair.Second - sample.ExpectedMinimum) / (sample.ExpectedMaximum - sample.ExpectedMinimum))) < .002d),
-                sample.Id + ": marks and labels must share the resolved scale.");
-        }
+        foreach (AutoCase sample in AutoCases().Where(c => c.NumberFormat != RequiredIntegerDigitsFormat))
+            AssertAutomaticIntervalGeometry(sample);
+    }
+
+    private static string[] AssertAutomaticIntervalGeometry(AutoCase sample)
+    {
+        PdfPage page = RenderAuto(sample, AutoChart(sample));
+        double[] expected = Enumerable.Range(0, (int)Math.Round((sample.ExpectedMaximum - sample.ExpectedMinimum) / sample.ExpectedUnit) + 1)
+            .Select(i => sample.ExpectedMinimum + i * sample.ExpectedUnit).ToArray();
+        string[] labels = AutoLabels(page);
+        TestAssert.True(labels.Length == expected.Length + 4, sample.Id + ": label count differs: " + labels.Length);
+        TestAssert.True(labels.Take(expected.Length).Select(text => double.Parse(text, CultureInfo.InvariantCulture))
+            .Zip(expected).All(pair => Math.Abs(pair.First - pair.Second) < 1e-9d), sample.Id + ": numeric labels must use the independent Office scale.");
+        var lines = PptxColumnIntervalTests.Lines(page);
+        double[] axis = lines.Single(line => line.Color == default && Math.Abs(line.V[1] - line.V[3]) < .001d &&
+            Math.Abs(line.V[0] - line.V[2]) > 100d).V;
+        double[] ticks = lines.Where(line => line.Color == new RgbColor(0, 255, 0) &&
+            Math.Abs(line.V[0] - line.V[2]) < .001d && Math.Abs(line.V[1] - line.V[3]) < 20d).Select(line => line.V[0]).ToArray();
+        TestAssert.True(ticks.Length == expected.Length, sample.Id + ": tick count differs: " + ticks.Length);
+        TestAssert.True(ticks.Zip(expected).All(pair => Math.Abs(pair.First - (axis[0] + (axis[2] - axis[0]) *
+            (pair.Second - sample.ExpectedMinimum) / (sample.ExpectedMaximum - sample.ExpectedMinimum))) < .002d),
+            sample.Id + ": marks and labels must share the resolved scale.");
+        return labels;
     }
 
     public static void PptxScatterAutomaticIntervalsPreserveSourceUnitsAndRejectedDeclarations()
@@ -74,19 +85,36 @@ internal static partial class PptxScatterIntervalTests
 
     public static void PptxScatterAutomaticIntervalGeometryRemainsSceneOwned()
     {
-        AutoCase sample = AutoCases().Single(c => c.Id == "auto-x-width-360-font-20");
-        XDocument xml = XDocument.Parse(AutoChart(sample));
-        PptxSceneChart scene = PptxTests.BuildSingleChartScene(xml.ToString())!;
         Type sourceType = typeof(PptxRenderer).GetNestedType("ChartAxisSource", System.Reflection.BindingFlags.NonPublic)!;
         Type frameType = typeof(PptxRenderer).GetNestedType("ChartFrameBox", System.Reflection.BindingFlags.NonPublic)!;
-        object source = Activator.CreateInstance(sourceType, [scene.Axes.First(), scene.Options.Date1904 == true])!;
-        object frame = Activator.CreateInstance(frameType, [72d, 72d, sample.FrameWidth, 360d])!;
-        double Read() => (double)CurveInvoke("ReadScatterSourceIntervalTarget", PptxTheme.Empty, scene, frame, source);
-        double before = Read();
-        xml.Descendants(CurveC + "w").Single().SetAttributeValue("val", ".95");
-        xml.Descendants(XName.Get("defRPr", "http://schemas.openxmlformats.org/drawingml/2006/main")).Single().SetAttributeValue("sz", "500");
-        TestAssert.Equal(before, Read());
-        TestAssert.Equal(2d, before);
+        AutoCase[] samples = AutoCases();
+        // Use the same width-only and font-only pairs as the rendered geometry checks.
+        foreach (var (sparseId, denseId, sparseTarget) in new[]
+        {
+            ("auto-x-inner-0p35", "auto-x-inner-0p95", 3d),
+            ("auto-x-width-360-font-20", "auto-x-width-360-font-5", 2d)
+        })
+        {
+            AutoCase sparse = samples.Single(c => c.Id == sparseId);
+            AutoCase dense = samples.Single(c => c.Id == denseId);
+            TestAssert.Equal(sparse.FrameWidth, dense.FrameWidth);
+            PptxSceneChart sparseScene = PptxTests.BuildSingleChartScene(AutoChart(sparse))!;
+            PptxSceneChart denseScene = PptxTests.BuildSingleChartScene(AutoChart(dense))!;
+            TestAssert.NotNull(sparseScene.ChartXml);
+            TestAssert.NotNull(denseScene.ChartXml);
+            object frame = Activator.CreateInstance(frameType, [72d, 72d, sparse.FrameWidth, 360d])!;
+
+            double Read(PptxSceneChart scene)
+            {
+                object source = Activator.CreateInstance(sourceType, [scene.Axes.First(), scene.Options.Date1904 == true])!;
+                return (double)CurveInvoke("ReadScatterSourceIntervalTarget", PptxTheme.Empty, scene, frame, source);
+            }
+
+            TestAssert.Equal(sparseTarget, Read(sparseScene));
+            TestAssert.Equal(10d, Read(denseScene));
+            TestAssert.Equal(sparseTarget, Read(sparseScene with { ChartXml = denseScene.ChartXml }));
+            TestAssert.Equal(10d, Read(denseScene with { ChartXml = sparseScene.ChartXml }));
+        }
     }
 
     private sealed record AutoCase(string Id, double FrameWidth, double WidthFactor, double FontSize, double[] X,

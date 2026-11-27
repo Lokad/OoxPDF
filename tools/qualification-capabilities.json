@@ -4753,6 +4753,7 @@
     "PptxScatterFixedUnit",
     "PptxScatterCurveOrder",
     "PptxScatterAutomaticIntervals",
+    "=PptxScatterRequiredIntegerDigitsReachNumericCaptions",
     "PptxScatterCaptionAdmission",
     "=ParsedAxisNumericOptionsKeepUnitsAndOrientation",
     "=ParsedAxisGridlineOptionsKeepVisibilityAndStroke",
@@ -4791,6 +4792,7 @@
   ],
   "pptx-scatter-automatic-intervals": [
     "PptxScatterAutomaticIntervalsMatchIndependentOfficeGeometry",
+    "=PptxScatterRequiredIntegerDigitsReachNumericCaptions",
     "PptxScatterAutomaticIntervalsPreserveSourceUnitsAndRejectedDeclarations",
     "PptxScatterAutomaticIntervalGeometryRemainsSceneOwned",
     "PptxChartRightLegendReserveUsesLegendTextStyle",
