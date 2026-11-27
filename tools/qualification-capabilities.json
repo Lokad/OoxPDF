@@ -703,6 +703,7 @@
     "=SvgLocalShapeReferencesPreservePlacementAndPaint",
     "=SvgLocalShapeGroupsPreserveOrderAndInheritedPaint",
     "=SvgLocalShapeGroupsKeepPaintBesideDescriptiveMetadata",
+    "=SvgLocalShapeGroupsKeepPaintBesideDisplayNoneChildren",
     "=SvgLocalShapeGroupsResolveNestedPaintServersFromTheirSource",
     "=SvgLocalShapeReferencesKeepLinkArtworkAndDiagnoseTheAction",
     "=SvgInlineTransformNonePreservesGeometryAndReferenceOffsets",

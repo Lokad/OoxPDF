@@ -1992,10 +1992,9 @@ internal sealed partial class PptxRenderer
             foreach (XElement child in element.Elements())
             {
                 cancellationToken.ThrowIfCancellationRequested();
-                if (IsSvgNonPaintingReferenceChild(child))
+                if (MeasureNonPaintingSvgReferenceChild(child) is long skippedCharacters)
                 {
-                    // Only the child element is visited when making an instance.
-                    size += 2L * child.Name.LocalName.Length + 5;
+                    size += skippedCharacters;
                     continue;
                 }
                 if (!group || MeasureGeometry(child) is not long childSize) return null;
@@ -2017,7 +2016,7 @@ internal sealed partial class PptxRenderer
             foreach (XElement child in source.Elements())
             {
                 cancellationToken.ThrowIfCancellationRequested();
-                if (!IsSvgNonPaintingReferenceChild(child))
+                if (MeasureNonPaintingSvgReferenceChild(child) is null)
                     clone.Add(CloneSvgReferenceGeometry(child, cancellationToken));
             }
         }
@@ -2028,9 +2027,21 @@ internal sealed partial class PptxRenderer
 
     // Paint servers are resolved from the original SVG tree, which owns their
     // inherited properties. The instance needs only its visible geometry.
-    private static bool IsSvgNonPaintingReferenceChild(XElement element) =>
-        element.Name.Namespace == element.Parent?.Name.Namespace &&
-        (element.Name.LocalName == "defs" || IsSvgPaintServerElement(element) || IsSvgMetadataElement(element));
+    private static long? MeasureNonPaintingSvgReferenceChild(XElement element)
+    {
+        if (element.Name.Namespace != element.Parent?.Name.Namespace)
+            return null;
+
+        long size = 2L * element.Name.LocalName.Length + 5;
+        if (element.Name.LocalName == "defs" || IsSvgPaintServerElement(element) || IsSvgMetadataElement(element))
+            return size;
+        if (!IsSvgDisplayNone(element, ReadSvgStyleDeclarations(element)))
+            return null;
+
+        // Cloning skips this subtree after checking its local style.
+        return size + (element.Attribute("style")?.Value.Length ?? 0) +
+            (element.Attribute("display")?.Value.Length ?? 0);
+    }
 
     private static bool IsSvgPaintServerElement(XElement element) =>
         element.Name.LocalName is "linearGradient" or "radialGradient" or "pattern";

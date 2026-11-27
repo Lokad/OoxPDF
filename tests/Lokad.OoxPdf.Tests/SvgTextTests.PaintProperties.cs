@@ -632,6 +632,33 @@ internal static partial class SvgTextTests
         AssertSvgPaintInBothFormats(literal, [reference, described], null, "1 0 0 rg", "0 0 1 rg");
     }
 
+    public static void SvgLocalShapeGroupsKeepPaintBesideDisplayNoneChildren()
+    {
+        const string red = """<rect width="90" height="36" fill="red"/>""";
+        const string blue = """<rect x="115" width="40" height="24" fill="blue"/>""";
+        const string sibling = """<rect x="260" y="20" width="42" height="35" fill="lime"/>""";
+        string literal = Svg($"""<g transform="translate(12 15)">{red}{blue}</g>{sibling}""");
+        string Reference(string child) => Svg($"""
+            <defs>
+              <rect id="accent" x="180" y="95" width="48" height="21" fill="magenta"/>
+              <g id="tile">{red}{child}{blue}</g>
+            </defs>
+            <use href="#tile" x="12" y="15"/>{sibling}
+            """);
+
+        string hiddenUse = Reference("""<use href="#accent" display="none"/>""");
+        string hiddenGroup = Reference("""
+            <g display="inline" style="display:none !important;display:inline"><use href="#accent"/></g>
+            """);
+        AssertSvgPaintInBothFormats(literal, [hiddenUse, hiddenGroup], null, "1 0 0 rg", "0 0 1 rg", "0 1 0 rg");
+
+        var diagnostics = new List<OoxPdfDiagnostic>();
+        var unsupported = Paint(Reference("""<use href="#accent" display="none" style="display:inline"/>"""), diagnostics);
+        AssertEquivalentSvgPaint(Paint(Svg(sibling)), unsupported,
+            "A visible chained reference retains the diagnosed fallback.");
+        TestAssert.Contains("1 unsupported use element.", diagnostics.Single().Message);
+    }
+
     public static void SvgInlineTransformNonePreservesGeometryAndReferenceOffsets()
     {
         const string red = """<rect x="12" y="15" width="35" height="25" fill="red"/>""";
