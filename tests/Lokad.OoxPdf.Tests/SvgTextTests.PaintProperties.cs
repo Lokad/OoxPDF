@@ -1082,7 +1082,7 @@ internal static partial class SvgTextTests
                 <use href="#reuse"/>
                 <g visibility="hidden"><rect x="224" y="18" width="36" height="36" fill="fuchsia" style="{show}"/></g>
                 <circle cx="312" cy="36" r="18" fill="blue"/>
-                <text x="12" y="106" font-size="16" fill="#114499">A<tspan visibility="hidden" {Inline("visibility:typo")}>B</tspan>C</text>
+                <text x="12" y="106" font-size="16" fill="#112233">A<tspan visibility="hidden" {Inline("visibility:typo")}>B</tspan>C</text>
                 """);
         }
     }
