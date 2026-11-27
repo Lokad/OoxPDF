@@ -6765,6 +6765,7 @@
     "DocxTableLayoutStageDistributesAutoLayoutByContentWidth",
     "DocxTableLayoutStageKeepsAutoPreferredCellWidths",
     "=DocxTableAutofitHonorsNoWrapWidthFloorsWithinNeighborMinima",
+    "=DocxTableAutofitPreservesPartialSpansWhenHonoringNoWrapWidthFloors",
     "DocxTableLayoutStageDistributesMissingGridWithSpansAcrossLogicalColumns",
     "DocxTableLayoutStageInfersEmptyMissingGridFromRowSpans",
     "DocxTableLayoutStageUsesFirstRowCellPreferredWidths",

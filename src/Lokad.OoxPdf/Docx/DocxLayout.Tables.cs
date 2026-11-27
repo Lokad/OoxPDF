@@ -1335,7 +1335,8 @@ internal sealed partial class DocxLayoutEngine
             if (required <= 0d) return false;
 
             // Only shrink a column by the space above its content minimum in
-            // every row. Partial spans require a coupled width calculation.
+            // every row. Keep the current width of columns that belong to a
+            // partial span, which may have a coupled content minimum.
             for (int rowIndex = 0; rowIndex < table.Rows.Count; rowIndex++)
             {
                 DocxTableRow row = table.Rows[rowIndex];
@@ -1345,14 +1346,22 @@ internal sealed partial class DocxLayoutEngine
                     cancellationToken.ThrowIfCancellationRequested();
                     int span = Math.Max(1, cell.GridSpan);
                     if (column == 0 && span == widths.Length) break;
-                    if (span != 1 || column < 0 || column >= widths.Length) return false;
-                    if (floors[column] < widths[column])
+                    if (column < 0 || span > widths.Length - column) return false;
+                    if (span > 1)
+                    {
+                        for (int index = column; index < column + span; index++)
+                        {
+                            if (floors[index] > widths[index]) return false;
+                            floors[index] = widths[index];
+                        }
+                    }
+                    else if (floors[column] < widths[column])
                     {
                         double? minimum = MeasureDonorWidth(cell,
                             ResolveTableHeaderPageNumber(rowIndex, pageNumber, headerSourcePages), measurer);
                         floors[column] = Math.Max(floors[column], Math.Min(widths[column], minimum ?? widths[column]));
                     }
-                    column++;
+                    column += span;
                 }
             }
 

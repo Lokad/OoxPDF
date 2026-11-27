@@ -677,6 +677,45 @@ internal static class DocxTablesLayoutTests
         }
     }
 
+    public static void DocxTableAutofitPreservesPartialSpansWhenHonoringNoWrapWidthFloors()
+    {
+        DocxTableCell Cell(string text, int span = 1) => new([DocxTests.CreateDocxLayoutParagraph(text, 10d, 12d)],
+            null, null, null, null, [], DocxTableCellMargins.Empty,
+            PreferredWidthPoints: span == 1 ? 130d : null, PreferredWidthType: "dxa") { GridSpan = span };
+        var first = new DocxTableRow([Cell("Left") with { NoWrap = true }, Cell("Peer"), Cell(""), Cell("")], null);
+        Check([Cell(""), Cell(""), Cell("Merged", 2)], [130d, 50d, 90d, 90d], [130d, 50d, 180d]);
+        Check([Cell(""), Cell("Merged", 3)], [90d, 90d, 90d, 90d], [90d, 270d]);
+        Check([Cell("Merged", 2), Cell(""), Cell("")], [90d, 90d, 90d, 90d], [180d, 90d, 90d]);
+
+        void Check(IReadOnlyList<DocxTableCell> second, double[] firstWidths, double[] secondWidths)
+        {
+            var table = new DocxTable("autofit", [130d, 130d, 130d, 130d], [first, new DocxTableRow(second, null)])
+            {
+                PreferredWidthPoints = 360d,
+                PreferredWidthType = "dxa"
+            };
+            var document = DocxTests.CreateLayoutTestDocument([new DocxTableElement(table)]);
+            var rows = new DocxLayoutEngine(OoxPdfDocxMarkupGeometryMode.PreserveDocumentLayout)
+                .Create(document, new DocxTests.FamilyWidthTextMeasurer(), default).Pages
+                .SelectMany(page => page.Items).OfType<DocxTableRowLayout>().ToArray();
+            TestAssert.Equal(2, rows.Length);
+            AssertRow(rows[0], firstWidths);
+            AssertRow(rows[1], secondWidths);
+        }
+
+        static void AssertRow(DocxTableRowLayout row, double[] widths)
+        {
+            TestAssert.Equal(widths.Length, row.Cells.Count);
+            double x = row.Cells[0].X;
+            for (int i = 0; i < widths.Length; i++)
+            {
+                TestAssert.True(Math.Abs(row.Cells[i].Width - widths[i]) < .001d && Math.Abs(row.Cells[i].X - x) < .001d,
+                    "Independent columns can fund the width floor while the partial span keeps its full width.");
+                x += widths[i];
+            }
+        }
+    }
+
     public static void DocxTableLayoutStageDistributesMissingGridWithSpansAcrossLogicalColumns() =>
         AssertMissingGridColumnGeometry([72d, 72d, 72d]);
 
