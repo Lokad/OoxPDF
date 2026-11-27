@@ -1298,7 +1298,7 @@
     "DocxZeroAreaPicturesKeepAuthoredFragmentDimensionsAndOwners",
     "DocxMissingPicturePreservesIndependentControlFrames",
     "DocxMissingPicturePreservesCellAndStaticStoryGeometry",
-    "DocxMissingPicturePreservesDanglingAndVmlFrames",
+    "DocxMissingPicturePreservesVmlFrame",
     "DocxMissingPictureReusesFailureAndOmitsItsLinks",
     "DocxMixedPictureRangesIncludePaintAcrossContainersAndPresets",
     "DocxMixedPictureRangesKeepDecodeRotationClipAndChildTargetFallbacks",
@@ -2884,7 +2884,7 @@
     "DocxSyntheticVmlInlinePngRendersImageXObject",
     "DocxInlineCompositionPictureFirstTablesUseTheirOwnedTextAnchor",
     "DocxInlineCompositionDisplayImageRowsRetainIndependentOfficeFractionFrames",
-    "DocxMissingPicturePreservesDanglingAndVmlFrames"
+    "DocxMissingPicturePreservesVmlFrame"
   ],
   "docx-cached-math-results": [
     "DocxCachedMathResults",

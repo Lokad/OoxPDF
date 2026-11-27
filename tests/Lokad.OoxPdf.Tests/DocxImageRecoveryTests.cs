@@ -116,14 +116,16 @@ internal static class DocxImageRecoveryTests
 
     public static void DocxMissingPicturePreservesIndependentControlFrames()
     {
+        string source = TestFixtures.PublicCasePath("ImageRecovery/picture-present.docx");
         foreach (var mode in Modes)
         {
-            var present = Render(TestFixtures.PublicCasePath("ImageRecovery/picture-present.docx"), mode);
+            var present = Render(source, mode);
+            AssertSinglePicturePaint(present.Pages);
+            TestAssert.Equal(0, present.Diagnostics.Count);
             foreach (string variant in new[] { "missing", "corrupt" })
             {
                 var actual = Render(TestFixtures.PublicCasePath($"ImageRecovery/picture-{variant}.docx"), mode);
-                AssertSameTextGeometry(present.Pages, actual.Pages, "Inline image", "After picture");
-                TestAssert.Equal(0, actual.Pages.Sum(page => page.Images.Count));
+                AssertPictureOmissionKeepsFrame(present.Pages, actual.Pages);
                 TestAssert.Equal(1, actual.Diagnostics.Count);
                 var diagnostic = actual.Diagnostics.Single();
                 TestAssert.Equal(variant == "missing" ? "IMAGE_MISSING_PART" : "IMAGE_UNSUPPORTED_FORMAT", diagnostic.Id);
@@ -131,8 +133,19 @@ internal static class DocxImageRecoveryTests
                 TestAssert.Equal("/word/media/image1.png", diagnostic.PartName);
                 TestAssert.Equal(1, diagnostic.PageIndex!.Value);
             }
-            TestAssert.Equal(0, present.Diagnostics.Count);
-            TestAssert.Equal(1, present.Pages.Sum(page => page.Images.Count));
+            if (mode == OoxPdfDocxMarkupMode.Final)
+            {
+                Mutate(source, parts => {
+                    const string relsPart = "word/_rels/document.xml.rels";
+                    var rels = XDocument.Parse(Encoding.UTF8.GetString(parts[relsPart]));
+                    rels.Root!.Elements().Single(e => (string?)e.Attribute("Id") == "rId4").Remove();
+                    parts[relsPart] = Encoding.UTF8.GetBytes(rels.ToString());
+                }, path => {
+                    var missing = Render(path, mode);
+                    AssertPictureOmissionKeepsFrame(present.Pages, missing.Pages);
+                    TestAssert.Equal(1, missing.Diagnostics.Count(d => d.Id == "IMAGE_MISSING_PART"));
+                });
+            }
         }
     }
 
@@ -177,15 +190,9 @@ internal static class DocxImageRecoveryTests
         }
     }
 
-    public static void DocxMissingPicturePreservesDanglingAndVmlFrames()
+    public static void DocxMissingPicturePreservesVmlFrame()
     {
         string source = TestFixtures.PublicCasePath("ImageRecovery/picture-present.docx");
-        AssertMissingPartKeepsFrame(source, parts => {
-            const string relsPart = "word/_rels/document.xml.rels";
-            var rels = XDocument.Parse(Encoding.UTF8.GetString(parts[relsPart]));
-            rels.Root!.Elements().Single(e => (string?)e.Attribute("Id") == "rId4").Remove();
-            parts[relsPart] = Encoding.UTF8.GetBytes(rels.ToString());
-        });
         Mutate(source, parts => {
             XNamespace v = "urn:schemas-microsoft-com:vml";
             const string documentPart = "word/document.xml";
@@ -194,18 +201,29 @@ internal static class DocxImageRecoveryTests
                 new XElement(v + "shape", new XAttribute("style", "width:72pt;height:36pt"),
                     new XElement(v + "imagedata", new XAttribute(R + "id", "rId4")))));
             parts[documentPart] = Encoding.UTF8.GetBytes(xml.ToString());
-        }, vml => AssertMissingPartKeepsFrame(vml, parts => parts.Remove("word/media/image1.png")));
-
-        static void AssertMissingPartKeepsFrame(string source, Action<Dictionary<string, byte[]>> change)
-        {
-            var present = Render(source, OoxPdfDocxMarkupMode.Final);
-            Mutate(source, change, path => {
+        }, vml => {
+            var present = Render(vml, OoxPdfDocxMarkupMode.Final);
+            AssertSinglePicturePaint(present.Pages);
+            Mutate(vml, parts => parts.Remove("word/media/image1.png"), path => {
                 var missing = Render(path, OoxPdfDocxMarkupMode.Final);
-                AssertSameTextGeometry(present.Pages, missing.Pages, "Inline image", "After picture");
+                AssertPictureOmissionKeepsFrame(present.Pages, missing.Pages);
                 TestAssert.Equal(1, missing.Diagnostics.Count(d => d.Id == "IMAGE_MISSING_PART"));
-                TestAssert.Equal(0, missing.Pages.Sum(page => page.Images.Count));
             });
-        }
+        });
+    }
+
+    private static void AssertSinglePicturePaint(PdfPage[] pages)
+    {
+        var page = pages.Single(page => page.Images.Count != 0);
+        var image = page.Images.Single();
+        TestAssert.Equal(1, DocxNoteClippingTests.ReadPhysicalPaintFrames(page)
+            .Count(frame => frame.Block == "/" + image.ResourceName + " Do"));
+    }
+
+    private static void AssertPictureOmissionKeepsFrame(PdfPage[] present, PdfPage[] missing)
+    {
+        AssertSameTextGeometry(present, missing, "Inline image", "After picture");
+        TestAssert.Equal(0, missing.Sum(page => page.Images.Count));
     }
 
     public static void DocxMissingPictureReusesFailureAndOmitsItsLinks()
