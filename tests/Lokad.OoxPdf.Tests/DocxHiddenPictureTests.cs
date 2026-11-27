@@ -28,11 +28,21 @@ internal static class DocxHiddenPictureTests
                 WithDocument(Parts(path), mode, document =>
                 {
                     int images = expected.GetProperty("Pages")[0].GetProperty("ImageCount").GetInt32();
-                    var pages = Render(document, mode);
-                    TestAssert.Equal(images, pages.Sum(page => page.Images.Count));
+                    PdfPage page = Render(document, mode).Single();
+                    TestAssert.Equal(images, page.Images.Count);
+                    var paints = DocxNoteClippingTests.ReadPhysicalPaintFrames(page).ToArray();
+                    foreach (var image in page.Images)
+                    {
+                        var paint = paints.Single(frame => frame.Block == "/" + image.ResourceName + " Do");
+                        var (clip, transform) = (paint.Clip, paint.Transform);
+                        TestAssert.True(transform.M12 == 0f && transform.M21 == 0f && transform.M11 > 0f && transform.M22 > 0f &&
+                            Math.Max(clip.X, transform.M31) < Math.Min(clip.X + clip.Width, transform.M31 + transform.M11) &&
+                            Math.Max(clip.Y, transform.M32) < Math.Min(clip.Y + clip.Height, transform.M32 + transform.M22),
+                            $"The authored inline image paints inside the active viewport: {Path.GetFileName(path)}/{mode}.");
+                    }
                     TestAssert.Equal(3, document.Paragraphs.Count);
                     TestAssert.Equal(images, document.Paragraphs[1].Images.Count);
-                    TestAssert.Contains("After picture", DocxPageFootnoteNumberingTests.DecodeText(pages.Single()));
+                    TestAssert.Contains("After picture", DocxPageFootnoteNumberingTests.DecodeText(page));
                 });
         }
     }
