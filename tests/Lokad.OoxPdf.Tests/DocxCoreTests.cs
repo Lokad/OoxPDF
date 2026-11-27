@@ -857,9 +857,9 @@ internal static class DocxCoreTests
         {
             Fonts = new DocxRunFonts("Corporate Sans", null, null, null, null, null, null, null)
         };
-        var missingRun = new DocxTextRun("Missing", 11d, null, false, false, false, null, null);
+        var fallbackRun = new DocxTextRun("Fallback", 11d, null, false, false, false, null, null);
         DocxDocument document = DocxTests.CreateFontPlanDocument(
-            [primaryRun, alternateRun, missingRun],
+            [primaryRun, alternateRun, primaryRun with { Text = "Repeated primary" }, fallbackRun],
             new DocxFontCatalog(
                 [new DocxFontTableEntry("Corporate Sans", "Installed Sans", null)],
                 DocxThemeFonts.Empty));
@@ -867,14 +867,16 @@ internal static class DocxCoreTests
 
         DocxFontPlanSnapshot snapshot = new DocxRenderer(resolver, OoxPdfDocxMarkupMode.Final, OoxPdfDocxMarkupGeometryMode.PreserveDocumentLayout).InspectFontPlan(document);
 
-        TestAssert.Equal(3, snapshot.RunCount);
-        TestAssert.Equal(1, snapshot.PrimaryCount);
+        TestAssert.Equal(4, snapshot.RunCount);
+        TestAssert.Equal(2, snapshot.PrimaryCount);
         TestAssert.Equal(1, snapshot.FontTableAlternateCount);
         TestAssert.Equal(0, snapshot.ThemeCount);
         TestAssert.Equal(1, snapshot.ResolverFallbackCount);
         TestAssert.Equal(0, snapshot.MissingCount);
         TestAssert.Equal(3, snapshot.DistinctCandidateFamilyCount);
         TestAssert.Equal(3, snapshot.DistinctResolvedFamilyCount);
+        TestAssert.Equal(3, snapshot.MetricBuckets.Count);
+        TestAssert.Equal(("Primary", 2), (snapshot.MetricBuckets[0].Source, snapshot.MetricBuckets[0].RunCount));
     }
 
     public static void DocxFontPlanSnapshotReportsPrivateSafeOpenTypeMetrics()

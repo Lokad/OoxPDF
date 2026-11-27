@@ -8,8 +8,7 @@ internal enum DocxTypefaceResolutionSource
     Primary,
     FontTableAlternate,
     Theme,
-    ResolverFallback,
-    Missing
+    ResolverFallback
 }
 
 internal sealed record DocxResolvedRunTypeface(
@@ -502,62 +501,65 @@ internal sealed record DocxFontPlanSnapshot(
     public static DocxFontPlanSnapshot FromPlan(DocxFontPlan plan, CancellationToken cancellationToken = default)
     {
         cancellationToken.ThrowIfCancellationRequested();
-        IReadOnlyList<DocxFontMetricBucketSnapshot> ToMetricBuckets(DocxFontPlan plan)
+        var counts = new int[(int)DocxTypefaceResolutionSource.ResolverFallback + 1];
+        var candidateFamilies = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+        var resolvedFamilies = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+        var familyHashes = new Dictionary<string, string>(StringComparer.Ordinal);
+        foreach (var run in plan.Runs)
         {
-            string? HashFamily(string? family)
-            {
-                if (string.IsNullOrWhiteSpace(family))
-                {
-                    return null;
-                }
-        
-                byte[] bytes = Encoding.UTF8.GetBytes(family.ToUpperInvariant());
-                byte[] hash = System.Security.Cryptography.SHA256.HashData(bytes);
-                return Convert.ToHexString(hash).Substring(0, 12).ToLowerInvariant();
-            }
-    
-            return plan.Runs
-                .GroupBy(run => new
-                {
-                    run.Source,
-                    FontSize = Math.Round(run.Run.EffectiveProperties.FontSize, 3),
-                    ResolvedFamilyHash = HashFamily(run.ResolvedFamily)
-                })
-                .OrderByDescending(group => group.Count())
-                .ThenBy(group => group.Key.Source.ToString(), StringComparer.Ordinal)
-                .ThenBy(group => group.Key.FontSize)
-                .Select(group => ToMetricBucketSnapshot(
-                    group.Key.Source.ToString(),
-                    group.Key.FontSize,
-                    group.Key.ResolvedFamilyHash,
-                    group.Count(),
-                    group.FirstOrDefault()?.Resolution,
-                    cancellationToken))
-                .ToArray();
+            cancellationToken.ThrowIfCancellationRequested();
+            counts[(int)run.Source]++;
+            candidateFamilies.UnionWith(run.CandidateFamilies);
+            if (!string.IsNullOrWhiteSpace(run.ResolvedFamily))
+                resolvedFamilies.Add(run.ResolvedFamily);
         }
+
+        var metricBuckets = plan.Runs
+            .GroupBy(run => new
+            {
+                run.Source,
+                FontSize = Math.Round(run.Run.EffectiveProperties.FontSize, 3),
+                ResolvedFamilyHash = HashFamily(run.ResolvedFamily)
+            })
+            .OrderByDescending(group => group.Count())
+            .ThenBy(group => group.Key.Source.ToString(), StringComparer.Ordinal)
+            .ThenBy(group => group.Key.FontSize)
+            .Select(group => ToMetricBucketSnapshot(
+                group.Key.Source.ToString(),
+                group.Key.FontSize,
+                group.Key.ResolvedFamilyHash,
+                group.Count(),
+                group.First().Resolution,
+                cancellationToken))
+            .ToArray();
 
         return new DocxFontPlanSnapshot(
             plan.Runs.Count,
-            Count(plan, DocxTypefaceResolutionSource.Primary),
-            Count(plan, DocxTypefaceResolutionSource.FontTableAlternate),
-            Count(plan, DocxTypefaceResolutionSource.Theme),
-            Count(plan, DocxTypefaceResolutionSource.ResolverFallback),
-            Count(plan, DocxTypefaceResolutionSource.Missing),
-            plan.Runs
-                .SelectMany(run => run.CandidateFamilies)
-                .Distinct(StringComparer.OrdinalIgnoreCase)
-                .Count(),
-            plan.Runs
-                .Select(run => run.ResolvedFamily)
-                .Where(family => !string.IsNullOrWhiteSpace(family))
-                .Distinct(StringComparer.OrdinalIgnoreCase)
-                .Count(),
-            ToMetricBuckets(plan));
-    }
+            counts[(int)DocxTypefaceResolutionSource.Primary],
+            counts[(int)DocxTypefaceResolutionSource.FontTableAlternate],
+            counts[(int)DocxTypefaceResolutionSource.Theme],
+            counts[(int)DocxTypefaceResolutionSource.ResolverFallback],
+            MissingCount: 0, // Preserve the existing inspector JSON field.
+            candidateFamilies.Count,
+            resolvedFamilies.Count,
+            metricBuckets);
 
-    private static int Count(DocxFontPlan plan, DocxTypefaceResolutionSource source)
-    {
-        return plan.Runs.Count(run => run.Source == source);
+        string? HashFamily(string? family)
+        {
+            cancellationToken.ThrowIfCancellationRequested();
+            if (string.IsNullOrWhiteSpace(family))
+                return null;
+
+            string normalized = family.ToUpperInvariant();
+            if (!familyHashes.TryGetValue(normalized, out string? hash))
+            {
+                byte[] bytes = Encoding.UTF8.GetBytes(normalized);
+                byte[] digest = System.Security.Cryptography.SHA256.HashData(bytes);
+                hash = Convert.ToHexString(digest).Substring(0, 12).ToLowerInvariant();
+                familyHashes.Add(normalized, hash);
+            }
+            return hash;
+        }
     }
 
     private static DocxFontMetricBucketSnapshot ToMetricBucketSnapshot(
