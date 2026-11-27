@@ -25,15 +25,14 @@ internal static partial class DocxMathTests
         }
     }
 
-    public static void DocxMathMatrixPlaceholderVisibilityRetainsBooleanDefaultsAndInvalidSource()
+    public static void DocxMathMatrixPlaceholderVisibilityValidatesSourceAndRetainsCells()
     {
         DocxMathMatrix Read(string properties) => (DocxMathMatrix)Parse(XElement.Parse($"<m:oMath xmlns:m='{MathNamespace}'><m:m><m:mPr>{properties}</m:mPr><m:mr><m:e/><m:e><m:r><m:t>x</m:t></m:r></m:e></m:mr></m:m></m:oMath>")).Children.Single();
-        TestAssert.True(Read("").HidePlaceholdersValue is null, "An omitted placeholder property retains its visible default source role.");
-        foreach ((string? value, bool hidden) in new (string?, bool)[] { (null, true), ("1", true), ("true", true), ("on", true), ("0", false), ("false", false), ("off", false) })
+        CheckKnown("");
+        CheckKnown("<m:plcHide/>");
+        foreach (string value in new[] { "1", "true", "on", "0", "false", "off" })
         {
-            var matrix = Read(value is null ? "<m:plcHide/>" : $"<m:plcHide m:val='{value}'/>");
-            TestAssert.True(!matrix.HasUnsupportedProperties && matrix.HidePlaceholdersValue == hidden && matrix.Rows[0].Cells[0].Children.Count == 0,
-                "Known boolean values and val-less on preserve the explicit empty cell and authored visibility.");
+            CheckKnown($"<m:plcHide m:val='{value}'/>");
         }
         foreach (string property in new[] { "<m:plcHide m:val='future'/>", "<m:plcHide m:val=''/>", "<m:plcHide extra='1'/>",
             "<m:plcHide/><m:plcHide/>", "<m:plcHide>stray</m:plcHide>", "<m:plcHide><m:future/></m:plcHide>" })
@@ -41,6 +40,15 @@ internal static partial class DocxMathTests
             var matrix = Read(property);
             TestAssert.True(matrix.HasUnsupportedProperties && matrix.Rows[0].Cells.Count == 2,
                 "Unknown, duplicate and malformed placeholder properties retain both cells and complete fallback.");
+        }
+
+        void CheckKnown(string property)
+        {
+            var matrix = Read(property);
+            var cells = matrix.Rows.Single().Cells;
+            TestAssert.True(!matrix.HasUnsupportedProperties && cells.Count == 2 &&
+                cells[0].Children.Count == 0 && RowText(cells[1]) == "x",
+                "Known and omitted placeholder settings preserve the empty cell and its operand neighbor.");
         }
     }
 

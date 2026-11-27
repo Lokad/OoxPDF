@@ -195,7 +195,7 @@ internal static class DocxMathMatrixLayoutTests
     {
         var font = MathFont(withPlaceholder: true); var resource = Resource("Sparse", font, "BC"); var empty = new DocxMathRow([]);
         var b = new DocxMathRow([Run("B")]); var c = new DocxMathRow([Run("C")]);
-        var matrix = new DocxMathMatrix([new([empty, b, empty]), new([c, empty, empty])]) { HidePlaceholdersValue = true };
+        var matrix = new DocxMathMatrix([new([empty, b, empty]), new([c, empty, empty])]);
         TestAssert.True(DocxMathLayout.TryGetRuns(Equation(matrix), CancellationToken.None, out var runs) && runs.Count == 2 &&
             ReferenceEquals(runs[0].ControlOwner, matrix) && runs[1].ControlOwner is null,
             "An initial empty cell cannot take over the metric-only owner from the first painted run.");
@@ -218,31 +218,14 @@ internal static class DocxMathMatrixLayoutTests
             "A hidden empty row retains one control-owned row frame without publishing placeholder glyphs.");
     }
 
-    public static void MathFontMatrixHiddenEmptyCellsPreserveVisibilityFallbackCancellationAndWork()
+    public static void MathFontMatrixHiddenEmptyCellsRetainFallbackAndCancellation()
     {
         var font = MathFont(withPlaceholder: true); var resource = Resource("Sparse", font, "B"); var empty = new DocxMathRow([]); var literal = new DocxMathRow([Run("B")]);
-        var matrix = new DocxMathMatrix([new([empty, empty, literal])]) { HidePlaceholdersValue = true };
-        DocxMathBox? reference = null;
-        foreach (bool? visibility in new bool?[] { null, false, true })
-        {
-            var known = matrix with { HidePlaceholdersValue = visibility };
-            TestAssert.True(DocxMathLayout.TryGetRuns(Equation(known), CancellationToken.None, out _),
-                "Known placeholder visibility profiles retain source discovery.");
-            TestAssert.True(DocxMathLayout.TryMeasure(Equation(known), _ => resource, CancellationToken.None, out var measured, out _,
-                resolveControlMetrics: _ => font), "Known placeholder visibility profiles retain the printed grid.");
-            var box = TestAssert.NotNull(measured);
-            TestAssert.Equal(1, box.Glyphs.Count);
-            if (reference is not null)
-                TestAssert.True(reference.Width == box.Width && reference.AboveBaseline == box.AboveBaseline &&
-                    reference.BelowBaseline == box.BelowBaseline && reference.Glyphs[0].X == box.Glyphs[0].X &&
-                    reference.Glyphs[0].BaselineY == box.Glyphs[0].BaselineY,
-                    "Known visibility settings preserve the independent Word-equivalent empty slots.");
-            reference = box;
-        }
-        foreach (var invalid in new[] { matrix with { Rows = [new([empty with { ArgumentProperties = new(null, true) }, empty, literal])] } })
-            TestAssert.True(!DocxMathLayout.TryGetRuns(Equation(invalid), CancellationToken.None, out _) &&
-                !DocxMathLayout.TryMeasure(Equation(invalid), _ => resource, CancellationToken.None, out var absent, out _, resolveControlMetrics: _ => font) && absent is null,
-                "Unknown empty-cell properties retain complete fallback.");
+        var matrix = new DocxMathMatrix([new([empty, empty, literal])]);
+        var invalid = Equation(matrix with { Rows = [new([empty with { ArgumentProperties = new(null, true) }, empty, literal])] });
+        TestAssert.True(!DocxMathLayout.TryGetRuns(invalid, CancellationToken.None, out _) &&
+            !DocxMathLayout.TryMeasure(invalid, _ => resource, CancellationToken.None, out var absent, out _, resolveControlMetrics: _ => font) && absent is null,
+            "Unknown empty-cell properties retain complete fallback.");
         var allEmpty = Equation(matrix with { Rows = [new([empty, empty, empty])] });
         TestAssert.True(DocxMathLayout.TryGetRuns(allEmpty, default, out var emptySources) && emptySources.Count == 0 &&
             DocxMathLayout.TryMeasure(allEmpty, _ => throw new InvalidOperationException("No literal font source exists."),

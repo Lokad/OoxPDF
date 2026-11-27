@@ -16899,7 +16899,7 @@
     "MathFontMatrixFencesRetainBothControlOwnersAndBoundedArgumentRoles",
     "MathFontMatrixFunctionArgumentsRetainOwnersIndependentPaintAndBoundedFallback",
     "MathFontMatrixHiddenEmptyCellsKeepSlotsRowFramesAndFirstPaintedOwner",
-    "MathFontMatrixHiddenEmptyCellsPreserveVisibilityFallbackCancellationAndWork",
+    "MathFontMatrixHiddenEmptyCellsRetainFallbackAndCancellation",
     "MathFontMatrixLiteralCellsShareSlotsAxisAndMetricOnlyControl",
     "MathFontMatrixMixedCellsKeepOrderedSourcesAndCompleteFallbacks",
     "MathFontMatrixMixedRowsRetainIndependentOwnersAndWholeFallback",

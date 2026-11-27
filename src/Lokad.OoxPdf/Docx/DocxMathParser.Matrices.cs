@@ -61,7 +61,6 @@ internal static partial class DocxMathParser
         DocxTextRun? text = control is null ? null : readRun(control, string.Empty);
         return new(rows)
         { ColumnGroups = columnGroups, BaseJustificationValue = baseJustification, HasUnsupportedProperties = !valid,
-            HidePlaceholdersValue = ReadBoolean(owner, "plcHide"),
             MinimumColumnWidthTwips = minimumWidth, ColumnGapRuleValue = gapRule, ColumnGapValue = gapValue,
             ControlText = text, ControlFontFamily = text is null ? null : ControlFontFamily(control, text) };
     }
