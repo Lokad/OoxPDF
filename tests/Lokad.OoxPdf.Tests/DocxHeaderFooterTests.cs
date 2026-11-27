@@ -1021,25 +1021,26 @@ internal static partial class DocxHeaderFooterTests
         TestAssert.Equal(double.PositiveInfinity, layout.HeaderContentBottomByPage[0]);
     }
 
+    private static DocxParagraph CreateStaticParagraph(string text) => new(
+        [new DocxTextRun(text, 10d, null, false, false, false, null, null)],
+        [],
+        null,
+        DocxTextAlignment.Left,
+        null,
+        0d,
+        0d,
+        278d / 240d,
+        null,
+        new DocxParagraphSpacing(null, "0", null, null, null, null, null, null, null),
+        DocxParagraphKeepRules.Empty,
+        null);
+
     public static void DocxOverflowingFooterTopIsExposedOnLayout()
     {
         // Supports footer-overflow frame raising: two tokened footer paras advance
         // 11.5833 each inside an R1 bottom-anchored block (first baseline 33.7667),
         // so the content top (first baseline plus the 9.4 body-rule offset) lands at
         // 43.1667 on the layout for the renderer two-pass to raise the frame by.
-        static DocxParagraph StaticPara(string text) => new(
-            [new DocxTextRun(text, 10d, null, false, false, false, null, null)],
-            [],
-            null,
-            DocxTextAlignment.Left,
-            null,
-            0d,
-            0d,
-            278d / 240d,
-            null,
-            new DocxParagraphSpacing(null, "0", null, null, null, null, null, null, null),
-            DocxParagraphKeepRules.Empty,
-            null);
         DocxParagraph body = DocxTests.CreateDocxLayoutParagraph("Body", 10d, 10d);
         DocxPageSettings settings = DocxPageSettings.Empty with
         {
@@ -1047,7 +1048,7 @@ internal static partial class DocxHeaderFooterTests
             FooterDistancePoints = 20d,
             FooterBodyElementsByType = new Dictionary<string, IReadOnlyList<DocxBodyElement>>(StringComparer.OrdinalIgnoreCase)
             {
-                ["default"] = DocxTests.CreateParagraphBlocks(StaticPara("Fa"), StaticPara("Fb"))
+                ["default"] = DocxTests.CreateParagraphBlocks(CreateStaticParagraph("Fa"), CreateStaticParagraph("Fb"))
             }
         };
         DocxDocument document = new(200d, 200d, 10d, 10d, 20d, 20d, settings, [], [], [], [new DocxParagraphElement(body)]);
@@ -1061,28 +1062,15 @@ internal static partial class DocxHeaderFooterTests
         // breaks before footer content instead of overlapping it (30 body lines on page
         // one, then the break). The footer frame map raises the page bottom, so the
         // second 10pt body para no longer fits under the first on a 100pt page.
-        static DocxParagraph StaticPara(string text) => new(
-            [new DocxTextRun(text, 10d, null, false, false, false, null, null)],
-            [],
-            null,
-            DocxTextAlignment.Left,
-            null,
-            0d,
-            0d,
-            278d / 240d,
-            null,
-            new DocxParagraphSpacing(null, "0", null, null, null, null, null, null, null),
-            DocxParagraphKeepRules.Empty,
-            null);
-        DocxParagraph first = StaticPara("One");
-        DocxParagraph second = StaticPara("Two");
+        DocxParagraph first = CreateStaticParagraph("One");
+        DocxParagraph second = CreateStaticParagraph("Two");
         DocxPageSettings settings = DocxPageSettings.Empty with
         {
             HeaderDistancePoints = 10d,
             FooterDistancePoints = 10d,
             FooterBodyElementsByType = new Dictionary<string, IReadOnlyList<DocxBodyElement>>(StringComparer.OrdinalIgnoreCase)
             {
-                ["default"] = DocxTests.CreateParagraphBlocks(StaticPara("F"))
+                ["default"] = DocxTests.CreateParagraphBlocks(CreateStaticParagraph("F"))
             }
         };
         DocxDocument document = new(100d, 100d, 10d, 10d, 10d, 10d, settings, [], [], [], [new DocxParagraphElement(first), new DocxParagraphElement(second)]);
@@ -1226,19 +1214,6 @@ internal static partial class DocxHeaderFooterTests
         // first story defined, page one shows no header (Word does not fall back to the
         // default story), while page-one footers behave the same way. Guards the story
         // selection against default-fallback regressions.
-        static DocxParagraph StaticPara(string text) => new(
-            [new DocxTextRun(text, 10d, null, false, false, false, null, null)],
-            [],
-            null,
-            DocxTextAlignment.Left,
-            null,
-            0d,
-            0d,
-            278d / 240d,
-            null,
-            new DocxParagraphSpacing(null, "0", null, null, null, null, null, null, null),
-            DocxParagraphKeepRules.Empty,
-            null);
         DocxParagraph body = DocxTests.CreateDocxLayoutParagraph("Body", 10d, 10d);
         DocxPageSettings settings = DocxPageSettings.Empty with
         {
@@ -1247,7 +1222,7 @@ internal static partial class DocxHeaderFooterTests
             FooterDistancePoints = 20d,
             HeaderBodyElementsByType = new Dictionary<string, IReadOnlyList<DocxBodyElement>>(StringComparer.OrdinalIgnoreCase)
             {
-                ["default"] = DocxTests.CreateParagraphBlocks(StaticPara("H"))
+                ["default"] = DocxTests.CreateParagraphBlocks(CreateStaticParagraph("H"))
             }
         };
         DocxDocument document = new(200d, 200d, 10d, 10d, 20d, 20d, settings, [], [], [], [new DocxParagraphElement(body)]);
@@ -1260,19 +1235,6 @@ internal static partial class DocxHeaderFooterTests
         // Office A/B (w53 even-pages probe, Word-COM rendered): with even/odd headers on
         // and no even story defined, even pages show no header (Word does not fall back
         // to the default story there either), while odd pages keep the default story.
-        static DocxParagraph StaticPara(string text) => new(
-            [new DocxTextRun(text, 10d, null, false, false, false, null, null)],
-            [],
-            null,
-            DocxTextAlignment.Left,
-            null,
-            0d,
-            0d,
-            278d / 240d,
-            null,
-            new DocxParagraphSpacing(null, "0", null, null, null, null, null, null, null),
-            DocxParagraphKeepRules.Empty,
-            null);
         DocxParagraph body = new(
             [new DocxTextRun(string.Concat(Enumerable.Repeat("word ", 80)), 10d, null, false, false, false, null, null)],
             [],
@@ -1293,7 +1255,7 @@ internal static partial class DocxHeaderFooterTests
             FooterDistancePoints = 10d,
             HeaderBodyElementsByType = new Dictionary<string, IReadOnlyList<DocxBodyElement>>(StringComparer.OrdinalIgnoreCase)
             {
-                ["default"] = DocxTests.CreateParagraphBlocks(StaticPara("H"))
+                ["default"] = DocxTests.CreateParagraphBlocks(CreateStaticParagraph("H"))
             }
         };
         DocxDocument document = new(100d, 100d, 10d, 10d, 10d, 10d, settings, [], [], [], [new DocxParagraphElement(body)]);
@@ -1308,19 +1270,6 @@ internal static partial class DocxHeaderFooterTests
         // Supports header-overflow displacement: three tokened 10pt header paras
         // advance 11.5833 each from startY 180, so the trailing content bottom lands
         // at 145.25 on the layout for the renderer two-pass to displace by.
-        static DocxParagraph StaticPara(string text) => new(
-            [new DocxTextRun(text, 10d, null, false, false, false, null, null)],
-            [],
-            null,
-            DocxTextAlignment.Left,
-            null,
-            0d,
-            0d,
-            278d / 240d,
-            null,
-            new DocxParagraphSpacing(null, "0", null, null, null, null, null, null, null),
-            DocxParagraphKeepRules.Empty,
-            null);
         DocxParagraph body = DocxTests.CreateDocxLayoutParagraph("Body", 10d, 10d);
         DocxPageSettings settings = DocxPageSettings.Empty with
         {
@@ -1328,7 +1277,7 @@ internal static partial class DocxHeaderFooterTests
             FooterDistancePoints = 20d,
             HeaderBodyElementsByType = new Dictionary<string, IReadOnlyList<DocxBodyElement>>(StringComparer.OrdinalIgnoreCase)
             {
-                ["default"] = DocxTests.CreateParagraphBlocks(StaticPara("Ha"), StaticPara("Hb"), StaticPara("Hc"))
+                ["default"] = DocxTests.CreateParagraphBlocks(CreateStaticParagraph("Ha"), CreateStaticParagraph("Hb"), CreateStaticParagraph("Hc"))
             }
         };
         DocxDocument document = new(200d, 200d, 10d, 10d, 20d, 20d, settings, [], [], [], [new DocxParagraphElement(body)]);
@@ -1342,19 +1291,6 @@ internal static partial class DocxHeaderFooterTests
         // below overflowing header content (w39 body top equals header content bottom
         // 681.39). The displacement map pins the page start cursor, so the 10pt body
         // first baseline lands at 135.85 instead of the undisplaced 180.6.
-        static DocxParagraph StaticPara(string text) => new(
-            [new DocxTextRun(text, 10d, null, false, false, false, null, null)],
-            [],
-            null,
-            DocxTextAlignment.Left,
-            null,
-            0d,
-            0d,
-            278d / 240d,
-            null,
-            new DocxParagraphSpacing(null, "0", null, null, null, null, null, null, null),
-            DocxParagraphKeepRules.Empty,
-            null);
         DocxParagraph body = new(
             [new DocxTextRun("Body", 10d, null, false, false, false, null, null)],
             [],
@@ -1374,7 +1310,7 @@ internal static partial class DocxHeaderFooterTests
             FooterDistancePoints = 20d,
             HeaderBodyElementsByType = new Dictionary<string, IReadOnlyList<DocxBodyElement>>(StringComparer.OrdinalIgnoreCase)
             {
-                ["default"] = DocxTests.CreateParagraphBlocks(StaticPara("Ha"), StaticPara("Hb"), StaticPara("Hc"))
+                ["default"] = DocxTests.CreateParagraphBlocks(CreateStaticParagraph("Ha"), CreateStaticParagraph("Hb"), CreateStaticParagraph("Hc"))
             }
         };
         DocxDocument document = new(200d, 200d, 10d, 10d, 20d, 20d, settings, [], [], [], [new DocxParagraphElement(body)]);
@@ -1471,19 +1407,6 @@ internal static partial class DocxHeaderFooterTests
         // Pages beyond a short displacement map reuse its last entry (extra pages arise
         // from the displacement itself under a repeated header), so page two of a long
         // body starts displaced by the page-zero entry here.
-        static DocxParagraph StaticPara(string text) => new(
-            [new DocxTextRun(text, 10d, null, false, false, false, null, null)],
-            [],
-            null,
-            DocxTextAlignment.Left,
-            null,
-            0d,
-            0d,
-            278d / 240d,
-            null,
-            new DocxParagraphSpacing(null, "0", null, null, null, null, null, null, null),
-            DocxParagraphKeepRules.Empty,
-            null);
         DocxParagraph body = new(
             [new DocxTextRun(string.Concat(Enumerable.Repeat("word ", 80)), 10d, null, false, false, false, null, null)],
             [],
@@ -1503,7 +1426,7 @@ internal static partial class DocxHeaderFooterTests
             FooterDistancePoints = 10d,
             HeaderBodyElementsByType = new Dictionary<string, IReadOnlyList<DocxBodyElement>>(StringComparer.OrdinalIgnoreCase)
             {
-                ["default"] = DocxTests.CreateParagraphBlocks(StaticPara("H"))
+                ["default"] = DocxTests.CreateParagraphBlocks(CreateStaticParagraph("H"))
             }
         };
         DocxDocument document = new(100d, 100d, 10d, 10d, 10d, 10d, settings, [], [], [], [new DocxParagraphElement(body)]);
@@ -1521,19 +1444,6 @@ internal static partial class DocxHeaderFooterTests
         // Aptos16 22.56 vs 22.624), while the layout used windows extents (12.0 here);
         // header origin follows the body baseline rule (w39 bare-11 inset 10.44 vs
         // body-bare 10.46), not winAscent (which sits 0.31 high at this size).
-        static DocxParagraph StaticPara(string text) => new(
-            [new DocxTextRun(text, 10d, null, false, false, false, null, null)],
-            [],
-            null,
-            DocxTextAlignment.Left,
-            null,
-            0d,
-            0d,
-            278d / 240d,
-            null,
-            new DocxParagraphSpacing(null, "0", null, null, null, null, null, null, null),
-            DocxParagraphKeepRules.Empty,
-            null);
         DocxParagraph body = DocxTests.CreateDocxLayoutParagraph("Body", 10d, 10d);
         DocxPageSettings settings = DocxPageSettings.Empty with
         {
@@ -1541,7 +1451,7 @@ internal static partial class DocxHeaderFooterTests
             FooterDistancePoints = 20d,
             HeaderBodyElementsByType = new Dictionary<string, IReadOnlyList<DocxBodyElement>>(StringComparer.OrdinalIgnoreCase)
             {
-                ["default"] = DocxTests.CreateParagraphBlocks(StaticPara("Ha"), StaticPara("Hb"))
+                ["default"] = DocxTests.CreateParagraphBlocks(CreateStaticParagraph("Ha"), CreateStaticParagraph("Hb"))
             }
         };
         DocxDocument document = new(200d, 200d, 10d, 10d, 20d, 20d, settings, [], [], [], [new DocxParagraphElement(body)]);
@@ -1560,19 +1470,6 @@ internal static partial class DocxHeaderFooterTests
         // block bottom-anchors its trailing cursor at the footer distance, so this
         // two-line tokened block lands its first baseline at 33.7667 with the 11.5833
         // pitch preserved.
-        static DocxParagraph StaticPara(string text) => new(
-            [new DocxTextRun(text, 10d, null, false, false, false, null, null)],
-            [],
-            null,
-            DocxTextAlignment.Left,
-            null,
-            0d,
-            0d,
-            278d / 240d,
-            null,
-            new DocxParagraphSpacing(null, "0", null, null, null, null, null, null, null),
-            DocxParagraphKeepRules.Empty,
-            null);
         DocxParagraph body = DocxTests.CreateDocxLayoutParagraph("Body", 10d, 10d);
         DocxPageSettings settings = DocxPageSettings.Empty with
         {
@@ -1580,7 +1477,7 @@ internal static partial class DocxHeaderFooterTests
             FooterDistancePoints = 20d,
             FooterBodyElementsByType = new Dictionary<string, IReadOnlyList<DocxBodyElement>>(StringComparer.OrdinalIgnoreCase)
             {
-                ["default"] = DocxTests.CreateParagraphBlocks(StaticPara("Fa"), StaticPara("Fb"))
+                ["default"] = DocxTests.CreateParagraphBlocks(CreateStaticParagraph("Fa"), CreateStaticParagraph("Fb"))
             }
         };
         DocxDocument document = new(200d, 200d, 10d, 10d, 20d, 20d, settings, [], [], [], [new DocxParagraphElement(body)]);
@@ -1637,19 +1534,6 @@ internal static partial class DocxHeaderFooterTests
         // compromise (9.5232 here) and spacing by s. The production-plumbing mirror
         // (scaled layout measurer plus raw fallback) must advance by raw single times
         // factor times the spacing scale.
-        static DocxParagraph StaticPara(string text) => new(
-            [new DocxTextRun(text, 10d, null, false, false, false, null, null)],
-            [],
-            null,
-            DocxTextAlignment.Left,
-            null,
-            0d,
-            0d,
-            278d / 240d,
-            null,
-            new DocxParagraphSpacing(null, "0", null, null, null, null, null, null, null),
-            DocxParagraphKeepRules.Empty,
-            null);
         DocxParagraph body = DocxTests.CreateDocxLayoutParagraph("Body", 10d, 10d);
         DocxPageSettings settings = DocxPageSettings.Empty with
         {
@@ -1657,7 +1541,7 @@ internal static partial class DocxHeaderFooterTests
             FooterDistancePoints = 20d,
             HeaderBodyElementsByType = new Dictionary<string, IReadOnlyList<DocxBodyElement>>(StringComparer.OrdinalIgnoreCase)
             {
-                ["default"] = DocxTests.CreateParagraphBlocks(StaticPara("Ha"), StaticPara("Hb"))
+                ["default"] = DocxTests.CreateParagraphBlocks(CreateStaticParagraph("Ha"), CreateStaticParagraph("Hb"))
             }
         };
         DocxDocument document = new(200d, 200d, 10d, 10d, 20d, 20d, settings, [], [], [], [new DocxParagraphElement(body)]);
