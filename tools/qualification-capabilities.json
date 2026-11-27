@@ -6760,6 +6760,7 @@
     "DocxTableLayoutStageScalesGridTo",
     "DocxTableLayoutStageDistributesAutoLayoutByContentWidth",
     "DocxTableLayoutStageKeepsAutoPreferredCellWidths",
+    "=DocxTableAutofitHonorsNoWrapWidthFloorsWithinNeighborMinima",
     "DocxTableLayoutStageDistributesMissingGridWithSpansAcrossLogicalColumns",
     "DocxTableLayoutStageInfersEmptyMissingGridFromRowSpans",
     "DocxTableLayoutStageUsesFirstRowCellPreferredWidths",

@@ -639,6 +639,43 @@ internal static class DocxTablesLayoutTests
         TestAssert.True(row.Cells[0].Width > row.Cells[1].Width, "Preferred cell widths should survive auto layout. Width0=" + row.Cells[0].Width.ToString(CultureInfo.InvariantCulture) + " Width1=" + row.Cells[1].Width.ToString(CultureInfo.InvariantCulture));
     }
 
+    public static void DocxTableAutofitHonorsNoWrapWidthFloorsWithinNeighborMinima()
+    {
+        DocxTableCell Cell(string text) => new([DocxTests.CreateDocxLayoutParagraph(text, 10d, 12d)],
+            null, null, null, null, [], DocxTableCellMargins.Empty, PreferredWidthPoints: 110d,
+            PreferredWidthType: "dxa");
+
+        DocxTableCell left = Cell("Left");
+        DocxTableCell right = Cell("Firstword Secondword");
+        var ordinary = new DocxTableRow([left, right], null);
+        var withFloor = new DocxTableRow([left with { NoWrap = true }, right], null);
+        var noRoom = new DocxTableRow([left, Cell(new string('A', 16))], null);
+        var table = new DocxTable("autofit", [90d, 90d], [ordinary])
+        {
+            PreferredWidthPoints = 180d,
+            PreferredWidthType = "dxa"
+        };
+
+        AssertColumns([ordinary], 90d, 90d);
+        AssertColumns([ordinary, withFloor], 110d, 70d);
+        AssertColumns([withFloor, noRoom], 90d, 90d);
+
+        void AssertColumns(IReadOnlyList<DocxTableRow> rows, double leftWidth, double rightWidth)
+        {
+            var document = DocxTests.CreateLayoutTestDocument([new DocxTableElement(table with { Rows = rows })]);
+            var layout = new DocxLayoutEngine(OoxPdfDocxMarkupGeometryMode.PreserveDocumentLayout)
+                .Create(document, new DocxTests.FamilyWidthTextMeasurer(), default).Pages
+                .SelectMany(page => page.Items).OfType<DocxTableRowLayout>().ToArray();
+            TestAssert.Equal(rows.Count, layout.Length);
+            foreach (DocxTableRowLayout row in layout)
+            {
+                TestAssert.Equal(leftWidth, row.Cells[0].Width);
+                TestAssert.Equal(rightWidth, row.Cells[1].Width);
+                TestAssert.Equal(row.Cells[0].X + leftWidth, row.Cells[1].X);
+            }
+        }
+    }
+
     public static void DocxTableLayoutStageDistributesMissingGridWithSpansAcrossLogicalColumns() =>
         AssertMissingGridColumnGeometry([72d, 72d, 72d]);
 

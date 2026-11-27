@@ -1302,12 +1302,94 @@ internal sealed partial class DocxLayoutEngine
         IReadOnlyList<double> effectiveColumns = GetEffectiveTableColumnWidths(targetTableWidth);
         double rawTableWidth = effectiveColumns.Sum();
         double scale = rawTableWidth <= 0d ? 1d : targetTableWidth / rawTableWidth;
-        return new DocxResolvedTableGrid(
-            gridX,
-            targetTableWidth,
-            effectiveColumns,
-            scale,
-            effectiveColumns.Select(width => width * scale).ToArray());
+        double[] resolvedColumns = effectiveColumns.Select(width => width * scale).ToArray();
+        if (resolvedColumns.Length > 1 && textMeasurer is not null &&
+            TryHonorNoWrapWidthFloors(resolvedColumns, textMeasurer))
+            return new DocxResolvedTableGrid(gridX, targetTableWidth, resolvedColumns, 1d, resolvedColumns);
+
+        return new DocxResolvedTableGrid(gridX, targetTableWidth, effectiveColumns, scale, resolvedColumns);
+
+        bool TryHonorNoWrapWidthFloors(double[] widths, IDocxTextMeasurer measurer)
+        {
+            double[]? floors = null;
+            foreach (DocxTableRow row in table.Rows)
+            {
+                int column = row.GridBefore;
+                foreach (DocxTableCell cell in row.Cells)
+                {
+                    cancellationToken.ThrowIfCancellationRequested();
+                    int span = Math.Max(1, cell.GridSpan);
+                    if (cell.NoWrapWidthFloorPoints is { } floor)
+                    {
+                        if (span != 1 || column < 0 || column >= widths.Length) return false;
+                        floors ??= new double[widths.Length];
+                        floors[column] = Math.Max(floors[column], floor * fixedScale);
+                    }
+                    column += span;
+                }
+            }
+            if (floors is null) return false;
+
+            double required = 0d;
+            for (int column = 0; column < widths.Length; column++)
+                required += Math.Max(0d, floors[column] - widths[column]);
+            if (required <= 0d) return false;
+
+            // Only shrink a column by the space above its content minimum in
+            // every row. Partial spans require a coupled width calculation.
+            for (int rowIndex = 0; rowIndex < table.Rows.Count; rowIndex++)
+            {
+                DocxTableRow row = table.Rows[rowIndex];
+                int column = row.GridBefore;
+                foreach (DocxTableCell cell in row.Cells)
+                {
+                    cancellationToken.ThrowIfCancellationRequested();
+                    int span = Math.Max(1, cell.GridSpan);
+                    if (column == 0 && span == widths.Length) break;
+                    if (span != 1 || column < 0 || column >= widths.Length) return false;
+                    if (floors[column] < widths[column])
+                    {
+                        double? minimum = MeasureDonorWidth(cell,
+                            ResolveTableHeaderPageNumber(rowIndex, pageNumber, headerSourcePages), measurer);
+                        floors[column] = Math.Max(floors[column], Math.Min(widths[column], minimum ?? widths[column]));
+                    }
+                    column++;
+                }
+            }
+
+            double available = 0d;
+            for (int column = 0; column < widths.Length; column++)
+                available += Math.Max(0d, widths[column] - floors[column]);
+            if (available < required) return false;
+
+            double remainingShare = (available - required) / available;
+            for (int column = 0; column < widths.Length; column++)
+                widths[column] = floors[column] + Math.Max(0d, widths[column] - floors[column]) * remainingShare;
+            return true;
+        }
+
+        double? MeasureDonorWidth(DocxTableCell cell, DocxPageNumber? rowPageNumber, IDocxTextMeasurer measurer)
+        {
+            // The intrinsic text minimum assumes ordinary horizontal wrapping.
+            if (!cell.HasHorizontalTextDirection || cell.FitText || cell.NoWrapSuppressesTextWrapping || cell.UsesFixedRowLayout)
+                return null;
+
+            double paragraphInsets = 0d;
+            foreach (DocxBodyElement element in DocxTableCellContent.GetBodyElements(cell))
+            {
+                cancellationToken.ThrowIfCancellationRequested();
+                if (element is not DocxParagraphElement { Paragraph: { ListLabel: null } paragraph }) return null;
+                double start = Math.Max(GetParagraphTextStartOffset(paragraph, fixedScale),
+                    GetParagraphFirstLineIndentOffset(paragraph, fixedScale));
+                paragraphInsets = Math.Max(paragraphInsets, start + Math.Max(0d, GetParagraphRightInset(paragraph, fixedScale)));
+            }
+
+            double? content = MeasureTableCellMinContentWidth(cell, measurer, rowPageNumber, pageCount,
+                fixedScale, commentMarkerLabels, mathEquations, cancellationToken);
+            return content + paragraphInsets +
+                ResolveTableCellHorizontalEdgeInset(cell, "left", cell.Margins.LeftPoints, fixedScale) +
+                ResolveTableCellHorizontalEdgeInset(cell, "right", cell.Margins.RightPoints, fixedScale);
+        }
 
         IReadOnlyList<double> GetEffectiveTableColumnWidths(double preferredTableWidth)
         {
