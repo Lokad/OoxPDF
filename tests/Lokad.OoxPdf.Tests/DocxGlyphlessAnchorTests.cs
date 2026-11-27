@@ -88,6 +88,44 @@ internal static class DocxGlyphlessAnchorTests
         }
     }
 
+    public static void DocxGlyphlessInlineBoxPicturesSurviveWithoutFontPrograms()
+    {
+        byte[] png = TestFixtures.CreateRgbPng(1, 1, [0, 255, 0]);
+        string box = $"""
+            <w:p><w:r><w:drawing><wp:inline>
+              <wp:extent cx="1143000" cy="1143000"/><wp:docPr id="1" name="Picture box"/>
+              <a:graphic><a:graphicData uri="http://schemas.microsoft.com/office/word/2010/wordprocessingShape">
+                <wps:wsp xmlns:wps="http://schemas.microsoft.com/office/word/2010/wordprocessingShape">
+                  <wps:txbx><w:txbxContent><w:p>{TestFixtures.DocxInlinePngRun}</w:p></w:txbxContent></wps:txbx>
+                  <wps:bodyPr lIns="12700" tIns="12700" rIns="12700" bIns="12700"/>
+                </wps:wsp>
+              </a:graphicData></a:graphic>
+            </wp:inline></w:drawing></w:r></w:p>
+            """;
+        string body = TestFixtures.WriteDocxInlinePng(box, png);
+        string cell = TestFixtures.WriteDocxInlinePng($"""
+            <w:tbl>
+              <w:tblGrid><w:gridCol w:w="4000"/></w:tblGrid>
+              <w:tr><w:tc>{box}</w:tc></w:tr>
+            </w:tbl>
+            """, png);
+        foreach (var (mode, geometry) in Views())
+        foreach (string input in new[] { body, cell })
+        {
+            PdfPage page = Render(input, new EmptyProgramResolver(), mode, geometry).Single();
+            TestAssert.Equal(0, page.Fonts.Count);
+            double[] frame = PaintedFrame(page);
+            TestAssert.Equal(72d, frame[0]);
+            TestAssert.Equal(72d, frame[1]);
+            using var compressed = new MemoryStream(page.Images.Single().Image.Bytes);
+            using var rgb = new ZLibStream(compressed, CompressionMode.Decompress);
+            TestAssert.Equal(0, rgb.ReadByte());
+            TestAssert.Equal(255, rgb.ReadByte());
+            TestAssert.Equal(0, rgb.ReadByte());
+            TestAssert.Equal(-1, rgb.ReadByte());
+        }
+    }
+
     public static void DocxGlyphlessAnchorsFollowBlankSlotsAndPageBreaks()
     {
         var parts = ReadParts(CreateDocument());

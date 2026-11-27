@@ -2470,7 +2470,7 @@ internal sealed partial class DocxLayoutEngine
         DocxRelatedStory story,
         int storyIndex,
         double bodyWidth,
-        IDocxTextMeasurer textMeasurer,
+        IDocxTextMeasurer? textMeasurer,
         double defaultTabStopPoints,
         double paragraphSpacingScale,
         DocxPageNumber? pageNumber,
@@ -2574,8 +2574,8 @@ internal sealed partial class DocxLayoutEngine
                     if (mathEquations.ContainsKey(equation)) { hasPreparedMath = true; break; }
                 }
             bool ordinaryBoxParagraph = textBoxParagraph && !hasPreparedMath;
-            if (textBoxParagraph || paragraph.Equations.Count != 0 &&
-                story.IsNormalStoryType && story.Kind is DocxRelatedStoryKind.Footnote or DocxRelatedStoryKind.Endnote)
+            if (textMeasurer is not null && (textBoxParagraph || paragraph.Equations.Count != 0 &&
+                story.IsNormalStoryType && story.Kind is DocxRelatedStoryKind.Footnote or DocxRelatedStoryKind.Endnote))
             {
                 double size = GetParagraphFontSize(paragraph);
                 double lineHeight = ResolveLineHeightProfile(paragraph, size, textMeasurer, selectMaxAcrossRuns: !ordinaryBoxParagraph).LineHeight;
@@ -2622,7 +2622,8 @@ internal sealed partial class DocxLayoutEngine
                     continue;
                 }
             }
-            (IReadOnlyList<DocxTextLineLayout> paragraphLines, IReadOnlyList<DocxInlineImageLayout> placedStoryImages, double paragraphUsedHeight, double paragraphBaselineOffset) = LayoutRelatedStoryParagraphTextLines(
+            (IReadOnlyList<DocxTextLineLayout> paragraphLines, IReadOnlyList<DocxInlineImageLayout> placedStoryImages, double paragraphUsedHeight, double paragraphBaselineOffset) =
+                textMeasurer is null ? ([], [], 0d, 0d) : LayoutRelatedStoryParagraphTextLines(
                 paragraph,
                 paragraphSpacingScale,
                 elementIndex,
@@ -2663,7 +2664,8 @@ internal sealed partial class DocxLayoutEngine
                     continue;
                 }
 
-                var (imageWidth, imageHeight) = ResolveInlineImageSize(image, bodyWidth, 1d);
+                var (imageWidth, imageHeight) = ResolveInlineImageSize(image, bodyWidth,
+                    textMeasurer is null ? paragraphSpacingScale : 1d);
                 double imageX = paragraph.EffectiveProperties.Alignment switch
                 {
                     DocxTextAlignment.Center => Math.Max(0, bodyWidth - imageWidth) / 2d,

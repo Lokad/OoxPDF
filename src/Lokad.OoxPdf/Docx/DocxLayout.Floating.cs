@@ -715,7 +715,7 @@ internal sealed partial class DocxLayoutEngine
         IReadOnlyDictionary<DocxEquation, DocxPreparedMathParagraph>? mathEquations = null,
         int? pageCount = null)
     {
-        if (textMeasurer is null || !TryReadInlineBoxExtent(textBox, out double fileWidth, out double fileHeight))
+        if (!TryReadInlineBoxExtent(textBox, out double fileWidth, out double fileHeight))
         {
             return null;
         }
@@ -740,6 +740,11 @@ internal sealed partial class DocxLayoutEngine
             pageCount: pageCount,
             cancellationToken: cancellationToken,
             mathEquations: mathEquations);
+        if (textMeasurer is null && storyLayout is { InlineImages.Count: 0, TableRows.Count: 0 })
+        {
+            return null;
+        }
+
         double boxX = alignment switch
         {
             DocxTextAlignment.Center => x + Math.Max(0, width - boxWidth) / 2d,

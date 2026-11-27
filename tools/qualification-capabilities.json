@@ -19504,6 +19504,7 @@
   "docx-glyphless-anchors": [
     "DocxLayoutStageConsumesEmptyParagraphLineBox",
     "=DocxGlyphlessTablePicturesSurviveNestedCellsAndHeaders",
+    "=DocxGlyphlessInlineBoxPicturesSurviveWithoutFontPrograms",
     "DocxGlyphlessFloatingImagePaintsWithoutFontPrograms",
     "DocxGlyphlessFloatingFramesMatchAnExplicitFontControl",
     "DocxGlyphlessAnchorsFollowBlankSlotsAndPageBreaks",
