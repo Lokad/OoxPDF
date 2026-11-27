@@ -50,6 +50,10 @@ internal static partial class DocxMathTests
             new XElement(m + "boxPr", new XElement(m + "aln")),
             new XElement(m + "boxPr", new XElement(m + "brk")),
             new XElement(m + "boxPr", new XElement(m + "aln", new XAttribute(m + "val", "invalid"))),
+            new XElement(m + "boxPr", new XElement(m + "ctrlPr",
+                new XElement(w + "rPr", new XElement(w + "strike")))),
+            new XElement(m + "boxPr", new XElement(m + "ctrlPr",
+                new XElement(w + "rPr", new XElement(w + "dstrike", new XAttribute(w + "val", "invalid"))))),
             new XElement(m + "boxPr", new XElement(m + "ctrlPr", new XElement(w + "rPr", new XElement(w + "b"))))
         })
         {

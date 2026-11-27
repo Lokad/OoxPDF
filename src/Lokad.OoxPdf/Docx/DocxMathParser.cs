@@ -261,7 +261,7 @@ internal static partial class DocxMathParser
         bool neutral = property.Name.LocalName switch
         {
             "noProof" or "webHidden" => HasBooleanValue(value),
-            "outline" or "shadow" or "emboss" or "imprint" => OoxBoolean.IsOff(value),
+            "outline" or "shadow" or "emboss" or "imprint" or "strike" or "dstrike" => OoxBoolean.IsOff(value),
             "effect" or "em" or "u" or "highlight" => value == "none",
             "bdr" => value is "none" or "nil",
             _ => false

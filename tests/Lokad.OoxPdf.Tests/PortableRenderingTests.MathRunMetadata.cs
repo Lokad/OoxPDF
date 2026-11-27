@@ -289,7 +289,8 @@ internal static partial class PortableRenderingTests
             XElement[] arguments = numerators.Select(numerator => numerator.Parent!.Parent!).ToArray();
             arguments[0].Add(new XElement(m + "ctrlPr"));
             arguments[1].Add(new XElement(m + "ctrlPr",
-                new XElement(w + "rPr", new XElement(w + "noProof"))));
+                new XElement(w + "rPr", new XElement(w + "noProof"),
+                    new XElement(w + "dstrike", new XAttribute(w + "val", "false")))));
             arguments[2].AddFirst(new XElement(m + "argPr",
                 new XElement(m + "argSz", new XAttribute(m + "val", "0"))));
             arguments[2].Add(new XElement(m + "ctrlPr",
@@ -312,7 +313,8 @@ internal static partial class PortableRenderingTests
                     transparency.AddBeforeSelf(new XElement(m + "zeroWid", new XAttribute(m + "val", "0")),
                         new XElement(m + "zeroAsc", new XAttribute(m + "val", "false")),
                         new XElement(m + "zeroDesc", new XAttribute(m + "val", "0")));
-                    properties.Add(new XElement(m + "ctrlPr", new XElement(w + "rPr", new XElement(w + "noProof"))));
+                    properties.Add(new XElement(m + "ctrlPr", new XElement(w + "rPr", new XElement(w + "noProof"),
+                        new XElement(w + "strike", new XAttribute(w + "val", "0")))));
                 }
                 run.ReplaceWith(new XElement(m + "phant", properties, new XElement(m + "e", new XElement(run))));
             }
@@ -333,7 +335,8 @@ internal static partial class PortableRenderingTests
                 if (index == 2)
                 {
                     box.AddFirst(new XElement(m + "boxPr",
-                        new XElement(m + "ctrlPr", new XElement(w + "rPr", new XElement(w + "noProof")))));
+                        new XElement(m + "ctrlPr", new XElement(w + "rPr", new XElement(w + "noProof"),
+                            new XElement(w + "strike", new XAttribute(w + "val", "false"))))));
                 }
                 run.ReplaceWith(box);
             }
