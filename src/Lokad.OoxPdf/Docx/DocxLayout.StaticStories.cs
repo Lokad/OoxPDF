@@ -14,9 +14,8 @@ internal sealed partial class DocxLayoutEngine
     // static header zone clear on continuation pages (h5 takes 22 vs 25 blind with
     // the rule below the header text; nohdr agrees 25/25). The layout runs the same
     // static machinery as the final pass, so takes and rendering agree; callers map
-    // the keep-out through the first-pin shift into take space. Null when no usable
-    // static measurer is available. Plain document-end notes also use the selected
-    // footer's existing body-frame edge at unit scale.
+    // the keep-out through the first-pin shift into take space. Plain
+    // document-end notes also use the selected footer's body-frame edge.
     private static DocxStaticStoryLayoutResult? LayoutContinuationStaticStory(
         DocxLayoutPage templatePage,
         int pageNumber,
@@ -29,10 +28,8 @@ internal sealed partial class DocxLayoutEngine
         bool header,
         IReadOnlyDictionary<DocxEquation, DocxPreparedMathParagraph>? mathEquations = null)
     {
-        if (textMeasurer is not IDocxStaticTextMetricsProvider staticMetrics)
-        {
-            return null;
-        }
+        var staticMetrics = textMeasurer as IDocxStaticTextMetricsProvider;
+        IDocxTextMeasurer? storyMeasurer = staticMetrics is null ? null : textMeasurer;
 
         IDocxLineMetricsProvider? unscaledLineMetrics =
             (unscaledTextMeasurer as IDocxLineMetricsProvider) ?? (textMeasurer as IDocxLineMetricsProvider);
@@ -47,7 +44,7 @@ internal sealed partial class DocxLayoutEngine
             header,
             templatePage.GetPageNumber(pageNumber),
             pageCount,
-            textMeasurer,
+            storyMeasurer,
             staticMetrics,
             defaultTabStopPoints,
             paragraphSpacingScale,
@@ -140,19 +137,8 @@ internal sealed partial class DocxLayoutEngine
         IReadOnlyDictionary<DocxEquation, DocxPreparedMathParagraph>? mathEquations = null)
     {
         var drawings = new List<DocxFloatingDrawingLayout>();
-        if (textMeasurer is not IDocxStaticTextMetricsProvider staticMetrics)
-        {
-            for (int pageIndex = 0; pageIndex < pages.Count; pageIndex++)
-            {
-                cancellationToken.ThrowIfCancellationRequested();
-                DocxLayoutPage page = pages[pageIndex];
-                if (page.IsBlankParityPage) continue;
-                string variant = GetStaticStoryVariant(page.PageSettings, page.GetPageNumber(pageIndex + 1), page.SectionFirstPageNumber);
-                AddDrawings(page, pageIndex, true, SelectStaticHeaderFooterDrawings(page.PageSettings, header: true, variant), null);
-                AddDrawings(page, pageIndex, false, SelectStaticHeaderFooterDrawings(page.PageSettings, header: false, variant), null);
-            }
-            return (pages, drawings, new Dictionary<int, double>(), new Dictionary<int, double>());
-        }
+        var staticMetrics = textMeasurer as IDocxStaticTextMetricsProvider;
+        IDocxTextMeasurer? storyMeasurer = staticMetrics is null ? null : textMeasurer;
 
         IDocxLineMetricsProvider? unscaledLineMetrics =
             (unscaledTextMeasurer as IDocxLineMetricsProvider) ?? (textMeasurer as IDocxLineMetricsProvider);
@@ -186,7 +172,7 @@ internal sealed partial class DocxLayoutEngine
                     true,
                     pageNumber,
                     pages.Count,
-                    textMeasurer,
+                    storyMeasurer,
                     staticMetrics,
                     defaultTabStopPoints,
                     paragraphSpacingScale,
@@ -200,7 +186,7 @@ internal sealed partial class DocxLayoutEngine
                     false,
                     pageNumber,
                     pages.Count,
-                    textMeasurer,
+                    storyMeasurer,
                     staticMetrics,
                     defaultTabStopPoints,
                     paragraphSpacingScale,
@@ -259,8 +245,8 @@ internal sealed partial class DocxLayoutEngine
         bool isHeader,
         DocxPageNumber pageNumber,
         int pageCount,
-        IDocxTextMeasurer textMeasurer,
-        IDocxStaticTextMetricsProvider staticMetrics,
+        IDocxTextMeasurer? textMeasurer,
+        IDocxStaticTextMetricsProvider? staticMetrics,
         double defaultTabStopPoints,
         double paragraphSpacingScale,
         IDocxLineMetricsProvider? unscaledLineMetrics,
@@ -336,9 +322,10 @@ internal sealed partial class DocxLayoutEngine
                 GetParagraphFirstLineIndentOffset(paragraph, paragraphSpacingScale) != 0d ||
                 GetParagraphTextStartOffset(paragraph, paragraphSpacingScale) != 0d ||
                 GetParagraphRightInset(paragraph, paragraphSpacingScale) != 0d);
-            if (paragraph.Equations.Count != 0 || paragraph.ListLabel is not null && paragraph.Images.Count == 0 ||
-                paragraph.InlineTextBoxes.Count != 0 || needsInlineFrame ||
-                sourcePictures && (!pictureOnly || unscaledLineMetrics is not null))
+            if (textMeasurer is not null &&
+                (paragraph.Equations.Count != 0 || paragraph.ListLabel is not null && paragraph.Images.Count == 0 ||
+                 paragraph.InlineTextBoxes.Count != 0 || needsInlineFrame ||
+                 sourcePictures && (!pictureOnly || unscaledLineMetrics is not null)))
             {
                 double size = GetParagraphFontSize(paragraph);
                 var profile = ResolveLineHeightProfile(paragraph, size, textMeasurer);
@@ -390,10 +377,10 @@ internal sealed partial class DocxLayoutEngine
                     continue;
                 }
             }
-            DocxTextSpan[] spans = CreateTextSpans(paragraph.Runs, pageNumber, pageCount);
+            DocxTextSpan[] spans = textMeasurer is null ? [] : CreateTextSpans(paragraph.Runs, pageNumber, pageCount);
             int sourceLineIndex = 0;
             var placedStaticImages = new List<DocxInlineImage>();
-            if (spans.Length != 0)
+            if (textMeasurer is not null && staticMetrics is not null && spans.Length != 0)
             {
                 // Token admission is shared with flowing/ordered inline content;
                 // the static story still owns its metrics, placement and alignment.
@@ -503,7 +490,7 @@ internal sealed partial class DocxLayoutEngine
                     IReadOnlyList<DocxTextSegmentLayout> segments = justifyLine
                         ? CreateJustifiedTextSegments(line.Spans, lineX, lineAlignWidth - lineImageWidth, width,
                             lineImageWidth, staticFontSize, textMeasurer, [], defaultTabStopPoints * paragraphSpacingScale)
-                        : CreateStaticTextSegments(line.Spans, lineX);
+                        : CreateStaticTextSegments(line.Spans, lineX, textMeasurer);
                     if (justifyLine) lineWidth = width;
                     IReadOnlyList<DocxTextSegmentLayout> emissionSegments = segments;
                     if (staticMidLinePlan is not null && staticMidLinePlan.ImagesByLine[staticLineIndex].Count != 0)
@@ -803,7 +790,8 @@ internal sealed partial class DocxLayoutEngine
             return CreateMidLinePlan(planParagraph, planSpans, planLines, planWidth, planWidth, maxDisplacement);
         }
 
-        IReadOnlyList<DocxTextSegmentLayout> CreateStaticTextSegments(IReadOnlyList<DocxTextSpan> spans, double lineX)
+        static IReadOnlyList<DocxTextSegmentLayout> CreateStaticTextSegments(IReadOnlyList<DocxTextSpan> spans, double lineX,
+            IDocxTextMeasurer textMeasurer)
         {
             var segments = new List<DocxTextSegmentLayout>(spans.Count);
             double segmentX = lineX;

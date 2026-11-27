@@ -447,7 +447,6 @@ internal sealed partial class DocxLayoutEngine
                 pendingSpacingAfter = 0d;
                 previousParagraph = null;
                 previousParagraphHasText = false;
-                if (measurer is null) continue;
                 var frame = CreateTableLayoutFrame(tableElement.Table, nestedTableIndex++, sourceBlockIndex: -1,
                     cellX + paddingLeft, textWidth, cellHeight, measurer, context.DefaultTabStopPoints,
                     context.CancellationToken, context.PageNumber, context.PageCount,

@@ -81,13 +81,13 @@ internal sealed partial class DocxLayoutEngine
 
     private static DocxStaticStoryLayoutResult CreatePageStaticStoryLayout(
         DocxLayoutPage page, DocxSelectedStaticStory story, double x, double width, double startY,
-        bool isHeader, DocxPageNumber pageNumber, int pageCount, IDocxTextMeasurer textMeasurer,
-        IDocxStaticTextMetricsProvider staticMetrics, double defaultTabStopPoints, double scale,
+        bool isHeader, DocxPageNumber pageNumber, int pageCount, IDocxTextMeasurer? textMeasurer,
+        IDocxStaticTextMetricsProvider? staticMetrics, double defaultTabStopPoints, double scale,
         IDocxLineMetricsProvider? unscaledLineMetrics, CancellationToken token,
         IReadOnlyDictionary<DocxEquation, DocxPreparedMathParagraph>? mathEquations,
         IDocxTextMeasurer? unscaledTextMeasurer)
     {
-        bool canMap = scale is > 0d and < 1d && double.IsFinite(width / scale) &&
+        bool canMap = staticMetrics is not null && scale is > 0d and < 1d && double.IsFinite(width / scale) &&
             unscaledTextMeasurer is IDocxStaticTextMetricsProvider &&
             // Each story owns its measured frame. A counterpart's fallback
             // cannot revoke physical placement of otherwise supported content;

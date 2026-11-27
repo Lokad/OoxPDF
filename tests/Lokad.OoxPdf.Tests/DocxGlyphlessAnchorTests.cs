@@ -35,6 +35,59 @@ internal static class DocxGlyphlessAnchorTests
         }
     }
 
+    public static void DocxGlyphlessTablePicturesSurviveNestedCellsAndHeaders()
+    {
+        byte[] png = TestFixtures.CreateRgbPng(1, 1, [0, 255, 0]);
+        string nested = TestFixtures.WriteDocxInlinePng($"""
+            <w:tbl>
+              <w:tblGrid><w:gridCol w:w="4000"/></w:tblGrid>
+              <w:tr><w:tc>
+                <w:tbl>
+                  <w:tblGrid><w:gridCol w:w="2880"/></w:tblGrid>
+                  <w:tr><w:tc><w:p>{TestFixtures.DocxInlinePngRun}</w:p></w:tc></w:tr>
+                </w:tbl>
+                <w:p/>
+              </w:tc></w:tr>
+            </w:tbl>
+            """, png);
+        XNamespace w = OoxNamespaces.WordprocessingNamespace;
+        XNamespace r = OoxNamespaces.RelationshipsNamespace;
+        XElement source = XElement.Parse(System.Text.Encoding.UTF8.GetString(ReadParts(nested)["word/document.xml"]));
+        XElement body = source.Element(w + "body")!;
+        XElement table = body.Element(w + "tbl")!;
+        var header = new XElement(w + "hdr", source.Attributes(), table.Descendants(w + "tbl").Single());
+        table.ReplaceWith(new XElement(w + "p"));
+        XElement section = body.Element(w + "sectPr")!;
+        section.AddFirst(new XElement(w + "headerReference",
+            new XAttribute(w + "type", "default"), new XAttribute(r + "id", "rIdHeader1")));
+        section.Add(new XElement(w + "pgMar", new XAttribute(w + "top", "2880"), new XAttribute(w + "header", "360")));
+        string staticCell = TestFixtures.WriteDocxHeaderImage(source.ToString(SaveOptions.DisableFormatting),
+            header.ToString(SaveOptions.DisableFormatting), png);
+
+        foreach (var (mode, geometry) in Views())
+        foreach (var (input, expectedClips) in new[] { (nested, 2), (staticCell, 1) })
+        {
+            PdfPage page = Render(input, new EmptyProgramResolver(), mode, geometry).Single();
+            TestAssert.Equal(0, page.Fonts.Count);
+            double[] frame = PaintedFrame(page);
+            TestAssert.Equal(72d, frame[0]);
+            TestAssert.Equal(72d, frame[1]);
+            MatchCollection clips = Regex.Matches(page.Content,
+                @"([-\d.]+) ([-\d.]+) ([-\d.]+) ([-\d.]+) re W n");
+            TestAssert.Equal(expectedClips, clips.Count);
+            foreach (Match clip in clips)
+            {
+                double x = Coordinate(1), y = Coordinate(2);
+                TestAssert.True(frame[2] >= x - .001d && frame[3] >= y - .001d &&
+                    frame[2] + frame[0] <= x + Coordinate(3) + .001d &&
+                    frame[3] + frame[1] <= y + Coordinate(4) + .001d,
+                    "Every containing cell clip must retain the full picture.");
+
+                double Coordinate(int index) => double.Parse(clip.Groups[index].Value, CultureInfo.InvariantCulture);
+            }
+        }
+    }
+
     public static void DocxGlyphlessAnchorsFollowBlankSlotsAndPageBreaks()
     {
         var parts = ReadParts(CreateDocument());

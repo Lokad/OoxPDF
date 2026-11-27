@@ -307,7 +307,7 @@ internal sealed partial class DocxLayoutEngine
         double width,
         double cursorY,
         DocxStoryId? staticStory,
-        IDocxTextMeasurer textMeasurer,
+        IDocxTextMeasurer? textMeasurer,
         double defaultTabStopPoints,
         double paragraphSpacingScale,
         DocxPageNumber? pageNumber,
@@ -333,7 +333,7 @@ internal sealed partial class DocxLayoutEngine
                 FragmentReason: "None", Story: staticStory, pageCount: pageCount,
                 paragraphSpacingScale: paragraphSpacingScale, cellMemo: cellMemo, previousRow: rows.LastOrDefault());
             // A related story lays out in its own frame and projects the contained baselines.
-            rows.Add(staticStory is null
+            rows.Add(staticStory is null && textMeasurer is not null
                 ? ProjectContainedTableBaselines(row, textMeasurer, paragraphSpacingScale, cancellationToken)
                 : row);
             cursorY -= rowHeight;
