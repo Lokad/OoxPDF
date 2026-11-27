@@ -945,66 +945,32 @@ internal static class DocxTablesTests
 
     public static void DocxSyntheticTableCellInlinePngRendersImageXObject()
     {
-        string input = TestFixtures.WriteTempPackage(".docx", new Dictionary<string, byte[]>
-        {
-            ["[Content_Types].xml"] = TestFixtures.Utf8("""
-                <?xml version="1.0" encoding="UTF-8"?>
-                <Types xmlns="http://schemas.openxmlformats.org/package/2006/content-types">
-                  <Default Extension="rels" ContentType="application/vnd.openxmlformats-package.relationships+xml"/>
-                  <Default Extension="xml" ContentType="application/xml"/>
-                  <Default Extension="png" ContentType="image/png"/>
-                  <Override PartName="/word/document.xml" ContentType="application/vnd.openxmlformats-officedocument.wordprocessingml.document.main+xml"/>
-                </Types>
-                """),
-            ["_rels/.rels"] = TestFixtures.Utf8("""
-                <?xml version="1.0" encoding="UTF-8"?>
-                <Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">
-                  <Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/officeDocument" Target="word/document.xml"/>
-                </Relationships>
-                """),
-            ["word/_rels/document.xml.rels"] = TestFixtures.Utf8("""
-                <?xml version="1.0" encoding="UTF-8"?>
-                <Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">
-                  <Relationship Id="rIdImage1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/image" Target="media/image1.png"/>
-                </Relationships>
-                """),
-            ["word/document.xml"] = TestFixtures.Utf8("""
-                <?xml version="1.0" encoding="UTF-8"?>
-                <w:document xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main"
-                            xmlns:wp="http://schemas.openxmlformats.org/drawingml/2006/wordprocessingDrawing"
-                            xmlns:a="http://schemas.openxmlformats.org/drawingml/2006/main"
-                            xmlns:pic="http://schemas.openxmlformats.org/drawingml/2006/picture"
-                            xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships">
-                  <w:body>
-                    <w:tbl>
-                      <w:tblGrid><w:gridCol w:w="2880"/></w:tblGrid>
-                      <w:tr><w:tc><w:p><w:r>
-                        <w:drawing>
-                          <wp:inline>
-                            <wp:extent cx="914400" cy="914400"/>
-                            <a:graphic>
-                              <a:graphicData uri="http://schemas.openxmlformats.org/drawingml/2006/picture">
-                                <pic:pic><pic:blipFill><a:blip r:embed="rIdImage1"/></pic:blipFill></pic:pic>
-                              </a:graphicData>
-                            </a:graphic>
-                          </wp:inline>
-                        </w:drawing>
-                      </w:r></w:p></w:tc></w:tr>
-                    </w:tbl>
-                    <w:sectPr><w:pgSz w:w="12240" w:h="15840"/></w:sectPr>
-                  </w:body>
-                </w:document>
-                """),
-            ["word/media/image1.png"] = TestFixtures.CreateRgbPng(1, 1, [0, 255, 0])
-        });
-        string output = Path.ChangeExtension(Path.GetTempFileName(), ".pdf");
-
+        string input = TestFixtures.WriteDocxInlinePng($"""
+            <w:tbl>
+              <w:tblGrid><w:gridCol w:w="2880"/></w:tblGrid>
+              <w:tr><w:tc><w:p>{TestFixtures.DocxInlinePngRun}</w:p></w:tc></w:tr>
+            </w:tbl>
+            """, TestFixtures.CreateRgbPng(1, 1, [0, 255, 0]));
+        string output = TestFixtures.NewTemporaryPath(".pdf");
         OoxPdfConverter.Convert(input, output);
 
+        byte[] pixel = PptxTests.ReadPdfDeviceRgbImageStreams(output, width: 1, height: 1).Single();
+        TestAssert.True(pixel.AsSpan().SequenceEqual(new byte[] { 0, 255, 0 }),
+            "The cell picture must retain its authored green pixel.");
+
         string pdf = File.ReadAllText(output, Encoding.ASCII);
-        TestAssert.Contains("/Subtype /Image", pdf);
-        TestAssert.Contains("/Im1 Do", pdf);
-        TestAssert.Contains("/Width 1 /Height 1", pdf);
+        const string number = @"(-?[0-9.]+)";
+        Match paint = Regex.Match(pdf,
+            $@"q\s+{number} {number} {number} {number} re W n\s+q\s+72 0 0 72 {number} {number} cm\s+/Im1 Do\s+Q\s+Q");
+        TestAssert.True(paint.Success, "The 72-point image must be painted inside the cell clip.");
+        double clipX = ReadCoordinate(1), clipY = ReadCoordinate(2);
+        double imageX = ReadCoordinate(5), imageY = ReadCoordinate(6);
+        TestAssert.True(imageX >= clipX && imageX + 72 <= clipX + ReadCoordinate(3) + .001d &&
+            imageY >= clipY && imageY + 72 <= clipY + ReadCoordinate(4) + .001d &&
+            imageX >= 0 && imageX + 72 <= 612 && imageY >= 0 && imageY + 72 <= 792,
+            "The whole authored picture must fit the cell clip and the page.");
+
+        double ReadCoordinate(int group) => double.Parse(paint.Groups[group].Value, CultureInfo.InvariantCulture);
     }
 
     public static void DocxRendererEmitsFloatingTextBoxTableRows()

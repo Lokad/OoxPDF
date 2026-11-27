@@ -22,6 +22,15 @@ internal static class TestFixtures
         </Relationships>
         """;
 
+    public const string DocxInlinePngRun = """
+        <w:r><w:drawing><wp:inline>
+          <wp:extent cx="914400" cy="914400"/>
+          <a:graphic><a:graphicData uri="http://schemas.openxmlformats.org/drawingml/2006/picture">
+            <pic:pic><pic:blipFill><a:blip r:embed="rIdImage1"/></pic:blipFill></pic:pic>
+          </a:graphicData></a:graphic>
+        </wp:inline></w:drawing></w:r>
+        """;
+
     // Checkout, frozen and parent runners all keep Cases beside the project's bin directory.
     public static string PublicCasePath(string relativePath) =>
         Path.GetFullPath(Path.Combine(AppContext.BaseDirectory, "..", "..", "..", "Cases", relativePath));
@@ -109,6 +118,32 @@ internal static class TestFixtures
                 """),
             ["word/document.xml"] = Utf8(document),
             ["word/header1.xml"] = Utf8(header),
+            ["word/media/image1.png"] = png,
+        });
+
+    public static string WriteDocxInlinePng(string body, byte[] png) =>
+        WriteTempPackage(".docx", new Dictionary<string, byte[]>
+        {
+            ["[Content_Types].xml"] = Utf8(DocxContentTypes.Replace(
+                "</Types>", """<Default Extension="png" ContentType="image/png"/></Types>""", StringComparison.Ordinal)),
+            ["_rels/.rels"] = Utf8(DocxPackageRelationships),
+            ["word/_rels/document.xml.rels"] = Utf8("""
+                <Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">
+                  <Relationship Id="rIdImage1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/image" Target="media/image1.png"/>
+                </Relationships>
+                """),
+            ["word/document.xml"] = Utf8($"""
+                <w:document xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main"
+                            xmlns:wp="http://schemas.openxmlformats.org/drawingml/2006/wordprocessingDrawing"
+                            xmlns:a="http://schemas.openxmlformats.org/drawingml/2006/main"
+                            xmlns:pic="http://schemas.openxmlformats.org/drawingml/2006/picture"
+                            xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships">
+                  <w:body>
+                    {body}
+                    <w:sectPr><w:pgSz w:w="12240" w:h="15840"/></w:sectPr>
+                  </w:body>
+                </w:document>
+                """),
             ["word/media/image1.png"] = png,
         });
 
