@@ -193,7 +193,7 @@ internal sealed partial class DocxRenderer
         foreach (DocxResolvedRunTypeface resolved in plan.Runs)
         {
             cancellationToken.ThrowIfCancellationRequested();
-            if (resolved.Run.EffectiveProperties.Hidden || string.IsNullOrEmpty(resolved.Run.Text) ||
+            if (!HasTextToDiagnose(resolved.Run) ||
                 !runResources.TryGetValue(resolved.Run, out DocxRunFontResource? resource))
             {
                 continue;
@@ -244,11 +244,15 @@ internal sealed partial class DocxRenderer
         foreach (DocxResolvedRunTypeface resolved in plan.Runs)
         {
             cancellationToken.ThrowIfCancellationRequested();
-            seen |= OoxComplexScript.DetectNeeds(resolved.Run.Text);
+            if (HasTextToDiagnose(resolved.Run))
+                seen |= OoxComplexScript.DetectNeeds(resolved.Run.Text);
         }
 
         OoxComplexScript.ReportApproximations(seen, diagnosticSink);
     }
+
+    private static bool HasTextToDiagnose(DocxTextRun run) =>
+        !run.EffectiveProperties.Hidden && !string.IsNullOrEmpty(run.Text);
 
     // RV01: runs with text but no usable embedded resource render with the diagnosed
     // built-in fallback faces instead of vanishing. Each affected family is reported once;
@@ -275,10 +279,12 @@ internal sealed partial class DocxRenderer
             string name = PdfFallbackFont.ResourceNameFor(effective.Bold, effective.Italic);
             faces[resolved.Run] = new PdfFallbackFontResource(name, face);
 
+            // Fallback metrics can still affect the line frame for stored hidden text.
+            if (diagnosticSink is null || !HasTextToDiagnose(resolved.Run)) continue;
             string family = resolved.RequestedFamily ?? resolved.ResolvedFamily ?? "unknown";
             if (reportedFamilies.Add(family))
             {
-                diagnosticSink?.Invoke(new OoxPdfDiagnostic(
+                diagnosticSink(new OoxPdfDiagnostic(
                     "FONT_NO_USABLE_FACE",
                     OoxPdfSeverity.Warning,
                     "No usable embeddable font for " + family + "; text renders with the built-in fallback typeface. Characters outside WinAnsi appear as question mark.",

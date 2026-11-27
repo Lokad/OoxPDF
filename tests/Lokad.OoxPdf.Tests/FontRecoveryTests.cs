@@ -107,6 +107,35 @@ internal static class FontRecoveryTests
         }
     }
 
+    public static void HiddenDocxTextDoesNotReportFallbackOrShaping()
+    {
+        const string arabic = "\u0633\u0644\u0627\u0645";
+        foreach (var (mode, geometry) in new[]
+        {
+            (OoxPdfDocxMarkupMode.Final, OoxPdfDocxMarkupGeometryMode.PreserveDocumentLayout),
+            (OoxPdfDocxMarkupMode.AllMarkup, OoxPdfDocxMarkupGeometryMode.WordCompatibleAllMarkup)
+        })
+        foreach (bool visible in new[] { false, true })
+        {
+            string vanish = visible ? """<w:vanish w:val="0"/>""" : "<w:vanish/>";
+            string path = CreateDocx(vanish, arabic, includeVisibleText: false);
+            try
+            {
+                DocxDocument document = DocxTests.ReadDocx(path, mode);
+                var diagnostics = new DiagnosticCollector();
+                var renderer = new DocxRenderer(new MissingTestFontResolver(), mode, geometry);
+                var page = renderer.RenderPagesAsync(document, diagnostics.Add, default).ToBlockingEnumerable().Single();
+
+                int expected = visible ? 1 : 0;
+                TestAssert.Equal(expected, diagnostics.Diagnostics.Count(d => d.Id == "FONT_NO_USABLE_FACE"));
+                TestAssert.Equal(expected, diagnostics.Diagnostics.Count(d => d.Id == "COMPLEX_SCRIPT_APPROXIMATION"));
+                TestAssert.Equal(visible, diagnostics.HasWarningsOrErrors);
+                TestAssert.Equal(expected, page.FallbackFonts.Count);
+            }
+            finally { File.Delete(path); }
+        }
+    }
+
     public static void InvalidCmapCoverageUsesDiagnosedSubstitutionInBothFormats()
     {
         foreach (OoxPdfInputKind kind in new[] { OoxPdfInputKind.Docx, OoxPdfInputKind.Pptx })
@@ -174,14 +203,15 @@ internal static class FontRecoveryTests
             """
     });
 
-    private static string CreateDocx(string? hidden, string text)
+    private static string CreateDocx(string? hidden, string text, bool includeVisibleText = true)
     {
         const string fonts="<w:rFonts w:ascii=\"TestFace\" w:hAnsi=\"TestFace\" w:eastAsia=\"TestFace\"/><w:sz w:val=\"24\"/>";
+        string firstRun = includeVisibleText ? "<w:r><w:rPr>"+fonts+"</w:rPr><w:t>Visible text</w:t></w:r>" : "";
         string extra = text.Length == 0 ? "" : "<w:r><w:rPr>"+fonts+hidden+"</w:rPr><w:t>"+text+"</w:t></w:r>";
         return TestFixtures.WriteTempPackage(".docx", new Dictionary<string,string> {
             ["[Content_Types].xml"]="<Types xmlns=\"http://schemas.openxmlformats.org/package/2006/content-types\"><Default Extension=\"rels\" ContentType=\"application/vnd.openxmlformats-package.relationships+xml\"/><Default Extension=\"xml\" ContentType=\"application/xml\"/><Override PartName=\"/word/document.xml\" ContentType=\"application/vnd.openxmlformats-officedocument.wordprocessingml.document.main+xml\"/></Types>",
             ["_rels/.rels"]="<Relationships xmlns=\"http://schemas.openxmlformats.org/package/2006/relationships\"><Relationship Id=\"main\" Type=\"http://schemas.openxmlformats.org/officeDocument/2006/relationships/officeDocument\" Target=\"word/document.xml\"/></Relationships>",
-            ["word/document.xml"]="<w:document xmlns:w=\"http://schemas.openxmlformats.org/wordprocessingml/2006/main\"><w:body><w:p><w:r><w:rPr>"+fonts+"</w:rPr><w:t>Visible text</w:t></w:r>"+extra+"</w:p><w:sectPr><w:pgSz w:w=\"12240\" w:h=\"15840\"/><w:pgMar w:top=\"1440\" w:bottom=\"1440\" w:left=\"1440\" w:right=\"1440\"/></w:sectPr></w:body></w:document>"
+            ["word/document.xml"]="<w:document xmlns:w=\"http://schemas.openxmlformats.org/wordprocessingml/2006/main\"><w:body><w:p>"+firstRun+extra+"</w:p><w:sectPr><w:pgSz w:w=\"12240\" w:h=\"15840\"/><w:pgMar w:top=\"1440\" w:bottom=\"1440\" w:left=\"1440\" w:right=\"1440\"/></w:sectPr></w:body></w:document>"
         });
     }
 
