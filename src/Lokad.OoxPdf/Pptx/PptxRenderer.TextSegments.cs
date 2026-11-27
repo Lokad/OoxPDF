@@ -364,12 +364,18 @@ internal sealed partial class PptxRenderer
         return gaps[(gaps.Count - 1) / 2];
     }
 
-    private static async ValueTask<IReadOnlyList<PptxPositionedTextSpan>> BuildTableCellTextSpansAsync(PptxTextFrameModel frame, PptxRenderContext context)
+    private static async ValueTask<(IReadOnlyList<PptxPositionedTextSpan> Spans, bool AllVisibleTextClipped)>
+        BuildTableCellTextSpansAsync(PptxTextFrameModel frame, PptxRenderContext context)
     {
         PptxTextFrameLayout layout = await BuildTextFrameLayoutAsync(frame, context.Document,
             new TextAdvanceEstimator(context.FontResolver, context.CancellationToken)).ConfigureAwait(false);
-        return await FlattenTextLayoutToSpansAsync(new PptxTextLayoutModel(new[] { layout }), context.FontResolver, context.Document).ConfigureAwait(false);
+        IReadOnlyList<PptxPositionedTextSpan> spans = await FlattenTextLayoutToSpansAsync(
+            new PptxTextLayoutModel([layout]), context.FontResolver, context.Document).ConfigureAwait(false);
+        return (spans, layout.HasCulledVisibleTableText && !spans.Any(span => IsVisibleTableText(span.Run)));
     }
+
+    private static bool IsVisibleTableText(TextRun run) =>
+        (run.Alpha > 0d || run.Outline is { Alpha: > 0d }) && !string.IsNullOrWhiteSpace(run.Text);
 
     private static IReadOnlyList<XElement> FindInheritedPlaceholderShapes(XElement shape, IReadOnlyList<XDocument> placeholderSources)
     {

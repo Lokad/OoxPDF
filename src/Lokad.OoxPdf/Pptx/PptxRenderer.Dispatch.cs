@@ -199,7 +199,7 @@ internal sealed partial class PptxRenderer
                 BeginSlideNodeClip(context, graphics);
                 // Frame-level links go first so cell-run links sit above them.
                 AddNodeHyperlinkAnnotation(node, context, sourcePartName, transform, linkAnnotations, reportedHyperlinkIds);
-                IReadOnlyList<PptxPositionedTextSpan> tableTextSpans = RenderTableFrame(context, node, graphics, transform, sourceColorMap);
+                IReadOnlyList<PptxPositionedTextSpan> tableTextSpans = RenderTableFrame(context, node, graphics, transform, sourceColorMap, sourcePartName);
                 var tableHyperlinkScope = new PptxTextHyperlinkScope(context, sourcePartName, linkAnnotations, reportedHyperlinkIds);
                 DrawTextSpansWithFonts(tableTextSpans, graphics, fonts, tableHyperlinkScope, cancellationToken);
                 EndSlideNodeClip(graphics);

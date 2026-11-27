@@ -157,6 +157,7 @@ internal sealed partial class PptxRenderer
             frame.TextClipWidth < document.SlideWidthPoints - PptxTextMetricRules.CoordinateTolerance);
         bool strictClip = ClipsTextVerticalOverflow(frame.BodyProperties.VerticalOverflow);
         bool cullOutOfFrameLines = frame.BodyProperties.VerticalOverflow == PptxTextVerticalOverflow.Clip;
+        bool hasCulledVisibleTableText = false;
         int autoNumberValue = 1;
         var autoNumberSequences = new Dictionary<int, (string Type, int Start, int Next)>();
         bool hasPlacedParagraph = false;
@@ -369,7 +370,8 @@ internal sealed partial class PptxRenderer
                         if (frame.Orientation == PptxTextOrientation.Vertical && line.Spans.Count > 0)
                         {
                             double freshLineFontSize = ResolveLineFontSize(maxFontSize, paragraphStyle.FontSize);
-                            AddClippedParagraphLine(lineLayouts, line, CreateLineBox(cursorLineTop, cursorY, paragraphStyle.LineSpacing, freshLineFontSize, line, advanceEstimator, frame.UseOfficeBaselineFloor), paragraphStyle.Alignment, columnStartX, effectiveTextWidth, justify: false, distribute: paragraphStyle.Alignment == TextAlignment.Distributed, advanceEstimator, cullOutOfFrameLines, cursorY, frame.TextClipY, frame.TextClipHeight, suppressNoWrapDistribution);
+                            CommitParagraphLine(freshLineFontSize, columnStartX, effectiveTextWidth, justify: false,
+                                distribute: paragraphStyle.Alignment == TextAlignment.Distributed);
                             double freshLineAdvance = ReadLineAdvance(paragraphStyle.LineSpacing, freshLineFontSize);
                             AdvanceTextLine(freshLineAdvance);
                             cursorY = cursorLineTop - LineBaselineOffset(fragmentFontSize, paragraphStyle.LineSpacing, runStyle, advanceEstimator, frame.UseOfficeBaselineFloor, useExplicitMultipleBaselineOffset);
@@ -439,7 +441,8 @@ internal sealed partial class PptxRenderer
                                 double lineFontSize = ResolveLineFontSize(maxFontSize, paragraphStyle.FontSize);
                                 double lineTextX = frame.Orientation == PptxTextOrientation.Horizontal ? columnStartX : frame.TextX;
                                 double lineTextWidth = frame.Orientation == PptxTextOrientation.Horizontal ? effectiveTextWidth : frame.TextWidth;
-                                AddClippedParagraphLine(lineLayouts, line, CreateLineBox(cursorLineTop, cursorY, paragraphStyle.LineSpacing, lineFontSize, line, advanceEstimator, frame.UseOfficeBaselineFloor), paragraphStyle.Alignment, lineTextX, lineTextWidth, justify: false, distribute: paragraphStyle.Alignment == TextAlignment.Distributed, advanceEstimator, cullOutOfFrameLines, cursorY, frame.TextClipY, frame.TextClipHeight, suppressNoWrapDistribution);
+                                CommitParagraphLine(lineFontSize, lineTextX, lineTextWidth, justify: false,
+                                    distribute: paragraphStyle.Alignment == TextAlignment.Distributed);
                                 double lineAdvance = ReadLineAdvance(paragraphStyle.LineSpacing, lineFontSize);
                                 AdvanceTextLine(lineAdvance);
                                 cursorY = cursorLineTop - LineBaselineOffset(fragmentFontSize, paragraphStyle.LineSpacing, runStyle, advanceEstimator, frame.UseOfficeBaselineFloor, useExplicitMultipleBaselineOffset);
@@ -535,7 +538,9 @@ internal sealed partial class PptxRenderer
                         }
 
                         double lineFontSize = ResolveLineFontSize(maxFontSize, paragraphStyle.FontSize);
-                        AddClippedParagraphLine(lineLayouts, line, CreateLineBox(cursorLineTop, cursorY, paragraphStyle.LineSpacing, lineFontSize, line, advanceEstimator, frame.UseOfficeBaselineFloor), paragraphStyle.Alignment, columnStartX, effectiveTextWidth, justify: IsWordJustifiedAlignment(paragraphStyle.Alignment), distribute: paragraphStyle.Alignment == TextAlignment.Distributed, advanceEstimator, cullOutOfFrameLines, cursorY, frame.TextClipY, frame.TextClipHeight, suppressNoWrapDistribution);
+                        CommitParagraphLine(lineFontSize, columnStartX, effectiveTextWidth,
+                            justify: IsWordJustifiedAlignment(paragraphStyle.Alignment),
+                            distribute: paragraphStyle.Alignment == TextAlignment.Distributed);
                         double lineAdvance = ReadLineAdvance(paragraphStyle.LineSpacing, lineFontSize);
                         AdvanceTextLine(lineAdvance);
                         cursorY = cursorLineTop - LineBaselineOffset(fragmentFontSize, paragraphStyle.LineSpacing, runStyle, advanceEstimator, frame.UseOfficeBaselineFloor, useExplicitMultipleBaselineOffset);
@@ -648,12 +653,32 @@ internal sealed partial class PptxRenderer
                     : LineBaselineOffset(paragraphLineFontSize, paragraphStyle.LineSpacing, useExplicitMultipleBaselineOffset));
             }
 
-            AddClippedParagraphLine(lineLayouts, line, CreateLineBox(cursorLineTop, cursorY, paragraphStyle.LineSpacing, paragraphLineFontSize, line, advanceEstimator, frame.UseOfficeBaselineFloor), paragraphStyle.Alignment, columnStartX, effectiveTextWidth, justify: false, distribute: paragraphStyle.Alignment == TextAlignment.Distributed, advanceEstimator, cullOutOfFrameLines, cursorY, frame.TextClipY, frame.TextClipHeight, suppressNoWrapDistribution);
+            CommitParagraphLine(paragraphLineFontSize, columnStartX, effectiveTextWidth, justify: false,
+                distribute: paragraphStyle.Alignment == TextAlignment.Distributed);
             double paragraphAdvance = ReadParagraphAdvance(paragraphStyle.LineSpacing, paragraphLineFontSize);
             cursorLineTop -= paragraphAdvance + paragraphStyle.SpacingAfter;
             MoveColumn(paragraphAdvance, linePlaced: true);
             hasPlacedParagraph = true;
             paragraphLayouts.Add(new PptxTextParagraphLayout(paragraph, lineLayouts));
+
+            void CommitParagraphLine(double fontSize, double textX, double textWidth, bool justify, bool distribute)
+            {
+                // Office's anchor-overflow reference drops Clip two when its baseline leaves the
+                // clip even though the glyph outline intersects it. The cursor still advances.
+                if (cullOutOfFrameLines && (cursorY < frame.TextClipY || cursorY > frame.TextClipY + frame.TextClipHeight))
+                {
+                    if (frame.TableRowIndex.HasValue && !hasCulledVisibleTableText)
+                    {
+                        hasCulledVisibleTableText = line.Spans.Any(span => IsVisibleTableText(span.Run));
+                    }
+                    return;
+                }
+
+                var box = CreateLineBox(cursorLineTop, cursorY, paragraphStyle.LineSpacing, fontSize, line,
+                    advanceEstimator, frame.UseOfficeBaselineFloor);
+                AddAlignedParagraphLine(lineLayouts, line, box, paragraphStyle.Alignment, textX, textWidth,
+                    justify, distribute && !suppressNoWrapDistribution, advanceEstimator);
+            }
 
             void AdvanceTextLine(double advance)
             {
@@ -668,10 +693,7 @@ internal sealed partial class PptxRenderer
                 double lineFontSize = ResolveLineFontSize(maxFontSize, breakFontSize);
                 bool leadingManualBreak = line.Spans.Count == 0;
                 bool useManualBreakFallback = (leadingManualBreak || !shapeAutoFit) && !frame.BodyProperties.CompatibleLineSpacing;
-                AddClippedParagraphLine(lineLayouts, line,
-                    CreateLineBox(cursorLineTop, cursorY, paragraphStyle.LineSpacing, lineFontSize, line, advanceEstimator, frame.UseOfficeBaselineFloor),
-                    paragraphStyle.Alignment, columnStartX, effectiveTextWidth, justify: false, distribute: false,
-                    advanceEstimator, cullOutOfFrameLines, cursorY, frame.TextClipY, frame.TextClipHeight, suppressNoWrapDistribution);
+                CommitParagraphLine(lineFontSize, columnStartX, effectiveTextWidth, justify: false, distribute: false);
                 double lineAdvance = useManualBreakFallback
                     ? ReadManualBreakLineAdvance(paragraphStyle.LineSpacing, lineFontSize)
                     : ReadLineAdvance(paragraphStyle.LineSpacing, lineFontSize);
@@ -705,7 +727,7 @@ internal sealed partial class PptxRenderer
             }
         }
 
-        return new PptxTextFrameLayout(frame, paragraphLayouts);
+        return new PptxTextFrameLayout(frame, paragraphLayouts, hasCulledVisibleTableText);
 
         (double X, double Width) ReadColumnClip() => clipsColumnsIndividually
             ? (columnStartX, columnWidth)

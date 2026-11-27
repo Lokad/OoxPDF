@@ -44,7 +44,8 @@ internal sealed partial class PptxRenderer
         double Width,
         double Height,
         TableDefaultGrid? DefaultGrid,
-        IReadOnlyList<TableBorderLine> ExplicitBorders);
+        IReadOnlyList<TableBorderLine> ExplicitBorders,
+        int TextClippedCellCount);
 
     internal readonly record struct TableCellFill(double X, double Y, double Width, double Height, RgbColor Color, double Alpha);
 
@@ -137,7 +138,8 @@ internal sealed partial class PptxRenderer
         }
     }
 
-    private static IReadOnlyList<PptxPositionedTextSpan> RenderTableFrame(PptxRenderContext context, PptxSceneNode node, PdfGraphicsBuilder graphics, GroupTransform transform, PptxColorMap colorMap)
+    private static IReadOnlyList<PptxPositionedTextSpan> RenderTableFrame(PptxRenderContext context, PptxSceneNode node,
+        PdfGraphicsBuilder graphics, GroupTransform transform, PptxColorMap colorMap, string? sourcePartName)
     {
         ShapeBounds? bounds = GetTableFrameBounds(node, transform);
         // The style diagnostic keeps its paint-order emission (once per painted table);
@@ -154,6 +156,18 @@ internal sealed partial class PptxRenderer
         if (layout is null)
         {
             return [];
+        }
+
+        if (layout.TextClippedCellCount > 0)
+        {
+            context.DiagnosticSink?.Invoke(new OoxPdfDiagnostic(
+                "PPTX_TABLE_CELL_TEXT_CLIPPED",
+                OoxPdfSeverity.Warning,
+                FormattableString.Invariant($"PPTX table clipping omitted all visible text in {layout.TextClippedCellCount} cell(s)."),
+                sourcePartName ?? context.SceneSlide.PartName,
+                context.SlideNumber,
+                Feature: "table cell text",
+                Fallback: "Local clip"));
         }
 
         RenderTableFrameLayout(graphics, layout);
@@ -223,6 +237,7 @@ internal sealed partial class PptxRenderer
         var skippedVerticalGridSegments = new bool[rawColumnWidths.Count + 1, rows.Count];
         var skippedHorizontalGridSegments = new bool[rows.Count + 1, rawColumnWidths.Count];
         var explicitBorders = new List<TableBorderLine>();
+        int textClippedCellCount = 0;
         rowTops[0] = yTop;
         for (int rowIndex = 0; rowIndex < rows.Count; rowIndex++)
         {
@@ -298,7 +313,12 @@ internal sealed partial class PptxRenderer
                         textMeasurements.Remove(tableTextFrame.TextBody, out TableCellTextMeasurement cellMeasurement) ? cellMeasurement : null;
                     PptxTextFrameModel model = await BuildTableCellTextFrameModelAsync(tableTextFrame, context, measurement: measured).ConfigureAwait(false);
                     textFrames?.Add(ToSnapshot(model));
-                    textSpans.AddRange(await BuildTableCellTextSpansAsync(model, context).ConfigureAwait(false));
+                    var (spans, allVisibleTextClipped) = await BuildTableCellTextSpansAsync(model, context).ConfigureAwait(false);
+                    textSpans.AddRange(spans);
+                    if (allVisibleTextClipped)
+                    {
+                        textClippedCellCount++;
+                    }
                 }
                 cellX += columnWidth;
                 nextColumn = columnIndex + columnSpan;
@@ -321,10 +341,10 @@ internal sealed partial class PptxRenderer
                 rows.Count,
                 skippedVerticalGridSegments,
                 skippedHorizontalGridSegments);
-            return new TableFrameLayout(textSpans, textFrames ?? [], cellFills, frameX, frameTop, frameWidth, frameHeight, defaultGrid, []);
+            return new TableFrameLayout(textSpans, textFrames ?? [], cellFills, frameX, frameTop, frameWidth, frameHeight, defaultGrid, [], textClippedCellCount);
         }
 
-        return new TableFrameLayout(textSpans, textFrames ?? [], cellFills, frameX, frameTop, frameWidth, frameHeight, DefaultGrid: null, explicitBorders);
+        return new TableFrameLayout(textSpans, textFrames ?? [], cellFills, frameX, frameTop, frameWidth, frameHeight, DefaultGrid: null, explicitBorders, textClippedCellCount);
 
         void AddTableCellBorders(PptxSceneTableCellBorders cellBorders, double x, double y, double width, double height)
         {

@@ -130,7 +130,8 @@ internal static class PptxTablesTests
 
     public static void PptxSyntheticTableExpandsSlackRowsFromCellText()
     {
-        PdfPage page = RenderWrappedHeaderTable(2286000);
+        var diagnostics = new List<OoxPdfDiagnostic>();
+        PdfPage page = RenderWrappedHeaderTable(2286000, diagnostics.Add);
         var (headerY, headerHeight) = ReadRowSlackHeaderFill(page);
         TestAssert.True(headerY < 448d, $"Expected expanded first row to move the lower edge below 448pt, got {headerY}pt.");
         TestAssert.True(headerHeight > 20d, $"Expected expanded first row to exceed 20pt, got {headerHeight}pt.");
@@ -140,6 +141,8 @@ internal static class PptxTablesTests
         double middleRowBottom = (headerY + 288d) / 2d;
         AssertRowSlackText(page, "Second", middleRowBottom, headerY);
         AssertRowSlackText(page, "Third", 288d, middleRowBottom);
+        TestAssert.True(diagnostics.All(diagnostic => diagnostic.Id != "PPTX_TABLE_CELL_TEXT_CLIPPED"),
+            "The expanded row keeps its full label and must not report an omission.");
     }
 
     public static void PptxSyntheticTableKeepsDeclaredRowsUnderLargeFrameSlack()
@@ -188,7 +191,8 @@ internal static class PptxTablesTests
 
     public static void PptxSyntheticTableKeepsDeclaredRowsWithoutMaterialSlack()
     {
-        PdfPage page = RenderWrappedHeaderTable(2095500);
+        var diagnostics = new List<OoxPdfDiagnostic>();
+        PdfPage page = RenderWrappedHeaderTable(2095500, diagnostics.Add);
         var (headerY, headerHeight) = ReadRowSlackHeaderFill(page);
         TestAssert.True(headerY > 455d, $"Expected the low-slack first-row lower edge above 455pt, got {headerY}pt.");
         TestAssert.True(headerHeight < 20d, $"Expected the low-slack first row to remain under 20pt, got {headerHeight}pt.");
@@ -197,11 +201,16 @@ internal static class PptxTablesTests
         // The short first row's expected ink needs a PowerPoint comparison.
         AssertRowSlackText(page, "Second", 378d, 458d);
         AssertRowSlackText(page, "Third", 298d, 378d);
+        OoxPdfDiagnostic warning = diagnostics.Single(diagnostic => diagnostic.Id == "PPTX_TABLE_CELL_TEXT_CLIPPED");
+        TestAssert.Equal(OoxPdfSeverity.Warning, warning.Severity);
+        TestAssert.Equal(1, warning.SlideIndex);
+        TestAssert.Contains("slide1.xml", warning.PartName ?? string.Empty);
+        TestAssert.Contains("1 cell(s)", warning.Message);
     }
 
     public static void PptxSyntheticTableKeepsDeclaredRowsForSmallPositiveUniqueSlack()
     {
-        PdfPage page = RenderRowSlackTable(1929136, (914400, "First", 1200), (965200, "Second", 1200));
+        PdfPage page = RenderRowSlackTable(1929136, [(914400, "First", 1200), (965200, "Second", 1200)]);
         var (headerY, headerHeight) = ReadRowSlackHeaderFill(page);
         TestAssert.True(Math.Abs(headerY - 396d) < 0.01d, $"Expected the first-row lower edge at 396pt, got {headerY}pt.");
         TestAssert.True(Math.Abs(headerHeight - 72d) < 0.01d, $"Expected the first-row height at 72pt, got {headerHeight}pt.");
@@ -213,7 +222,7 @@ internal static class PptxTablesTests
 
     public static void PptxSyntheticTableKeepsDeclaredRowsForModerateSlack()
     {
-        PdfPage page = RenderRowSlackTable(1955800, (914400, "First", 1200), (914400, "Second", 1200));
+        PdfPage page = RenderRowSlackTable(1955800, [(914400, "First", 1200), (914400, "Second", 1200)]);
         var (headerY, headerHeight) = ReadRowSlackHeaderFill(page);
         TestAssert.True(headerY > 394d, $"Expected the first-row lower edge above 394pt, got {headerY}pt.");
         TestAssert.True(headerHeight < 74d, $"Expected the first-row height below 74pt, got {headerHeight}pt.");
@@ -222,7 +231,7 @@ internal static class PptxTablesTests
         AssertRowSlackText(page, "First", 396d, 468d);
         AssertRowSlackText(page, "Second", 324d, 396d);
 
-        PdfPage blankSecond = RenderRowSlackTable(1955800, (914400, "First", 1200), (914400, "", 1200));
+        PdfPage blankSecond = RenderRowSlackTable(1955800, [(914400, "First", 1200), (914400, "", 1200)]);
         TestAssert.Equal((headerY, headerHeight), ReadRowSlackHeaderFill(blankSecond));
         AssertRowSlackText(blankSecond, "First", 396d, 468d);
         var missing = TestAssert.Throws<InvalidOperationException>(() => AssertRowSlackText(blankSecond, "Second", 324d, 396d));
@@ -231,10 +240,11 @@ internal static class PptxTablesTests
 
     private const string WrappedHeaderText = "Alpha Beta Gamma Delta Epsilon Zeta";
 
-    private static PdfPage RenderWrappedHeaderTable(int frameHeight) =>
-        RenderRowSlackTable(frameHeight, (127000, WrappedHeaderText, 1800), (1016000, "Second", null), (1016000, "Third", null));
+    private static PdfPage RenderWrappedHeaderTable(int frameHeight, Action<OoxPdfDiagnostic> diagnosticSink) =>
+        RenderRowSlackTable(frameHeight, [(127000, WrappedHeaderText, 1800), (1016000, "Second", null), (1016000, "Third", null)], diagnosticSink);
 
-    private static PdfPage RenderRowSlackTable(int frameHeight, params (int Height, string Text, int? Size)[] rows)
+    private static PdfPage RenderRowSlackTable(int frameHeight, (int Height, string Text, int? Size)[] rows,
+        Action<OoxPdfDiagnostic>? diagnosticSink = null)
     {
         var tableRows = new StringBuilder();
         for (int index = 0; index < rows.Length; index++)
@@ -271,7 +281,7 @@ internal static class PptxTablesTests
         });
         using var package = OoxPackage.Open(input, default);
         return new PptxRenderer(new PortableRenderingTests.PinnedResolver())
-            .RenderPagesAsync(new PptxReader().Read(package, default), package, null, default)
+            .RenderPagesAsync(new PptxReader().Read(package, default), package, diagnosticSink, default)
             .ToBlockingEnumerable().Single();
     }
 

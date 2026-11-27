@@ -43,7 +43,8 @@ internal sealed partial class PptxRenderer
 
     private sealed record PptxTextFrameLayout(
         PptxTextFrameModel Model,
-        IReadOnlyList<PptxTextParagraphLayout> Paragraphs);
+        IReadOnlyList<PptxTextParagraphLayout> Paragraphs,
+        bool HasCulledVisibleTableText);
 
     private sealed record PptxTextParagraphLayout(
         PptxTextParagraphModel Model,
