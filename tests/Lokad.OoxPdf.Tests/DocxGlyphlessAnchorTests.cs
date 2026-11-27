@@ -245,9 +245,10 @@ internal static class DocxGlyphlessAnchorTests
     {
         const string relationshipsPart = "word/_rels/document.xml.rels";
         XNamespace rel = OoxNamespaces.PackageRelationshipsNamespace;
+        XNamespace r = OoxNamespaces.RelationshipsNamespace;
         XElement relationships = XElement.Parse(System.Text.Encoding.UTF8.GetString(parts[relationshipsPart]));
         relationships.Add(new XElement(rel + "Relationship",
-            new XAttribute("Id", "rIdBlue"), new XAttribute("Type", OoxNamespaces.RelationshipsNamespace + "/image"),
+            new XAttribute("Id", "rIdBlue"), new XAttribute("Type", r.NamespaceName + "/image"),
             new XAttribute("Target", "media/blue.png")));
         parts[relationshipsPart] = TestFixtures.Utf8(relationships.ToString(SaveOptions.DisableFormatting));
         parts["word/media/blue.png"] = TestFixtures.CreateRgbPng(1, 1, [0, 0, 255]);
