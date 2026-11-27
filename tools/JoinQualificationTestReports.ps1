@@ -104,6 +104,7 @@ $rows=[Collections.Generic.Dictionary[string,object]]::new([StringComparer]::Ord
 $initialFailures=[Collections.Generic.HashSet[string]]::new([StringComparer]::Ordinal)
 $observedFailures=[Collections.Generic.HashSet[string]]::new([StringComparer]::Ordinal)
 $unexpectedSkips=[Collections.Generic.HashSet[string]]::new([StringComparer]::Ordinal)
+$primaryPasses=[Collections.Generic.HashSet[string]]::new([StringComparer]::Ordinal)
 $toolHashes=[Collections.Generic.Dictionary[string,string]]::new([StringComparer]::Ordinal)
 $sources=@();$methodAttempts=0
 foreach ($attempt in $attempts) {
@@ -140,11 +141,14 @@ foreach ($attempt in $attempts) {
             $null=$observedFailures.Add($test.name)
             if (!$attempt.Repair) { $null=$initialFailures.Add($test.name) }
         }
-        # Apply the producing selection's skip policy to the retained row.
-        # A report without a fast-group union validates skips for every method.
+        # Use the producing selection for both skip policy and primary passes.
+        # A report without a fast-group union has only primary methods.
+        $primary = $null -eq $report.provenance.SkipValidationMethods -or $test.name -cin $report.provenance.SkipValidationMethods
+        $null=$primaryPasses.Remove($test.name)
+        if ($primary -and $test.outcome -eq 'passed') { $null=$primaryPasses.Add($test.name) }
         $null=$unexpectedSkips.Remove($test.name)
         if ($test.outcome -eq 'skipped' -and $test.name -cnotin $report.provenance.ExpectedSkips -and
-            ($null -eq $report.provenance.SkipValidationMethods -or $test.name -cin $report.provenance.SkipValidationMethods)) {
+            $primary) {
             $null=$unexpectedSkips.Add($test.name)
         }
         $counts[$test.outcome]++;$methodAttempts++
@@ -178,6 +182,9 @@ $passed = @($rows.Values | Where-Object {$_.outcome -eq 'passed'}).Count
 if (!$passed) {
     throw 'No selected qualification test passed in the joined result.'
 }
+if (!$primaryPasses.Count) {
+    throw 'No primary qualification test passed in the joined result.'
+}
 foreach ($artifact in $boundSnapshots.Keys) {
     if ((Get-BoundInputSnapshot $artifact $pins[$artifact]) -cne $boundSnapshots[$artifact]) {
         throw 'A shared public input binding changed during the join'
@@ -188,6 +195,7 @@ $result=[ordered]@{
     Platform=$config.Platform;Framework=$framework;FrozenRevision=$last.Revision
     LibrarySha256=$last.LibrarySha256;TestAssemblySha256=$last.TestAssemblySha256
     passed=$passed
+    PrimaryPassedMethods=$primaryPasses.Count
     failed=0;skipped=@($rows.Values | Where-Object {$_.outcome -eq 'skipped'}).Count
     UniqueMethods=$rows.Count;MethodAttempts=$methodAttempts
     RuntimeAssetsUnchanged=$runtime.Count;InputsUnchanged=$first.Inputs.Count

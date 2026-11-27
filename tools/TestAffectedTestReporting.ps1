@@ -50,6 +50,7 @@ function dotnet {
     $rows=@(foreach($method in $methods) {
         $outcome=if($method -eq 'ReportAlpha' -and $global:ooxPdfAffectedReportFault -eq 'failed') {'failed'}
             elseif($global:ooxPdfAffectedReportFault -eq 'all-expected-skips' -or
+                ($global:ooxPdfAffectedReportFault -eq 'all-primary-skips' -and $method -in @('ReportAlpha','ReportExplicitSlow')) -or
                 ($method -eq 'ReportAlpha' -and $global:ooxPdfAffectedReportFault -in @('expected-skip','unexpected-skip','capability-skip','group-and-capability-skip')) -or
                 ($method -eq 'ReportGroupOnly' -and $global:ooxPdfAffectedReportFault -in @('group-skip','group-and-capability-skip'))) {'skipped'}
             else {'passed'}
@@ -162,12 +163,13 @@ try {
     $manifest=Join-Path $root 'union-capabilities.json'
     @{union=@('=ReportAlpha','ReportExplicitSlow')} | ConvertTo-Json | Set-Content -LiteralPath $manifest -Encoding unicode
     $manifestHash=(Get-FileHash -LiteralPath $manifest).Hash
-    foreach($case in @('union','group-skip','capability-skip','group-and-capability-skip','unknown-group','slow-only-group','list-only')) {
+    foreach($case in @('union','group-skip','capability-skip','group-and-capability-skip','all-primary-skips','unknown-group','slow-only-group','list-only')) {
         $global:ooxPdfAffectedReportFault=$case
         $global:ooxPdfAffectedReportCalls=0
         $output=Join-Path $root $case
         $parameters=@{RunnerPath=$runner;OutputDirectory=$output;Capability='union';SelectionManifest=$manifest;FastGroup=@('fixture','auxiliary','fixture')}
         if($case -eq 'group-and-capability-skip') {$parameters.ExpectedSkip=@('ReportAlpha')}
+        if($case -eq 'all-primary-skips') {$parameters.ExpectedSkip=@('ReportAlpha','ReportExplicitSlow')}
         if($case -eq 'unknown-group') {$parameters.FastGroup=@('missing')}
         if($case -eq 'slow-only-group') {$parameters.FastGroup=@('only-slow')}
         if($case -eq 'list-only') {$parameters.ListOnly=$true}
@@ -195,7 +197,16 @@ try {
             else {
                 $report=Get-Content -LiteralPath (Join-Path $output 'affected-tests.json') -Raw | ConvertFrom-Json
                 $groupSkips=if($case -in @('group-skip','group-and-capability-skip')) {@('ReportGroupOnly')} else {@()}
+                $primaryPasses=switch ($case) {
+                    'all-primary-skips' {0}
+                    {$_ -in @('capability-skip','group-and-capability-skip')} {1}
+                    default {2}
+                }
+                if ($case -eq 'all-primary-skips' -and ($report.passed -ne 2 -or $caught -notlike 'No primary qualification test passed.*')) {
+                    throw 'Fast-group-only passes must be reported and cannot qualify an all-skipped primary selection'
+                }
                 if($report.provenance.GatePassed -ne $shouldPass -or $report.tests.Count -ne 4 -or
+                    $report.provenance.UniquePassedPrimaryMethods -ne $primaryPasses -or
                     $report.provenance.SelectionManifestSha256 -cne $manifestHash -or
                     $report.provenance.SourceReports[0].Sha256 -cne (Get-FileHash -LiteralPath (Join-Path $output 'selection-000.json')).Hash -or
                     $report.provenance.RunnerInvocations -ne 1 -or

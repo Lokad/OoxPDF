@@ -311,6 +311,12 @@ $skipOnly.Repairs=@(@{Artifact='repo/artifacts/after';Report='skip-all-repair.js
 $skipOnlyManifest=Join-Path $root 'skip-all-manifest.json'
 Write-Json $skipOnlyManifest $skipOnly
 Reject 'final-skip-all' 'No selected qualification test passed' $skipOnlyManifest
+Write-BoundReport 'skip-primary-repair.json' @{passed=1;failed=0;skipped=1;provenance=@{
+    ExpectedSkips=@('Corrected');SkipValidationMethods=@('Corrected')};tests=@(
+    @{name='Corrected';outcome='skipped'},@{name='Neighbor';outcome='passed'})}
+$skipOnly.Repairs=@(@{Artifact='repo/artifacts/after';Report='skip-primary-repair.json'})
+Write-Json $skipOnlyManifest $skipOnly
+Reject 'final-skip-primary-with-fast-group-pass' 'No primary qualification test passed' $skipOnlyManifest
 # A method first failing during a repair must also finish with a real pass.
 Write-BoundReport 'repair-failed.json' @{passed=1;failed=1;skipped=0;tests=@(
     @{name='Corrected';outcome='passed'},@{name='Neighbor';outcome='failed';detail='failure during repair'})}
