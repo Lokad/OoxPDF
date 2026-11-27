@@ -1964,13 +1964,6 @@ internal sealed partial class DocxLayoutEngine
             return;
         }
 
-        if (separatorLayout is null)
-        {
-            PlaceFootnoteStoriesWithoutSeparator(outputPages, outputIndex, page, footnoteStories, continuationSeparatorLayout, separatorMeasurer, printScale, headerKeepOut, sharedSlicePlacement, inFlightNotes, pageNumberOverride, pageCountOverride,
-                sharedContentTop: sharedContentTop, footerKeepOut: footerKeepOut, availableFooterKeepOut: availableFooterKeepOut, cancellationToken: cancellationToken);
-            return;
-        }
-
         bool ownedInlineFrame = ResolveOwnedInlineFootnoteFrame(page, footnoteStories, printScale,
             ref sharedContentTop, ref footerKeepOut, availableFooterKeepOut);
 
@@ -1981,111 +1974,56 @@ internal sealed partial class DocxLayoutEngine
         int placementPageCount = pageCountOverride ?? outputPages.Count;
         var (placementFooter, frameBottom, cursorTop) = ResolveFootnotePlacementFrame(
             activePage, footnoteStories, placementPageNumber, placementPageCount, footerKeepOut, availableFooterKeepOut);
-        DocxRelatedStoryLayout[]? contentStories = null;
-        double? plainSeparatorHeight = null;
-
-        DocxRelatedStoryLayout[] ContentStories() => contentStories ??= footnoteStories.Select(story => story.StoryLayout).ToArray();
-        double PlainSeparatorHeight() => plainSeparatorHeight ??=
-            ResolvePlainNoteSeparatorHeight(separatorLayout, activePage, separatorMeasurer, ContentStories(), printScale);
-
-        bool continuesHead = inFlightNotes is not null && footnoteStories[0].Location.Reference.Id is { } firstId &&
-            inFlightNotes.TryGetValue((DocxRelatedStoryKind.Footnote, firstId), out InFlightRelatedStory? firstFlight) && firstFlight.SeparatorPlaced;
-        bool plainSharedHead = placementFooter is not null && continuesHead;
-        double separatorHeight = frameBottom > activePage.MarginBottom || plainSharedHead
-            ? PlainSeparatorHeight()
-            : ResolvePlacedStoryHeight(separatorLayout, activePage);
-        (DocxTextRun? gapRun, double gapFontSizePoints) = FindSeparatorMarkFont(separatorLayout.TextLines);
-        double separatorGapPoints = ResolveSeparatorGapPoints(gapRun, gapFontSizePoints, separatorMeasurer);
-        double footnoteContentGapPoints = ResolveFootnoteContentGapPoints(footnoteStories, gapRun, gapFontSizePoints, separatorMeasurer);
-        // The physical frame checks the original document sources. An occupied
-        // continuation uses the same nominal separator gap as a fresh head;
-        // empty pages and unqualified sources retain their existing fallback.
-        if (footerKeepOut is not null && CanUseNominalNoteSeparatorFlow(activePage,
-            separatorLayout, printScale, ContentStories()))
-            footnoteContentGapPoints = ResolveSourceInsetNoteContentGap(footnoteContentGapPoints,
-                gapRun, gapFontSizePoints, separatorMeasurer);
-        double footnoteContentPushdownPoints = System.Math.Max(0d, footnoteContentGapPoints - separatorGapPoints);
-        double clampBodyBottom = ResolveFootnoteClampBodyBottom(page, placementPageNumber, placementPageCount, footnoteStories[0].StoryLayout, headerKeepOut);
-        // The admitted shared frame already reserves the separator's flow charge.
-        // Its physical clip can retain latent spacing without charging it again.
-        double separatorCharge = footerKeepOut is not null ? PlainSeparatorHeight() : separatorHeight;
-        double storiesTop = Math.Min(cursorTop, clampBodyBottom - separatorCharge);
-        if (plainSharedHead && !ownedInlineFrame)
-        {
-            // Continued paragraph batches share the same measured rule capacity
-            // as the single-story slicer, without charging a fresh-head inset.
-            double frameTop = Math.Min(activePage.Height - activePage.MarginTop,
-                headerKeepOut?.Invoke(activePage, placementPageNumber, placementPageCount) ?? double.PositiveInfinity);
-            storiesTop = Math.Min(cursorTop, frameTop - ContinuationRuleOverhead(continuationSeparatorLayout, separatorMeasurer));
-        }
-        if (sharedContentTop is not null)
-        {
-            storiesTop = Math.Min(storiesTop, sharedContentTop.Value);
-        }
-        if (!ownedInlineFrame && !hasSourceOwnedReserve &&
-            TryResolveFootnoteBodyBottom(activePage, printScale, null, out double bodyBottom))
-        {
-            // Body geometry owns the boundary even when note typography keeps
-            // its fallback. Derive it from placed content so admission's prior
-            // separator reserve is not subtracted a second time.
-            double headCharge = ResolveParagraphBoundarySeparatorHeight(separatorLayout, activePage,
-                separatorMeasurer, ContentStories());
-            storiesTop = Math.Min(storiesTop, bodyBottom - headCharge);
-        }
-        // RV06 p1-position probes (Word 16.0): Office seats the overflowing head block
-        // bottom-up (storiesTop = margin + takeHeight), so absolute positions match instead
-        // of leaving capacity slack above the margin. The head take still comes from the
-        // same clamped capacity, so take counts are unchanged; fitting stories keep the
-        // legacy whole placement bit-identically.
-        storiesTop = ResolveSeatedFootnoteTop(activePage, footnoteStories, storiesTop, frameBottom,
-            inFlightNotes, printScale, placementFooter is not null);
-        bool sharesContinuationSeparator = plainSharedHead && continuationSeparatorLayout is { TextLines.Count: > 0 };
-        bool drawHeadSeparator = !sharesContinuationSeparator;
-        if (inFlightNotes is not null && !sharesContinuationSeparator)
-        {
-            drawHeadSeparator = false;
-            foreach (DocxReferencedRelatedStoryLayout story in footnoteStories)
-            {
-                if (story.Location.Reference.Id is null || !inFlightNotes.TryGetValue((story.Location.Reference.Kind, story.Location.Reference.Id), out InFlightRelatedStory? tracked) || !tracked.SeparatorPlaced)
-                {
-                    drawHeadSeparator = true;
-                    break;
-                }
-            }
-
-        }
-
-        if (drawHeadSeparator)
-        {
-        double separatorTop = storiesTop + separatorGapPoints + separatorHeight;
-        (DocxPlacedRelatedStoryLayout placedSeparator, _) = PlaceSeparatorStoryWithMark(activePage, activePageIndex, separatorLayout,
-            footnoteStories[0].Location.SourceBlockIndex, separatorTop, separatorMeasurer,
-            placementHeightOverride: placementFooter is not null ? separatorHeight : null);
-        activePlacedStories.Add(placedSeparator);
-        outputPages[activePageIndex] = activePage with { PlacedRelatedStories = activePlacedStories.ToArray() };
-        }
-        // A plain footer-frame batch owns one physical separator, matching its
-        // shared reserve. A continued first note supplies the full-width rule.
-        bool sharedSeparatorPlaced = drawHeadSeparator;
-        double contentTop = storiesTop;
+        var (contentTop, contentPushdown, sharedSeparatorPlaced, impliedParagraphFrame) = separatorLayout is null
+            ? ResolveImpliedHead()
+            : PlaceAuthoredHead(separatorLayout);
+        bool firstStory = true;
         foreach (DocxReferencedRelatedStoryLayout story in footnoteStories)
         {
-            InFlightRelatedStory? trackedStory = inFlightNotes is not null && story.Location.Reference.Id is not null && inFlightNotes.TryGetValue((story.Location.Reference.Kind, story.Location.Reference.Id), out InFlightRelatedStory? tracked) ? tracked : null;
-            // Admission measures the complete source remainder. Capping it to
-            // page height can falsely admit an oversized story without slicing.
+            InFlightRelatedStory? trackedStory = FindProgress(story);
+            // Admission measures the complete source remainder.
             double storyHeight = Math.Max(0d, story.StoryLayout.ContentHeight);
-            if (trackedStory is not null && trackedStory.SeparatorPlaced && continuationSeparatorLayout is not null && continuationSeparatorLayout.TextLines.Count != 0 &&
-                (placementFooter is null || !sharedSeparatorPlaced))
+            bool synthesizeHead = separatorLayout is null && firstStory;
+            if (trackedStory is { SeparatorPlaced: true } &&
+                continuationSeparatorLayout is { TextLines.Count: > 0 } continuation &&
+                (separatorLayout is null || placementFooter is null || !sharedSeparatorPlaced))
             {
                 AppendFootnoteContinuationSeparator(outputPages, activePageIndex, activePage, activePlacedStories,
-                    continuationSeparatorLayout, story.Location.SourceBlockIndex, contentTop, separatorMeasurer, printScale);
+                    continuation, story.Location.SourceBlockIndex, contentTop, separatorMeasurer, printScale);
                 sharedSeparatorPlaced = true;
+                synthesizeHead = false;
             }
+
+            // An omitted continuation story uses the full-width rule when its source has progressed.
+            double? defaultContinuationWidth = synthesizeHead && impliedParagraphFrame &&
+                continuationSeparatorLayout is null && trackedStory is { PlacedLineCount: > 0 }
+                    ? ResolveContinuationRuleWidth(activePage, printScale) : null;
 
             if (contentTop - storyHeight >= frameBottom - 0.001d)
             {
-                DocxPlacedRelatedStoryLayout placedStory = PlaceRelatedStoryAtTop(activePage, activePageIndex, story.StoryLayout, story.Location.SourceBlockIndex, contentTop - footnoteContentPushdownPoints, separatorY: null)
+                double? separatorY = null;
+                double separatorThickness = FootnoteSeparatorThicknessPoints;
+                if (synthesizeHead)
+                {
+                    (DocxTextRun? bodyRun, double bodyFontSizePoints) = FindSeparatorMarkFont(story.StoryLayout.TextLines);
+                    (double offset, double thickness) = ResolveSeparatorRuleGeometry(
+                        DocxRelatedStoryKind.Footnote, bodyRun, bodyFontSizePoints, separatorMeasurer);
+                    separatorY = contentTop + ResolveSeparatorGapPoints(bodyRun, bodyFontSizePoints, separatorMeasurer) + offset;
+                    separatorThickness = thickness;
+                }
+
+                var placedStory = PlaceRelatedStoryAtTop(activePage, activePageIndex, story.StoryLayout,
+                    story.Location.SourceBlockIndex, contentTop - contentPushdown, separatorY)
                     with { UsesPlainFootnoteFrame = footerKeepOut is not null };
+                if (separatorY is not null)
+                {
+                    placedStory = placedStory with
+                    {
+                        SeparatorThickness = separatorThickness,
+                        SeparatorWidth = defaultContinuationWidth ?? placedStory.SeparatorWidth
+                    };
+                }
+
                 activePlacedStories.Add(placedStory);
                 outputPages[activePageIndex] = activePage with { PlacedRelatedStories = activePlacedStories.ToArray() };
                 contentTop -= storyHeight;
@@ -2096,11 +2034,156 @@ internal sealed partial class DocxLayoutEngine
             }
             else
             {
-                PlaceRelatedStorySlices(outputPages, ref activePageIndex, ref activePage, ref activePlacedStories, ref contentTop, story.StoryLayout, story.Location.SourceBlockIndex, insertContinuationAfterActivePage: true, continuationSeparatorLayout, separatorMeasurer, printScale, headerKeepOut, stopAfterCurrentPage: sharedSlicePlacement, inFlight: trackedStory, headContentPushdownPoints: footnoteContentPushdownPoints, frameBottom: placementFooter, usesPlainFootnoteFrame: footerKeepOut is not null);
+                int headPageIndex = activePageIndex;
+                int headCount = activePlacedStories.Count;
+                PlaceRelatedStorySlices(outputPages, ref activePageIndex, ref activePage, ref activePlacedStories,
+                    ref contentTop, story.StoryLayout, story.Location.SourceBlockIndex, insertContinuationAfterActivePage: true,
+                    continuationSeparatorLayout, separatorMeasurer, printScale, headerKeepOut, stopAfterCurrentPage: sharedSlicePlacement,
+                    inFlight: trackedStory, headContentPushdownPoints: contentPushdown, frameBottom: placementFooter,
+                    usesPlainFootnoteFrame: footerKeepOut is not null);
+                if (synthesizeHead)
+                {
+                    PatchSyntheticRuleOntoHeadSlice(outputPages, headPageIndex, headCount, separatorMeasurer, defaultContinuationWidth);
+                }
             }
+
+            firstStory = false;
         }
 
         MarkFootnoteSeparatorsPlaced(footnoteStories, inFlightNotes);
+
+        InFlightRelatedStory? FindProgress(DocxReferencedRelatedStoryLayout story) =>
+            inFlightNotes is not null && story.Location.Reference.Id is { } id &&
+            inFlightNotes.TryGetValue((story.Location.Reference.Kind, id), out InFlightRelatedStory? tracked)
+                ? tracked : null;
+
+        (double Top, double Pushdown, bool SeparatorPlaced, bool ImpliedParagraphFrame) PlaceAuthoredHead(
+            DocxRelatedStoryLayout authoredSeparator)
+        {
+            DocxRelatedStoryLayout[]? contentStories = null;
+            double? plainSeparatorHeight = null;
+
+            DocxRelatedStoryLayout[] ContentStories() => contentStories ??= footnoteStories.Select(story => story.StoryLayout).ToArray();
+            double PlainSeparatorHeight() => plainSeparatorHeight ??=
+                ResolvePlainNoteSeparatorHeight(authoredSeparator, activePage, separatorMeasurer, ContentStories(), printScale);
+
+            bool continuesHead = inFlightNotes is not null && footnoteStories[0].Location.Reference.Id is { } firstId &&
+                inFlightNotes.TryGetValue((DocxRelatedStoryKind.Footnote, firstId), out InFlightRelatedStory? firstFlight) && firstFlight.SeparatorPlaced;
+            bool plainSharedHead = placementFooter is not null && continuesHead;
+            double separatorHeight = frameBottom > activePage.MarginBottom || plainSharedHead
+                ? PlainSeparatorHeight()
+                : ResolvePlacedStoryHeight(authoredSeparator, activePage);
+            (DocxTextRun? gapRun, double gapFontSizePoints) = FindSeparatorMarkFont(authoredSeparator.TextLines);
+            double separatorGapPoints = ResolveSeparatorGapPoints(gapRun, gapFontSizePoints, separatorMeasurer);
+            double footnoteContentGapPoints = ResolveFootnoteContentGapPoints(footnoteStories, gapRun, gapFontSizePoints, separatorMeasurer);
+            // The physical frame checks the original document sources. An occupied
+            // continuation uses the same nominal separator gap as a fresh head;
+            // empty pages and unqualified sources retain their existing fallback.
+            if (footerKeepOut is not null && CanUseNominalNoteSeparatorFlow(activePage,
+                authoredSeparator, printScale, ContentStories()))
+                footnoteContentGapPoints = ResolveSourceInsetNoteContentGap(footnoteContentGapPoints,
+                    gapRun, gapFontSizePoints, separatorMeasurer);
+            double footnoteContentPushdownPoints = System.Math.Max(0d, footnoteContentGapPoints - separatorGapPoints);
+            double clampBodyBottom = ResolveFootnoteClampBodyBottom(page, placementPageNumber, placementPageCount, footnoteStories[0].StoryLayout, headerKeepOut);
+            // The admitted shared frame already reserves the separator's flow charge.
+            // Its physical clip can retain latent spacing without charging it again.
+            double separatorCharge = footerKeepOut is not null ? PlainSeparatorHeight() : separatorHeight;
+            double storiesTop = Math.Min(cursorTop, clampBodyBottom - separatorCharge);
+            if (plainSharedHead && !ownedInlineFrame)
+            {
+                // Continued paragraph batches share the same measured rule capacity
+                // as the single-story slicer, without charging a fresh-head inset.
+                double frameTop = Math.Min(activePage.Height - activePage.MarginTop,
+                    headerKeepOut?.Invoke(activePage, placementPageNumber, placementPageCount) ?? double.PositiveInfinity);
+                storiesTop = Math.Min(cursorTop, frameTop - ContinuationRuleOverhead(continuationSeparatorLayout, separatorMeasurer));
+            }
+            if (sharedContentTop is not null)
+            {
+                storiesTop = Math.Min(storiesTop, sharedContentTop.Value);
+            }
+            if (!ownedInlineFrame && !hasSourceOwnedReserve &&
+                TryResolveFootnoteBodyBottom(activePage, printScale, null, out double bodyBottom))
+            {
+                // Body geometry owns the boundary even when note typography keeps
+                // its fallback. Derive it from placed content so admission's prior
+                // separator reserve is not subtracted a second time.
+                double headCharge = ResolveParagraphBoundarySeparatorHeight(authoredSeparator, activePage,
+                    separatorMeasurer, ContentStories());
+                storiesTop = Math.Min(storiesTop, bodyBottom - headCharge);
+            }
+            // RV06 p1-position probes (Word 16.0): Office seats the overflowing head block
+            // bottom-up (storiesTop = margin + takeHeight), so absolute positions match instead
+            // of leaving capacity slack above the margin. The head take still comes from the
+            // same clamped capacity, so take counts are unchanged; fitting stories keep the
+            // legacy whole placement bit-identically.
+            storiesTop = ResolveSeatedFootnoteTop(activePage, footnoteStories, storiesTop, frameBottom,
+                inFlightNotes, printScale, placementFooter is not null);
+            bool sharesContinuationSeparator = plainSharedHead && continuationSeparatorLayout is { TextLines.Count: > 0 };
+            bool drawHeadSeparator = !sharesContinuationSeparator;
+            if (inFlightNotes is not null && !sharesContinuationSeparator)
+            {
+                drawHeadSeparator = false;
+                foreach (DocxReferencedRelatedStoryLayout story in footnoteStories)
+                {
+                    if (FindProgress(story)?.SeparatorPlaced != true)
+                    {
+                        drawHeadSeparator = true;
+                        break;
+                    }
+                }
+            }
+
+            if (drawHeadSeparator)
+            {
+                double separatorTop = storiesTop + separatorGapPoints + separatorHeight;
+                (DocxPlacedRelatedStoryLayout placedSeparator, _) = PlaceSeparatorStoryWithMark(activePage, activePageIndex, authoredSeparator,
+                    footnoteStories[0].Location.SourceBlockIndex, separatorTop, separatorMeasurer,
+                    placementHeightOverride: placementFooter is not null ? separatorHeight : null);
+                activePlacedStories.Add(placedSeparator);
+                outputPages[activePageIndex] = activePage with { PlacedRelatedStories = activePlacedStories.ToArray() };
+            }
+            return (storiesTop, footnoteContentPushdownPoints, drawHeadSeparator, false);
+        }
+
+        (double Top, double Pushdown, bool SeparatorPlaced, bool ImpliedParagraphFrame) ResolveImpliedHead()
+        {
+            double storiesTop = cursorTop;
+            DocxRelatedStoryLayout firstLayout = footnoteStories[0].StoryLayout;
+            double clampBodyBottom = ownedInlineFrame
+                ? Math.Min(page.Height - page.MarginTop,
+                    headerKeepOut?.Invoke(page, placementPageNumber, placementPageCount) ?? double.PositiveInfinity)
+                : ResolveFootnoteClampBodyBottom(page, placementPageNumber, placementPageCount, firstLayout, headerKeepOut);
+            DocxTextLineLayout? firstLine = firstLayout.TextLines.Count == 0 ? null : firstLayout.TextLines[0];
+            double measuredFirstBoxHeight = 0d;
+            if (firstLine is not null)
+            {
+                measuredFirstBoxHeight = ResolveFirstStoryLineHeight(firstLine, firstLayout.InlineImages, cancellationToken);
+                double firstBoxHeight = ownedInlineFrame
+                    ? ResolveDefaultFootnoteSeparatorFlowHeight(firstLine, separatorMeasurer, measuredFirstBoxHeight)
+                    : measuredFirstBoxHeight;
+                storiesTop = Math.Min(cursorTop, clampBodyBottom - firstBoxHeight);
+                if (sharedContentTop is not null)
+                {
+                    storiesTop = Math.Min(storiesTop, sharedContentTop.Value - (ownedInlineFrame ? firstBoxHeight : 0d));
+                }
+            }
+            bool paragraphBodyFrame = false;
+            if (!ownedInlineFrame && footnoteStories.All(story => HasParagraphNoteFlowStory(story.StoryLayout, cancellationToken)) &&
+                TryResolveFootnoteBodyBottom(activePage, printScale, null, out double bodyBottom))
+            {
+                paragraphBodyFrame = true;
+                // The implied rule owns a natural source-font line on this path too.
+                // Physical body/table occupancy is independent of math eligibility.
+                storiesTop = Math.Min(storiesTop, bodyBottom -
+                    ResolveDefaultFootnoteSeparatorFlowHeight(firstLine, separatorMeasurer, measuredFirstBoxHeight));
+            }
+            if (ownedInlineFrame || paragraphBodyFrame)
+            {
+                storiesTop = ResolveSeatedFootnoteTop(activePage, footnoteStories, storiesTop, frameBottom,
+                    inFlightNotes, printScale, usesParagraphFrames: true);
+            }
+            return (storiesTop, 0d, false, ownedInlineFrame || paragraphBodyFrame);
+        }
     }
 
     private static (Func<DocxLayoutPage, int, int, double>? Footer, double Bottom, double Top)
@@ -2148,140 +2231,6 @@ internal sealed partial class DocxLayoutEngine
             if (double.IsFinite(height) && height > 0d) return height;
         }
         return measuredHeight;
-    }
-
-    // RV06 footlong probes: separator-less footnote blocks keep legacy whole
-    // placement when they fit (synthetic rule preserved), but overflowing stories
-    // slice through the shared line-partition machinery with the synthetic rule
-    // patched onto the head slice. The stories top clamps like the present path,
-    // using the first body line box for the missing separator height.
-    private static void PlaceFootnoteStoriesWithoutSeparator(
-        List<DocxLayoutPage> outputPages,
-        int outputIndex,
-        DocxLayoutPage page,
-        IReadOnlyList<DocxReferencedRelatedStoryLayout> footnoteStories,
-        DocxRelatedStoryLayout? continuationSeparatorLayout,
-        IDocxTextMeasurer? separatorMeasurer,
-        double printScale = 1d, 
-        Func<DocxLayoutPage, int, int, double>? headerKeepOut = null,
-        bool sharedSlicePlacement = false,
-        Dictionary<(DocxRelatedStoryKind Kind, string Id), InFlightRelatedStory>? inFlightNotes = null,
-        int? pageNumberOverride = null,
-        int? pageCountOverride = null,
-        double? sharedContentTop = null,
-        Func<DocxLayoutPage, int, int, double>? footerKeepOut = null,
-        Func<DocxLayoutPage, int, int, double>? availableFooterKeepOut = null,
-        CancellationToken cancellationToken = default)
-    {
-        bool ownedFrame = ResolveOwnedInlineFootnoteFrame(page, footnoteStories, printScale,
-            ref sharedContentTop, ref footerKeepOut, availableFooterKeepOut);
-        DocxLayoutPage activePage = outputPages[outputIndex];
-        int activePageIndex = outputIndex;
-        List<DocxPlacedRelatedStoryLayout> activePlacedStories = activePage.PlacedRelatedStories.ToList();
-        int placementPageNumber = pageNumberOverride ?? outputIndex + 1;
-        int placementPageCount = pageCountOverride ?? outputPages.Count;
-        var (placementFooter, frameBottom, cursorTop) = ResolveFootnotePlacementFrame(
-            activePage, footnoteStories, placementPageNumber, placementPageCount, footerKeepOut, availableFooterKeepOut);
-        double storiesTop = cursorTop;
-        DocxRelatedStoryLayout firstLayout = footnoteStories[0].StoryLayout;
-        double clampBodyBottom = ownedFrame
-            ? Math.Min(page.Height - page.MarginTop,
-                headerKeepOut?.Invoke(page, placementPageNumber, placementPageCount) ?? double.PositiveInfinity)
-            : ResolveFootnoteClampBodyBottom(page, placementPageNumber, placementPageCount, firstLayout, headerKeepOut);
-        DocxTextLineLayout? firstLine = firstLayout.TextLines.Count == 0 ? null : firstLayout.TextLines[0];
-        double measuredFirstBoxHeight = 0d;
-        if (firstLine is not null)
-        {
-            measuredFirstBoxHeight = ResolveFirstStoryLineHeight(firstLine, firstLayout.InlineImages, cancellationToken);
-            double firstBoxHeight = ownedFrame
-                ? ResolveDefaultFootnoteSeparatorFlowHeight(firstLine, separatorMeasurer, measuredFirstBoxHeight)
-                : measuredFirstBoxHeight;
-            storiesTop = Math.Min(cursorTop, clampBodyBottom - firstBoxHeight);
-            if (sharedContentTop is not null)
-            {
-                storiesTop = Math.Min(storiesTop, sharedContentTop.Value - (ownedFrame ? firstBoxHeight : 0d));
-            }
-        }
-        bool paragraphBodyFrame = false;
-        if (!ownedFrame && footnoteStories.All(story => HasParagraphNoteFlowStory(story.StoryLayout, cancellationToken)) &&
-            TryResolveFootnoteBodyBottom(activePage, printScale, null, out double bodyBottom))
-        {
-            paragraphBodyFrame = true;
-            // The implied rule owns a natural source-font line on this path too.
-            // Physical body/table occupancy is independent of math eligibility.
-            storiesTop = Math.Min(storiesTop, bodyBottom -
-                ResolveDefaultFootnoteSeparatorFlowHeight(firstLine, separatorMeasurer, measuredFirstBoxHeight));
-        }
-        if (ownedFrame || paragraphBodyFrame)
-        {
-            storiesTop = ResolveSeatedFootnoteTop(activePage, footnoteStories, storiesTop, frameBottom,
-                inFlightNotes, printScale, usesParagraphFrames: true);
-        }
-        double contentTop = storiesTop;
-        bool firstStory = true;
-        foreach (DocxReferencedRelatedStoryLayout story in footnoteStories)
-        {
-            InFlightRelatedStory? trackedStory = inFlightNotes is not null && story.Location.Reference.Id is not null && inFlightNotes.TryGetValue((story.Location.Reference.Kind, story.Location.Reference.Id), out InFlightRelatedStory? tracked) ? tracked : null;
-            double storyHeight = Math.Max(0d, story.StoryLayout.ContentHeight);
-            // Omitted continuation stories still have a default full-width rule.
-            // Source progress distinguishes a true continuation from an unplaced head.
-            double? defaultContinuationWidth = (ownedFrame || paragraphBodyFrame) && continuationSeparatorLayout is null &&
-                trackedStory is { PlacedLineCount: > 0 }
-                    ? ResolveContinuationRuleWidth(activePage, printScale) : null;
-            bool needsContinuationRule = false;
-            if (trackedStory is not null && trackedStory.SeparatorPlaced && continuationSeparatorLayout is not null && continuationSeparatorLayout.TextLines.Count != 0)
-            {
-                needsContinuationRule = true;
-                AppendFootnoteContinuationSeparator(outputPages, activePageIndex, activePage, activePlacedStories,
-                    continuationSeparatorLayout, story.Location.SourceBlockIndex, contentTop, separatorMeasurer, printScale);
-            }
-
-            if (contentTop - storyHeight >= frameBottom - 0.001d)
-            {
-                double? separatorY = null;
-                double separatorThickness = FootnoteSeparatorThicknessPoints;
-                if (firstStory && !needsContinuationRule)
-                {
-                    (DocxTextRun? bodyRun, double bodyFontSizePoints) = FindSeparatorMarkFont(story.StoryLayout.TextLines);
-                    (double syntheticOffsetPoints, double syntheticThicknessPoints) = ResolveSeparatorRuleGeometry(DocxRelatedStoryKind.Footnote, bodyRun, bodyFontSizePoints, separatorMeasurer);
-                    separatorY = contentTop + ResolveSeparatorGapPoints(bodyRun, bodyFontSizePoints, separatorMeasurer) + syntheticOffsetPoints;
-                    separatorThickness = syntheticThicknessPoints;
-                }
-
-                DocxPlacedRelatedStoryLayout placedStory = PlaceRelatedStoryAtTop(activePage, activePageIndex, story.StoryLayout, story.Location.SourceBlockIndex, contentTop, separatorY)
-                    with { UsesPlainFootnoteFrame = footerKeepOut is not null };
-                if (separatorY is not null)
-                {
-                    placedStory = placedStory with
-                    {
-                        SeparatorThickness = separatorThickness,
-                        SeparatorWidth = defaultContinuationWidth ?? placedStory.SeparatorWidth
-                    };
-                }
-
-                activePlacedStories.Add(placedStory);
-                outputPages[activePageIndex] = activePage with { PlacedRelatedStories = activePlacedStories.ToArray() };
-                contentTop -= storyHeight;
-                if (trackedStory is not null)
-                {
-                    trackedStory.PlacedLineCount += story.StoryLayout.TextLines.Count;
-                }
-            }
-            else
-            {
-                int headPageIndex = activePageIndex;
-                int headCount = activePlacedStories.Count;
-                PlaceRelatedStorySlices(outputPages, ref activePageIndex, ref activePage, ref activePlacedStories, ref contentTop, story.StoryLayout, story.Location.SourceBlockIndex, insertContinuationAfterActivePage: true, continuationSeparatorLayout, separatorMeasurer, printScale, headerKeepOut, stopAfterCurrentPage: sharedSlicePlacement, inFlight: trackedStory, frameBottom: placementFooter, usesPlainFootnoteFrame: footerKeepOut is not null);
-                if (firstStory && !needsContinuationRule)
-                {
-                    PatchSyntheticRuleOntoHeadSlice(outputPages, headPageIndex, headCount, separatorMeasurer, defaultContinuationWidth);
-                }
-            }
-
-            firstStory = false;
-        }
-
-        MarkFootnoteSeparatorsPlaced(footnoteStories, inFlightNotes);
     }
 
     private static void MarkFootnoteSeparatorsPlaced(
