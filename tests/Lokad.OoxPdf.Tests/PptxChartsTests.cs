@@ -573,123 +573,73 @@ internal static partial class PptxChartsTests
         TestAssert.Equal(2, PptxTests.CountTextMatrices(pdf));
     }
 
-    public static void PptxSyntheticChartCategoryGridlinesDoNotEnableValueGridlines()
+    public static void PptxSyntheticChartCategoryGridlinesDoNotEnableValueGridlines() =>
+        AssertColumnGridlines(includeValueGridlines: false, crossAtMaximum: false, []);
+
+    public static void PptxSyntheticChartValueGridlinesUseOfficeLikeMultiSegmentPath() =>
+        AssertColumnGridlines(includeValueGridlines: true, crossAtMaximum: false, [10, 20, 30]);
+
+    public static void PptxSyntheticChartValueGridlinesExcludeCrossingTick() =>
+        AssertColumnGridlines(includeValueGridlines: true, crossAtMaximum: true, [0, 10, 20]);
+
+    private static void AssertColumnGridlines(bool includeValueGridlines, bool crossAtMaximum, int[] expectedLevels)
     {
-        string input = TestFixtures.WriteTempPackage(".pptx", new Dictionary<string, byte[]>
+        const string majorGridlines = "<c:majorGridlines/>";
+        using var input = PptxTests.CreateSingleChartPackageStream($$"""
+            <c:chartSpace xmlns:c="http://schemas.openxmlformats.org/drawingml/2006/chart">
+              <c:chart><c:plotArea>
+              <c:barChart>
+                <c:barDir val="col"/>
+                <c:ser><c:cat><c:strLit><c:pt idx="0"><c:v>A</c:v></c:pt><c:pt idx="1"><c:v>B</c:v></c:pt></c:strLit></c:cat><c:val><c:numLit><c:pt idx="0"><c:v>10</c:v></c:pt><c:pt idx="1"><c:v>20</c:v></c:pt></c:numLit></c:val></c:ser>
+                <c:axId val="1"/><c:axId val="2"/>
+              </c:barChart>
+              <c:catAx>
+                <c:axId val="1"/><c:axPos val="b"/>
+                {{(includeValueGridlines ? "" : majorGridlines)}}
+                {{(crossAtMaximum ? """<c:crossAx val="2"/><c:crosses val="max"/>""" : "")}}
+              </c:catAx>
+              <c:valAx>
+                <c:axId val="2"/><c:axPos val="l"/><c:tickLblPos val="none"/>
+                <c:scaling><c:min val="0"/><c:max val="30"/></c:scaling>
+                {{(crossAtMaximum ? """<c:crossAx val="1"/><c:crosses val="autoZero"/>""" : "")}}
+                <c:majorUnit val="10"/>{{(includeValueGridlines ? majorGridlines : "")}}
+              </c:valAx>
+              </c:plotArea></c:chart>
+            </c:chartSpace>
+            """);
+        PdfPage page = PptxTests.RenderSingleSlidePage(input);
+        var strokes = PptxLinePointStyleTests.ReadStrokeSegments(page).ToArray();
+        var categoryAxis = strokes.Single(stroke => IsHorizontalAxisStroke(stroke) && stroke.Join == 0);
+        var valueAxis = strokes.Single(IsVerticalAxisStroke);
+        double bottom = Math.Min(valueAxis.Start.Y, valueAxis.End.Y);
+        double top = Math.Max(valueAxis.Start.Y, valueAxis.End.Y);
+        TestAssert.True(Math.Abs(categoryAxis.Start.Y - (crossAtMaximum ? top : bottom)) < .002d,
+            "The category axis must cross at the requested end of the range.");
+
+        var paths = strokes.GroupBy(stroke => stroke.PathIndex)
+            .Where(path => path.Key != categoryAxis.PathIndex && path.Any(IsHorizontalAxisStroke)).ToArray();
+        TestAssert.Equal(includeValueGridlines ? 1 : 0, paths.Length);
+        if (!includeValueGridlines)
         {
-            ["[Content_Types].xml"] = TestFixtures.Utf8(PptxTests.BasicContentTypes()),
-            ["_rels/.rels"] = TestFixtures.Utf8(PptxTests.PackageRelationship()),
-            ["ppt/_rels/presentation.xml.rels"] = TestFixtures.Utf8(PptxTests.PresentationRelationship()),
-            ["ppt/presentation.xml"] = TestFixtures.Utf8(PptxTests.BasicPresentation()),
-            ["ppt/slides/_rels/slide1.xml.rels"] = TestFixtures.Utf8("""
-                <?xml version="1.0" encoding="UTF-8"?>
-                <Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">
-                  <Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/chart" Target="../charts/chart1.xml"/>
-                </Relationships>
-                """),
-            ["ppt/slides/slide1.xml"] = TestFixtures.Utf8("""
-                <?xml version="1.0" encoding="UTF-8"?>
-                <p:sld xmlns:p="http://schemas.openxmlformats.org/presentationml/2006/main"
-                       xmlns:a="http://schemas.openxmlformats.org/drawingml/2006/main"
-                       xmlns:c="http://schemas.openxmlformats.org/drawingml/2006/chart"
-                       xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships">
-                  <p:cSld><p:spTree>
-                    <p:graphicFrame>
-                      <p:xfrm><a:off x="914400" y="914400"/><a:ext cx="3657600" cy="2743200"/></p:xfrm>
-                      <a:graphic><a:graphicData uri="http://schemas.openxmlformats.org/drawingml/2006/chart"><c:chart r:id="rId1"/></a:graphicData></a:graphic>
-                    </p:graphicFrame>
-                  </p:spTree></p:cSld>
-                </p:sld>
-                """),
-            ["ppt/charts/chart1.xml"] = TestFixtures.Utf8("""
-                <?xml version="1.0" encoding="UTF-8"?>
-                <c:chartSpace xmlns:c="http://schemas.openxmlformats.org/drawingml/2006/chart"
-                              xmlns:a="http://schemas.openxmlformats.org/drawingml/2006/main">
-                  <c:chart><c:plotArea>
-                  <c:barChart>
-                    <c:barDir val="col"/>
-                    <c:ser><c:cat><c:strLit><c:pt idx="0"><c:v>A</c:v></c:pt><c:pt idx="1"><c:v>B</c:v></c:pt></c:strLit></c:cat><c:val><c:numLit><c:pt idx="0"><c:v>10</c:v></c:pt><c:pt idx="1"><c:v>20</c:v></c:pt></c:numLit></c:val></c:ser>
-                    <c:axId val="1"/><c:axId val="2"/>
-                  </c:barChart>
-                  <c:catAx>
-                    <c:axId val="1"/><c:axPos val="b"/><c:majorGridlines/>
-                  </c:catAx>
-                  <c:valAx>
-                    <c:axId val="2"/><c:axPos val="l"/><c:tickLblPos val="none"/>
-                    <c:scaling><c:min val="0"/><c:max val="30"/></c:scaling><c:majorUnit val="10"/>
-                  </c:valAx>
-                  </c:plotArea></c:chart>
-                </c:chartSpace>
-                """)
-        });
-        string output = Path.ChangeExtension(Path.GetTempFileName(), ".pdf");
+            return;
+        }
 
-        OoxPdfConverter.Convert(input, output);
-
-        string pdf = File.ReadAllText(output, Encoding.ASCII);
-        TestAssert.True(!Regex.IsMatch(pdf, @"0\.75 w\s+(?:[0-9.]+ [0-9.]+ m\s+[0-9.]+ [0-9.]+ l\s+){2,}S"),
-            "Category-axis gridlines must not enable value-axis gridline rendering.");
-    }
-
-    public static void PptxSyntheticChartValueGridlinesUseOfficeLikeMultiSegmentPath()
-    {
-        string input = TestFixtures.WriteTempPackage(".pptx", new Dictionary<string, byte[]>
+        var gridlines = paths.Single().OrderBy(stroke => stroke.Start.Y).ToArray();
+        TestAssert.Equal(expectedLevels.Length, gridlines.Length);
+        for (int i = 0; i < gridlines.Length; i++)
         {
-            ["[Content_Types].xml"] = TestFixtures.Utf8(PptxTests.BasicContentTypes()),
-            ["_rels/.rels"] = TestFixtures.Utf8(PptxTests.PackageRelationship()),
-            ["ppt/_rels/presentation.xml.rels"] = TestFixtures.Utf8(PptxTests.PresentationRelationship()),
-            ["ppt/presentation.xml"] = TestFixtures.Utf8(PptxTests.BasicPresentation()),
-            ["ppt/slides/_rels/slide1.xml.rels"] = TestFixtures.Utf8("""
-                <?xml version="1.0" encoding="UTF-8"?>
-                <Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">
-                  <Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/chart" Target="../charts/chart1.xml"/>
-                </Relationships>
-                """),
-            ["ppt/slides/slide1.xml"] = TestFixtures.Utf8("""
-                <?xml version="1.0" encoding="UTF-8"?>
-                <p:sld xmlns:p="http://schemas.openxmlformats.org/presentationml/2006/main"
-                       xmlns:a="http://schemas.openxmlformats.org/drawingml/2006/main"
-                       xmlns:c="http://schemas.openxmlformats.org/drawingml/2006/chart"
-                       xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships">
-                  <p:cSld><p:spTree>
-                    <p:graphicFrame>
-                      <p:xfrm><a:off x="914400" y="914400"/><a:ext cx="3657600" cy="2743200"/></p:xfrm>
-                      <a:graphic><a:graphicData uri="http://schemas.openxmlformats.org/drawingml/2006/chart"><c:chart r:id="rId1"/></a:graphicData></a:graphic>
-                    </p:graphicFrame>
-                  </p:spTree></p:cSld>
-                </p:sld>
-                """),
-            ["ppt/charts/chart1.xml"] = TestFixtures.Utf8("""
-                <?xml version="1.0" encoding="UTF-8"?>
-                <c:chartSpace xmlns:c="http://schemas.openxmlformats.org/drawingml/2006/chart"
-                              xmlns:a="http://schemas.openxmlformats.org/drawingml/2006/main">
-                  <c:chart><c:plotArea>
-                  <c:barChart>
-                    <c:barDir val="col"/>
-                    <c:ser><c:cat><c:strLit><c:pt idx="0"><c:v>A</c:v></c:pt><c:pt idx="1"><c:v>B</c:v></c:pt></c:strLit></c:cat><c:val><c:numLit><c:pt idx="0"><c:v>10</c:v></c:pt><c:pt idx="1"><c:v>20</c:v></c:pt></c:numLit></c:val></c:ser>
-                    <c:axId val="1"/><c:axId val="2"/>
-                  </c:barChart>
-                  <c:catAx>
-                    <c:axId val="1"/><c:axPos val="b"/>
-                  </c:catAx>
-                  <c:valAx>
-                    <c:axId val="2"/><c:axPos val="l"/><c:tickLblPos val="none"/>
-                    <c:scaling><c:min val="0"/><c:max val="30"/></c:scaling><c:majorUnit val="10"/><c:majorGridlines/>
-                  </c:valAx>
-                  </c:plotArea></c:chart>
-                </c:chartSpace>
-                """)
-        });
-        string output = Path.ChangeExtension(Path.GetTempFileName(), ".pdf");
-
-        OoxPdfConverter.Convert(input, output);
-
-        string pdf = File.ReadAllText(output, Encoding.ASCII);
-        TestAssert.Contains("0 G", pdf);
-        TestAssert.Contains("0.75 w", pdf);
-        TestAssert.DoesNotContain("0.851 G", pdf);
-        TestAssert.True(Regex.IsMatch(pdf, @"(?:[0-9.]+ [0-9.]+ m\s+[0-9.]+ [0-9.]+ l\s+){3}S"),
-            "Major value gridlines should be emitted as one multi-segment stroked path that includes the maximum tick and excludes the axis baseline.");
+            var line = gridlines[i];
+            double expectedY = bottom + (top - bottom) * expectedLevels[i] / 30d;
+            TestAssert.True(line.Operator == "l" && Math.Abs(line.Start.Y - expectedY) < .002d &&
+                Math.Abs(line.End.Y - expectedY) < .002d &&
+                line.Start.X == categoryAxis.Start.X && line.End.X == categoryAxis.End.X,
+                $"Expected a plot-wide gridline at value {expectedLevels[i]}.");
+            TestAssert.Equal(default(RgbColor), line.Color);
+            TestAssert.Equal(.75d, line.Width);
+            TestAssert.Equal(1d, line.Opacity);
+            TestAssert.Equal(0, line.Cap);
+            TestAssert.Equal(1, line.Join);
+        }
     }
 
     public static void PptxSyntheticChartHorizontalValueAxisAutoUnitUsesOfficeDenseTicks()
@@ -2138,76 +2088,6 @@ internal static partial class PptxChartsTests
             TestAssert.True(Math.Abs(x - actual.X) < .002d && Math.Abs(y - actual.Y) < .002d,
                 $"Expected endpoint ({x}, {y}) in {operation}.");
         }
-    }
-
-    public static void PptxSyntheticChartValueGridlinesExcludeCrossingTick()
-    {
-        string input = TestFixtures.WriteTempPackage(".pptx", new Dictionary<string, byte[]>
-        {
-            ["[Content_Types].xml"] = TestFixtures.Utf8(PptxTests.BasicContentTypes()),
-            ["_rels/.rels"] = TestFixtures.Utf8(PptxTests.PackageRelationship()),
-            ["ppt/_rels/presentation.xml.rels"] = TestFixtures.Utf8(PptxTests.PresentationRelationship()),
-            ["ppt/presentation.xml"] = TestFixtures.Utf8(PptxTests.BasicPresentation()),
-            ["ppt/slides/_rels/slide1.xml.rels"] = TestFixtures.Utf8("""
-                <?xml version="1.0" encoding="UTF-8"?>
-                <Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">
-                  <Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/chart" Target="../charts/chart1.xml"/>
-                </Relationships>
-                """),
-            ["ppt/slides/slide1.xml"] = TestFixtures.Utf8("""
-                <?xml version="1.0" encoding="UTF-8"?>
-                <p:sld xmlns:p="http://schemas.openxmlformats.org/presentationml/2006/main"
-                       xmlns:a="http://schemas.openxmlformats.org/drawingml/2006/main"
-                       xmlns:c="http://schemas.openxmlformats.org/drawingml/2006/chart"
-                       xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships">
-                  <p:cSld><p:spTree>
-                    <p:graphicFrame>
-                      <p:xfrm><a:off x="914400" y="914400"/><a:ext cx="3657600" cy="2743200"/></p:xfrm>
-                      <a:graphic><a:graphicData uri="http://schemas.openxmlformats.org/drawingml/2006/chart"><c:chart r:id="rId1"/></a:graphicData></a:graphic>
-                    </p:graphicFrame>
-                  </p:spTree></p:cSld>
-                </p:sld>
-                """),
-            ["ppt/charts/chart1.xml"] = TestFixtures.Utf8("""
-                <?xml version="1.0" encoding="UTF-8"?>
-                <c:chartSpace xmlns:c="http://schemas.openxmlformats.org/drawingml/2006/chart"
-                              xmlns:a="http://schemas.openxmlformats.org/drawingml/2006/main">
-                  <c:chart><c:plotArea>
-                  <c:barChart>
-                    <c:barDir val="col"/>
-                    <c:ser><c:cat><c:strLit><c:pt idx="0"><c:v>A</c:v></c:pt><c:pt idx="1"><c:v>B</c:v></c:pt></c:strLit></c:cat><c:val><c:numLit><c:pt idx="0"><c:v>10</c:v></c:pt><c:pt idx="1"><c:v>20</c:v></c:pt></c:numLit></c:val></c:ser>
-                    <c:axId val="1"/><c:axId val="2"/>
-                  </c:barChart>
-                  <c:catAx>
-                    <c:axId val="1"/><c:axPos val="b"/><c:crossAx val="2"/><c:crosses val="max"/>
-                  </c:catAx>
-                  <c:valAx>
-                    <c:axId val="2"/><c:axPos val="l"/><c:tickLblPos val="none"/>
-                    <c:scaling><c:min val="0"/><c:max val="30"/></c:scaling><c:crossAx val="1"/><c:crosses val="autoZero"/><c:majorUnit val="10"/><c:majorGridlines/>
-                  </c:valAx>
-                  </c:plotArea></c:chart>
-                </c:chartSpace>
-                """)
-        });
-        string output = Path.ChangeExtension(Path.GetTempFileName(), ".pdf");
-
-        OoxPdfConverter.Convert(input, output);
-
-        string pdf = File.ReadAllText(output, Encoding.ASCII);
-        Match group = Regex.Match(pdf, @"(?:[0-9.]+ [0-9.]+ m\s+[0-9.]+ [0-9.]+ l\s+){3}S");
-        TestAssert.True(group.Success, "Expected three value gridline segments after excluding the max crossing tick.");
-        double[] groupY = Regex.Matches(group.Value, @"[0-9.]+ (?<y>[0-9.]+) m\s+[0-9.]+ [0-9.]+ l")
-            .Select(match => double.Parse(match.Groups["y"].Value, CultureInfo.InvariantCulture))
-            .ToArray();
-        double categoryAxisY = Regex.Matches(pdf, @"[0-9.]+ (?<y>[0-9.]+) m [0-9.]+ (?<y2>[0-9.]+) l S")
-            .Cast<Match>()
-            .Where(match => match.Groups["y"].Value == match.Groups["y2"].Value)
-            .Select(match => double.Parse(match.Groups["y"].Value, CultureInfo.InvariantCulture))
-            .Max();
-        TestAssert.True(groupY.All(y => Math.Abs(y - categoryAxisY) > 0.001d),
-            "When the category crossing is max, the grouped gridlines should exclude the top crossing tick.");
-        TestAssert.True(groupY.Min() < categoryAxisY,
-            "When the category crossing is max, lower value ticks remain visible as gridlines.");
     }
 
     public static void PptxSyntheticChartCategoryAxisLineUsesCrossingTick()

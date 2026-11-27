@@ -1407,13 +1407,15 @@ internal sealed partial class PptxRenderer
 
     private static void DrawHorizontalChartGridlines(PdfGraphicsBuilder graphics, double plotX, double plotY, double plotWidth, double plotHeight, ChartValueExtents extents, double? explicitUnit, double? crossingValue, bool reversed, bool major, ChartSeriesStroke? gridlineStroke, PptxRenderContext? context = null)
     {
-        DrawHorizontalChartGridlinePaths(graphics, plotX, plotY, plotWidth, plotHeight, extents, reversed, major, gridlineStroke,
+        DrawChartGridlinePaths(graphics, plotX, plotY, plotWidth, plotHeight, extents, reversed, major, gridlineStroke,
+            vertical: false,
             () => GetChartGridlineValues(extents, explicitUnit, crossingValue, PptxChartMetricRules.AxisNiceTickTargetCount, context: context));
     }
 
     private static void DrawHorizontalChartGridlines(PdfGraphicsBuilder graphics, double plotX, double plotY, double plotWidth, double plotHeight, ChartValueExtents extents, ChartAxisUnits units, double? crossingValue, bool reversed, bool major, ChartSeriesStroke? gridlineStroke, bool hasMajorGridlineElement, ChartAxisTickPolicy tickPolicy = ChartAxisTickPolicy.ZeroAlignedWithEndpoints, PptxRenderContext? context = null)
     {
-        DrawHorizontalChartGridlinePaths(graphics, plotX, plotY, plotWidth, plotHeight, extents, reversed, major, gridlineStroke,
+        DrawChartGridlinePaths(graphics, plotX, plotY, plotWidth, plotHeight, extents, reversed, major, gridlineStroke,
+            vertical: false,
             () => GetChartGridlineValuesCore(extents, units, major, crossingValue,
                 tickPolicy == ChartAxisTickPolicy.SourceMinimumIntervals
                     ? PptxChartMetricRules.AxisNiceVerticalValueTickTargetCount
@@ -1421,7 +1423,9 @@ internal sealed partial class PptxRenderer
                 hasMajorGridlineElement, tickPolicy, context: context));
     }
 
-    private static void DrawHorizontalChartGridlinePaths(PdfGraphicsBuilder graphics, double plotX, double plotY, double plotWidth, double plotHeight, ChartValueExtents extents, bool reversed, bool major, ChartSeriesStroke? gridlineStroke, Func<IReadOnlyList<double>> readValues)
+    private static void DrawChartGridlinePaths(PdfGraphicsBuilder graphics, double plotX, double plotY, double plotWidth,
+        double plotHeight, ChartValueExtents extents, bool reversed, bool major, ChartSeriesStroke? gridlineStroke,
+        bool vertical, Func<IReadOnlyList<double>> readValues)
     {
         ChartSeriesStroke stroke = gridlineStroke ?? DefaultChartGridlineStroke(major);
         if (stroke.Alpha <= 0.001d)
@@ -1440,9 +1444,18 @@ internal sealed partial class PptxRenderer
         bool hasPath = false;
         foreach (double value in readValues())
         {
-            double y = ChartValueToPlotCoordinate(extents, value, plotY, plotHeight, reversed);
-            graphics.MoveTo(plotX, y);
-            graphics.LineTo(plotX + plotWidth, y);
+            if (vertical)
+            {
+                double x = ChartValueToPlotCoordinate(extents, value, plotX, plotWidth, reversed);
+                graphics.MoveTo(x, plotY);
+                graphics.LineTo(x, plotY + plotHeight);
+            }
+            else
+            {
+                double y = ChartValueToPlotCoordinate(extents, value, plotY, plotHeight, reversed);
+                graphics.MoveTo(plotX, y);
+                graphics.LineTo(plotX + plotWidth, y);
+            }
             hasPath = true;
         }
 
@@ -1459,42 +1472,14 @@ internal sealed partial class PptxRenderer
 
     private static void DrawVerticalChartGridlines(PdfGraphicsBuilder graphics, double plotX, double plotY, double plotWidth, double plotHeight, ChartValueExtents extents, ChartValueAxisRenderOptions options, bool major, double autoTickTargetCount, PptxRenderContext? context = null)
     {
-        ChartSeriesStroke stroke = (major ? options.GridlineStyle.Major : options.GridlineStyle.Minor) ?? DefaultChartGridlineStroke(major);
-        if (stroke.Alpha <= 0.001d)
-        {
-            return;
-        }
-
-        if (stroke.Alpha < 1d)
-        {
-            graphics.SaveState();
-            graphics.SetAlpha(1d, stroke.Alpha);
-        }
-
-        // Office defaults gridlines to round joins (caps stay butt).
-        SetChartStroke(graphics, stroke with { Join = stroke.Join ?? 1 });
-        bool hasPath = false;
-        IReadOnlyList<double> values = options.TickPolicy == ChartAxisTickPolicy.SourceMinimumIntervals
-            ? GetChartGridlineValuesCore(extents, options.Units, major, options.CrossingValue, autoTickTargetCount, options.HasMajorGridlineElement, options.TickPolicy, context: context)
-            : GetChartGridlineValues(extents, major ? options.Units.MajorUnit : options.Units.MinorUnit, options.CrossingValue,
-                major ? autoTickTargetCount : PptxChartMetricRules.AxisNiceTickTargetCount, context: context);
-        foreach (double value in values)
-        {
-            double x = ChartValueToPlotCoordinate(extents, value, plotX, plotWidth, options.Reversed);
-            graphics.MoveTo(x, plotY);
-            graphics.LineTo(x, plotY + plotHeight);
-            hasPath = true;
-        }
-
-        if (hasPath)
-        {
-            graphics.StrokeCurrentPath();
-        }
-
-        if (stroke.Alpha < 1d)
-        {
-            graphics.RestoreState();
-        }
+        DrawChartGridlinePaths(graphics, plotX, plotY, plotWidth, plotHeight, extents, options.Reversed, major,
+            major ? options.GridlineStyle.Major : options.GridlineStyle.Minor, vertical: true,
+            () => options.TickPolicy == ChartAxisTickPolicy.SourceMinimumIntervals
+                ? GetChartGridlineValuesCore(extents, options.Units, major, options.CrossingValue, autoTickTargetCount,
+                    options.HasMajorGridlineElement, options.TickPolicy, context: context)
+                : GetChartGridlineValues(extents, major ? options.Units.MajorUnit : options.Units.MinorUnit,
+                    options.CrossingValue, major ? autoTickTargetCount : PptxChartMetricRules.AxisNiceTickTargetCount,
+                    context: context));
     }
 
     // RV04: effective-style-18/26 bars paint a vertical base-relative gradient resolved

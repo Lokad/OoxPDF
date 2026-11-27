@@ -316,7 +316,7 @@ internal static class PptxLinePointStyleTests
     private readonly record struct StrokeState(RgbColor Color, double Width, double Opacity, int Cap, int Join, PdfRectangle Clip);
 
     internal readonly record struct StrokeSegment(RgbColor Color, double Width, double Opacity, string Operator, int Cap, int Join,
-        (double X, double Y) Start, (double X, double Y) End, PdfRectangle Clip);
+        (double X, double Y) Start, (double X, double Y) End, PdfRectangle Clip, int PathIndex);
 
     // These fixtures use segments over 40pt wide and shorter markers and keys.
     private static IEnumerable<StrokeSegment> NativeSegments(PdfPage page) =>
@@ -331,6 +331,7 @@ internal static class PptxLinePointStyleTests
         var states = new Stack<StrokeState>();
         var edges = new List<(string Operator, (double X, double Y) Start, (double X, double Y) End)>();
         (double X, double Y) current = default;
+        int pathIndex = 0;
         foreach (string raw in page.Content.Split('\n'))
         {
             string line = raw.Trim(); string[] words = line.Split(' ', StringSplitOptions.RemoveEmptyEntries);
@@ -375,7 +376,9 @@ internal static class PptxLinePointStyleTests
                 if (words.Length == 7 && words[2] == "m" && words[5] == "l")
                     edges.Add(("l", (N(0), N(1)), (N(3), N(4))));
                 foreach (var edge in edges)
-                    yield return new StrokeSegment(stroke.Color, stroke.Width, stroke.Opacity, edge.Operator, stroke.Cap, stroke.Join, edge.Start, edge.End, stroke.Clip);
+                    yield return new StrokeSegment(stroke.Color, stroke.Width, stroke.Opacity, edge.Operator, stroke.Cap, stroke.Join,
+                        edge.Start, edge.End, stroke.Clip, pathIndex);
+                pathIndex++;
                 edges.Clear();
             }
             else if (op is "n" or "f" or "f*") edges.Clear();
