@@ -990,12 +990,12 @@ internal static partial class PptxChartsTests
     {
         foreach ((string fields, bool geometry) in new[] { ("", false), ("<c:layoutTarget val=\"outer\"/>", false), ("<c:xMode val=\"factor\"/>", false), ("<c:x val=\"0\"/>", true), ("<c:h val=\"0.68\"/>", true), ("<c:y val=\"bad\"/>", true) })
         {
-            XDocument xml = XDocument.Parse("<c:chartSpace xmlns:c=\"http://schemas.openxmlformats.org/drawingml/2006/chart\"><c:plotArea><c:layout><c:manualLayout>" + fields + "</c:manualLayout></c:layout></c:plotArea></c:chartSpace>");
-            PptxSceneChartManualLayout layout = PptxSceneBuilder.ReadChartPlotAreaManualLayout(xml);
+            XElement plotArea = XElement.Parse("<c:plotArea xmlns:c=\"http://schemas.openxmlformats.org/drawingml/2006/chart\"><c:layout><c:manualLayout>" + fields + "</c:manualLayout></c:layout></c:plotArea>");
+            PptxSceneChartManualLayout layout = PptxSceneBuilder.ReadChartManualLayout(plotArea);
             TestAssert.True(layout.HasLayout, "Authored manual-layout presence remains inspectable.");
             TestAssert.Equal(geometry, layout.HasGeometryValues);
         }
-        TestAssert.True(!default(PptxSceneChartManualLayout).HasGeometryValues, "Absent layout has no coordinates.");
+        TestAssert.True(!PptxSceneBuilder.ReadChartManualLayout(null).HasGeometryValues, "Absent layout has no coordinates.");
     }
 
     public static void PptxLegendlessLinePlotRetainsSourceLayoutFallbacks()

@@ -45,7 +45,8 @@ internal sealed partial class PptxSceneBuilder
                 ? PptxSceneChartStyle.Undefined
                 : ReadChartStylePart(package, chartRelationships, theme, colorMap, cancellationToken);
             cancellationToken.ThrowIfCancellationRequested();
-            IReadOnlyList<PptxSceneChartPlot> plots = ReadChartPlots(chartXml, theme, colorMap);
+            XElement? plotArea = chartXml?.Descendants(ChartNamespace + "plotArea").FirstOrDefault();
+            IReadOnlyList<PptxSceneChartPlot> plots = ReadChartPlots(plotArea, theme, colorMap);
             cancellationToken.ThrowIfCancellationRequested();
             XElement? chartSpace = chartXml?.Root;
             string legacyStyleValue = ReadChartElementValue(chartSpace, "style");
@@ -62,7 +63,7 @@ internal sealed partial class PptxSceneBuilder
             XElement? directStyle = chartSpace?.Element(ChartStyle2010Namespace + "style");
             string seriesStyleValue = directStyle is null ? legacyStyleValue : ReadChartValueAttribute(directStyle);
             int? seriesStyleId = int.TryParse(seriesStyleValue, out int seriesStyle) ? seriesStyle : null;
-            IReadOnlyList<PptxSceneChartAxis> axes = ReadChartAxes(chartXml, theme, colorMap, stylePart, plots, preferredGalleryStyle);
+            IReadOnlyList<PptxSceneChartAxis> axes = ReadChartAxes(plotArea, theme, colorMap, stylePart, plots, preferredGalleryStyle);
             return result = new PptxSceneChart(
                 relationshipId,
                 targetPartName,
@@ -79,13 +80,10 @@ internal sealed partial class PptxSceneBuilder
                 axes,
                 ReadChartTitle(chartXml, theme, colorMap, plots),
                 ReadChartLegend(chartXml, theme, colorMap),
-                ReadChartTextStyleOverride(chartXml?.Root, theme, colorMap),
-                ReadChartPlotAreaManualLayout(chartXml),
-                ReadChartShapeStyle(chartXml?.Root?.Element(ChartNamespace + "spPr"), theme, colorMap),
-                ReadChartShapeStyle(chartXml?
-                    .Descendants(ChartNamespace + "plotArea")
-                    .FirstOrDefault()
-                    ?.Element(ChartNamespace + "spPr"), theme, colorMap),
+                ReadChartTextStyleOverride(chartSpace, theme, colorMap),
+                ReadChartManualLayout(plotArea),
+                ReadChartShapeStyle(chartSpace?.Element(ChartNamespace + "spPr"), theme, colorMap),
+                ReadChartShapeStyle(plotArea?.Element(ChartNamespace + "spPr"), theme, colorMap),
                 chartRelationships);
         }
         finally
@@ -105,11 +103,8 @@ internal sealed partial class PptxSceneBuilder
             ParseChartDisplayBlanksAs(ReadChartElementValue(chart, "dispBlanksAs")));
     }
 
-    private static IReadOnlyList<PptxSceneChartPlot> ReadChartPlots(XDocument? chartXml, PptxTheme theme, PptxColorMap colorMap)
+    private static IReadOnlyList<PptxSceneChartPlot> ReadChartPlots(XElement? plotArea, PptxTheme theme, PptxColorMap colorMap)
     {
-        XElement? plotArea = chartXml?
-            .Descendants(ChartNamespace + "plotArea")
-            .FirstOrDefault();
         if (plotArea is null)
         {
             return [];
@@ -319,12 +314,9 @@ internal sealed partial class PptxSceneBuilder
             : null;
     }
 
-    private static IReadOnlyList<PptxSceneChartAxis> ReadChartAxes(XDocument? chartXml, PptxTheme theme, PptxColorMap colorMap,
+    private static IReadOnlyList<PptxSceneChartAxis> ReadChartAxes(XElement? plotArea, PptxTheme theme, PptxColorMap colorMap,
         PptxSceneChartStyle stylePart, IReadOnlyList<PptxSceneChartPlot> plots, int? preferredGalleryStyle)
     {
-        XElement? plotArea = chartXml?
-            .Descendants(ChartNamespace + "plotArea")
-            .FirstOrDefault();
         if (plotArea is null)
         {
             return [];
@@ -430,14 +422,6 @@ internal sealed partial class PptxSceneBuilder
     {
         PptxSceneLineStyle line = ReadChartLineWithInheritedProperties(axis.Element(ChartNamespace + "spPr"), theme, colorMap, inheritedLine);
         return line.HasLine ? line : inheritedLine;
-    }
-
-    internal static PptxSceneChartManualLayout ReadChartPlotAreaManualLayout(XDocument? chartXml)
-    {
-        XElement? plotArea = chartXml?
-            .Descendants(ChartNamespace + "plotArea")
-            .FirstOrDefault();
-        return ReadChartManualLayout(plotArea);
     }
 
     internal static PptxSceneChartManualLayout ReadChartManualLayout(XElement? container)
