@@ -282,9 +282,56 @@ internal static class DocxGlyphlessAnchorTests
         }
     }
 
+    public static void DocxGlyphlessAutofitHonorsFixedNoWrapWidthFloors()
+    {
+        const int greenWidth = 120;
+        foreach (var (noWrap, blueWidth, columnWidth) in new[] { (true, 40, 130), (false, 40, 90), (true, 82, 90) })
+        {
+            string green = TestFixtures.DocxInlinePngRun.Replace("cx=\"914400\"", "cx=\"1524000\"", StringComparison.Ordinal);
+            string blue = TestFixtures.DocxInlinePngRun.Replace("rIdImage1", "rIdBlue", StringComparison.Ordinal)
+                .Replace("cx=\"914400\"", FormattableString.Invariant($"cx=\"{blueWidth * 12700}\""), StringComparison.Ordinal);
+            string textSizing = noWrap ? "<w:noWrap/>" : "";
+            string input = WriteLinkedCellPictureDocument($"""
+                <w:tbl>
+                  <w:tblPr><w:tblW w:w="3600" w:type="dxa"/><w:tblLayout w:type="autofit"/></w:tblPr>
+                  <w:tblGrid><w:gridCol w:w="2600"/><w:gridCol w:w="2600"/></w:tblGrid>
+                  <w:tr>
+                    <w:tc><w:tcPr><w:tcW w:w="2600" w:type="dxa"/>{textSizing}</w:tcPr><w:p>{green}</w:p></w:tc>
+                    <w:tc><w:tcPr><w:tcW w:w="2600" w:type="dxa"/></w:tcPr><w:p>{blue}</w:p></w:tc>
+                  </w:tr>
+                </w:tbl>
+                """);
+            foreach (var (mode, geometry) in Views())
+            {
+                PdfPage page = Render(input, new EmptyProgramResolver(), mode, geometry).Single();
+                TestAssert.Equal(0, page.Fonts.Count);
+                var paints = DocxNoteClippingTests.ReadPhysicalPaintFrames(page).ToArray();
+                var images = page.Images.ToDictionary(ReadPictureGreenChannel, image =>
+                    paints.Single(paint => paint.Block == "/" + image.ResourceName + " Do"));
+                var left = images[255];
+                var right = images[0];
+                TestAssert.True(Math.Abs(right.Transform.M31 - left.Transform.M31 - columnWidth) < .002d,
+                    "Only the fixed noWrap cell with a peer that can shrink receives its 130pt width.");
+                TestAssert.Equal(2, page.Annotations.Count);
+                TestAssert.True(PictureFitsViewport(right, blueWidth), "The peer keeps its full picture.");
+                AssertPictureLink(page, "blue", right);
+                if (columnWidth == 130)
+                {
+                    TestAssert.True(PictureFitsViewport(left, greenWidth), "The authored width restores the full wide picture.");
+                    AssertPictureLink(page, "green", left);
+                }
+                else
+                {
+                    TestAssert.True(!PictureFitsViewport(left, greenWidth), "The proportional control clips the wide picture.");
+                    var link = page.Annotations.Single(annotation => annotation.Uri == "https://example.invalid/green");
+                    TestAssert.True(link.Width > 80d && link.Width < 90d, "The clipped picture retains its visible click area.");
+                }
+            }
+        }
+    }
+
     private static string WriteLinkedCellPictures(string textSizing, string trailingRun, string layout = "fixed")
     {
-        const string documentPart = "word/document.xml";
         string picture = TestFixtures.DocxInlinePngRun;
         string blue = picture.Replace("rIdImage1", "rIdBlue", StringComparison.Ordinal);
         string table = $"""
@@ -295,8 +342,14 @@ internal static class DocxGlyphlessAnchorTests
                 <w:p>{picture}{blue}{trailingRun}</w:p></w:tc></w:tr>
             </w:tbl>
             """;
+        return WriteLinkedCellPictureDocument(table);
+    }
+
+    private static string WriteLinkedCellPictureDocument(string body)
+    {
+        const string documentPart = "word/document.xml";
         byte[] green = TestFixtures.CreateRgbPng(1, 1, [0, 255, 0]);
-        string seed = TestFixtures.WriteDocxInlinePng(table, green);
+        string seed = TestFixtures.WriteDocxInlinePng(body, green);
         try
         {
             var parts = ReadParts(seed);
@@ -324,10 +377,10 @@ internal static class DocxGlyphlessAnchorTests
         AssertPictureLink(page, "blue", second);
     }
 
-    private static bool PictureFitsViewport(DocxNoteClippingTests.PhysicalPaintFrame paint) =>
-        paint.Transform.M11 == 72f && paint.Transform.M22 == 72f &&
+    private static bool PictureFitsViewport(DocxNoteClippingTests.PhysicalPaintFrame paint, float width = 72f) =>
+        paint.Transform.M11 == width && paint.Transform.M22 == 72f &&
         paint.Transform.M31 >= paint.Clip.X && paint.Transform.M32 >= paint.Clip.Y &&
-        paint.Transform.M31 + 72f <= paint.Clip.X + paint.Clip.Width &&
+        paint.Transform.M31 + width <= paint.Clip.X + paint.Clip.Width &&
         paint.Transform.M32 + 72f <= paint.Clip.Y + paint.Clip.Height;
 
     private static void AssertPictureLink(PdfPage page, string color, DocxNoteClippingTests.PhysicalPaintFrame paint)

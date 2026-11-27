@@ -1303,13 +1303,12 @@ internal sealed partial class DocxLayoutEngine
         double rawTableWidth = effectiveColumns.Sum();
         double scale = rawTableWidth <= 0d ? 1d : targetTableWidth / rawTableWidth;
         double[] resolvedColumns = effectiveColumns.Select(width => width * scale).ToArray();
-        if (resolvedColumns.Length > 1 && textMeasurer is not null &&
-            TryHonorNoWrapWidthFloors(resolvedColumns, textMeasurer))
+        if (resolvedColumns.Length > 1 && TryHonorNoWrapWidthFloors(resolvedColumns, textMeasurer))
             return new DocxResolvedTableGrid(gridX, targetTableWidth, resolvedColumns, 1d, resolvedColumns);
 
         return new DocxResolvedTableGrid(gridX, targetTableWidth, effectiveColumns, scale, resolvedColumns);
 
-        bool TryHonorNoWrapWidthFloors(double[] widths, IDocxTextMeasurer measurer)
+        bool TryHonorNoWrapWidthFloors(double[] widths, IDocxTextMeasurer? measurer)
         {
             double[]? floors = null;
             foreach (DocxTableRow row in table.Rows)
@@ -1368,7 +1367,7 @@ internal sealed partial class DocxLayoutEngine
             return true;
         }
 
-        double? MeasureDonorWidth(DocxTableCell cell, DocxPageNumber? rowPageNumber, IDocxTextMeasurer measurer)
+        double? MeasureDonorWidth(DocxTableCell cell, DocxPageNumber? rowPageNumber, IDocxTextMeasurer? measurer)
         {
             // The intrinsic text minimum assumes ordinary horizontal wrapping.
             if (!cell.HasHorizontalTextDirection || cell.FitText || cell.NoWrapSuppressesTextWrapping || cell.UsesFixedRowLayout)
@@ -1741,7 +1740,7 @@ internal sealed partial class DocxLayoutEngine
 
     private static double? MeasureTableCellMinContentWidth(
         DocxTableCell cell,
-        IDocxTextMeasurer measurer,
+        IDocxTextMeasurer? measurer,
         DocxPageNumber? pageNumber,
         int? pageCount,
         double fixedScale,
@@ -1771,42 +1770,52 @@ internal sealed partial class DocxLayoutEngine
                 }
             }
             string text = string.Concat(spans.Select(span => span.Text));
-            if (text.IndexOfAny(['\t', '\r', '\n']) >= 0)
+            if (text.Length != 0)
             {
-                // Positioned tabs and explicit line breaks need their own
-                // preferred/minimum-content qualification.
-                return null;
-            }
-            var spanStarts = new int[spans.Count + 1];
-            for (int index = 0; index < spans.Count; index++)
-            {
-                spanStarts[index + 1] = spanStarts[index] + spans[index].Text.Length;
-            }
-            int start = 0;
-            for (int index = 0; index < text.Length; index++)
-            {
-                if (OoxTextBreakRules.IsBreakableWhitespaceChar(text[index]))
+                // Text needs metrics. Picture and text-box extents can be
+                // measured independently in cells with no text to lay out.
+                if (measurer is not { } textMetrics || text.IndexOfAny(['\t', '\r', '\n']) >= 0)
+                    return null;
+
+                var spanStarts = new int[spans.Count + 1];
+                for (int index = 0; index < spans.Count; index++)
+                    spanStarts[index + 1] = spanStarts[index] + spans[index].Text.Length;
+
+                int start = 0;
+                for (int index = 0; index < text.Length; index++)
                 {
-                    int afterSpaces = OoxTextBreakRules.EndOfBreakableSpaces(text, index, text.Length);
-                    if (afterSpaces == text.Length || !OoxTextBreakRules.IsWordJoiner(text[afterSpaces]))
+                    if (OoxTextBreakRules.IsBreakableWhitespaceChar(text[index]))
                     {
-                        MeasureWord(index, false);
-                        start = afterSpaces;
+                        int afterSpaces = OoxTextBreakRules.EndOfBreakableSpaces(text, index, text.Length);
+                        if (afterSpaces == text.Length || !OoxTextBreakRules.IsWordJoiner(text[afterSpaces]))
+                        {
+                            MeasureWord(index, false);
+                            start = afterSpaces;
+                        }
+                        index = afterSpaces - 1;
                     }
-                    index = afterSpaces - 1;
+                    else if (DocxLineBreakOpportunities.IsOpportunityAt(text, index + 1))
+                    {
+                        MeasureWord(index + 1, true);
+                        start = index + 1;
+                    }
                 }
-                else if (DocxLineBreakOpportunities.IsOpportunityAt(text, index + 1))
+                MeasureWord(text.Length, false);
+
+                void MeasureWord(int end, bool preserveTerminalSoftHyphen)
                 {
-                    MeasureWord(index + 1, true);
-                    start = index + 1;
+                    if (end <= start) return;
+                    IReadOnlyList<DocxTextSpan> word = SliceTextSpans(spans, start, end - start, spanStarts);
+                    minimum = Math.Max(minimum, MeasureTextSpansForWrapping(word, fontSize, textMetrics, [], 0d, preserveTerminalSoftHyphen, pageNumber));
                 }
             }
-            MeasureWord(text.Length, false);
             foreach (DocxEquation equation in paragraph.Equations)
             {
                 cancellationToken.ThrowIfCancellationRequested();
                 if (mathEquations is not null && mathEquations.TryGetValue(equation, out var math))
                     minimum = Math.Max(minimum, math.Box.AdvanceWidth * fixedScale);
+                else if (measurer is null)
+                    return null;
             }
             foreach (DocxInlineImage image in paragraph.Images)
             {
@@ -1815,16 +1824,6 @@ internal sealed partial class DocxLayoutEngine
             foreach (DocxInlineTextBox box in paragraph.InlineTextBoxes)
             {
                 minimum = Math.Max(minimum, Math.Max(0d, ReadEmuPoints(box.ExtentCxValue) ?? 0d) * fixedScale);
-            }
-
-            void MeasureWord(int end, bool preserveTerminalSoftHyphen)
-            {
-                if (end <= start)
-                {
-                    return;
-                }
-                IReadOnlyList<DocxTextSpan> word = SliceTextSpans(spans, start, end - start, spanStarts);
-                minimum = Math.Max(minimum, MeasureTextSpansForWrapping(word, fontSize, measurer, [], 0d, preserveTerminalSoftHyphen, pageNumber));
             }
         }
         return minimum;

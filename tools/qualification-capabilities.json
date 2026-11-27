@@ -19515,6 +19515,7 @@
     "=PdfCrossReferencesAndStreamLengthsMatchFileContents"
   ],
   "docx-glyphless-anchors": [
+    "=DocxGlyphlessAutofitHonorsFixedNoWrapWidthFloors",
     "=DocxCellTextSizingPreservesPicturesAndCaption",
     "=DocxGlyphlessCellPicturesUseTheCellWidthWithTextSizing",
     "=DocxGlyphlessTextBoxChildPicturesUseTheAvailableLine",

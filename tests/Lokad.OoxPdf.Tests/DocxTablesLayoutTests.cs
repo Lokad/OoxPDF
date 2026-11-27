@@ -659,12 +659,13 @@ internal static class DocxTablesLayoutTests
         AssertColumns([ordinary], 90d, 90d);
         AssertColumns([ordinary, withFloor], 110d, 70d);
         AssertColumns([withFloor, noRoom], 90d, 90d);
+        AssertColumns([ordinary, withFloor], 90d, 90d, measureText: false);
 
-        void AssertColumns(IReadOnlyList<DocxTableRow> rows, double leftWidth, double rightWidth)
+        void AssertColumns(IReadOnlyList<DocxTableRow> rows, double leftWidth, double rightWidth, bool measureText = true)
         {
             var document = DocxTests.CreateLayoutTestDocument([new DocxTableElement(table with { Rows = rows })]);
             var layout = new DocxLayoutEngine(OoxPdfDocxMarkupGeometryMode.PreserveDocumentLayout)
-                .Create(document, new DocxTests.FamilyWidthTextMeasurer(), default).Pages
+                .Create(document, measureText ? new DocxTests.FamilyWidthTextMeasurer() : null, default).Pages
                 .SelectMany(page => page.Items).OfType<DocxTableRowLayout>().ToArray();
             TestAssert.Equal(rows.Count, layout.Length);
             foreach (DocxTableRowLayout row in layout)
