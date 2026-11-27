@@ -78,6 +78,20 @@ same bytes and publishes its summaries in `package-smoke-ubuntu-latest`.
 The console-test artifacts carry the hosted rendering reports. Use a local frozen
 build for the test runner and inspectors.
 
+After the hosted jobs pass, bind the package and verify its binaries from the
+repository root. Use a stage directory under `artifacts/` containing
+`bound-inputs.json`, `hosted-trigger.json` and `hosted-ci.json`. The binding
+records the two library and symbol identities and all four consumer receipts.
+
+```powershell
+python -B tools/BindHostedPackage.py $stage
+pwsh -NoProfile -File tools/VerifyHostedPackageBinaries.ps1 -StageDirectory $stage
+```
+
+Use `--offline` with retained artifact metadata and archives to replay the
+binding. The stage checks write separate receipts. The package and symbols
+are stored under their revision-qualified names in `artifacts/nuget/`.
+
 Console tests launch prebuilt tools from the matching local build configuration
 or an explicitly bound assembly. For frozen tests, bind the tools your selection
 uses with `OOXPDF_TEST_CLI_ASSEMBLY`, `OOXPDF_TEST_PDF_INSPECTOR`,
