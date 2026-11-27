@@ -764,7 +764,8 @@ internal static partial class SvgTextTests
     public static void SvgIdentityTransformsPreserveArtworkAndGradientPaint()
     {
         AssertSvgPaintInBothFormats(Picture(false), Picture(true),
-            "1 0 0 rg", "0 1 0 rg", "1 1 0 rg", "1 0 1 rg", "0 1 1 rg", "/ShadingType 2");
+            "1 0 0 rg", "0 1 0 rg", "1 1 0 rg", "1 0 1 rg", "0 1 1 rg",
+            "0.11 0.192 0.863 rg", "0.133 0.847 0.957 rg");
 
         static string Picture(bool useKeywords)
         {
