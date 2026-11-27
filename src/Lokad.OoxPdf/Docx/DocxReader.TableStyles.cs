@@ -187,9 +187,7 @@ internal sealed partial class DocxReader
         XElement? tableIndent = tableProperties?.Element(WordprocessingNamespace + "tblInd");
         XElement? tableCellSpacing = tableProperties?.Element(WordprocessingNamespace + "tblCellSpacing");
         return new DocxTableStyleProperties(
-            (string?)tableProperties
-                ?.Element(WordprocessingNamespace + "tblLayout")
-                ?.Attribute(WordprocessingNamespace + "type"),
+            ReadTableLayoutValue(tableProperties),
             ReadPreferredWidth(tableWidth),
             ReadDxaWidth(tableIndent),
             (string?)tableIndent?.Attribute(WordprocessingNamespace + "w"),

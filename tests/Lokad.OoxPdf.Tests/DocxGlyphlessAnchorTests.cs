@@ -241,44 +241,77 @@ internal static class DocxGlyphlessAnchorTests
 
     public static void DocxGlyphlessCellPicturesUseTheCellWidthWithTextSizing()
     {
-        const string documentPart = "word/document.xml";
-        byte[] green = TestFixtures.CreateRgbPng(1, 1, [0, 255, 0]);
-        string picture = TestFixtures.DocxInlinePngRun;
-        string blue = picture.Replace("rIdImage1", "rIdBlue", StringComparison.Ordinal);
         foreach (string textSizing in new[] { "", "<w:noWrap/>", "<w:tcFitText/>" })
         foreach (string hidden in new[] { "", "<w:r><w:rPr><w:vanish/></w:rPr><w:t>Hidden annotation source</w:t></w:r>" })
         {
-            string table = $"""
-                <w:tbl>
-                  <w:tblPr><w:tblW w:w="2200" w:type="dxa"/><w:tblLayout w:type="fixed"/></w:tblPr>
-                  <w:tblGrid><w:gridCol w:w="2200"/></w:tblGrid>
-                  <w:tr><w:tc><w:tcPr><w:tcW w:w="2200" w:type="dxa"/>{textSizing}</w:tcPr>
-                    <w:p>{picture}{blue}{hidden}</w:p></w:tc></w:tr>
-                </w:tbl>
-                """;
-            var parts = ReadParts(TestFixtures.WriteDocxInlinePng(table, green));
-            var document = XElement.Parse(System.Text.Encoding.UTF8.GetString(parts[documentPart]));
-            AddBluePicturePart(parts, document);
-            parts[documentPart] = TestFixtures.Utf8(document.ToString(SaveOptions.DisableFormatting));
-            string input = TestFixtures.WriteTempPackage(".docx", parts);
+            string input = WriteLinkedCellPictures(textSizing, hidden);
             foreach (var (mode, geometry) in Views())
             {
                 PdfPage page = Render(input, new EmptyProgramResolver(), mode, geometry).Single();
                 TestAssert.Equal(0, page.Fonts.Count);
-                var paints = DocxNoteClippingTests.ReadPhysicalPaintFrames(page).ToArray();
-                var images = page.Images.ToDictionary(ReadPictureGreenChannel, image =>
-                    paints.Single(paint => paint.Block == "/" + image.ResourceName + " Do"));
-                var first = images[255];
-                var second = images[0];
-                TestAssert.True(PictureFitsViewport(first) && PictureFitsViewport(second),
-                    "The automatic row retains the full paint of both 72pt pictures.");
-                TestAssert.True(second.Transform.M32 + 72f <= first.Transform.M32,
-                    "The source-second picture wraps within the physical cell width.");
-                TestAssert.Equal(2, page.Annotations.Count);
-                AssertPictureLink(page, "green", first);
-                AssertPictureLink(page, "blue", second);
+                AssertStackedCellPictureLinks(page);
             }
         }
+    }
+
+    public static void DocxFixedCellNoWrapPreservesPicturesAndCaption()
+    {
+        const string caption = "<w:r><w:t>Visible label</w:t></w:r>";
+        string ordinary = WriteLinkedCellPictures("", caption);
+        string noWrap = WriteLinkedCellPictures("<w:noWrap/>", caption);
+        foreach (var (mode, geometry) in Views())
+        {
+            var resolver = new EmptyProgramResolver();
+            PdfPage baseline = Render(ordinary, resolver, mode, geometry).Single();
+            PdfPage flagged = Render(noWrap, resolver, mode, geometry).Single();
+            AssertStackedCellPictureLinks(flagged);
+            string text = new(FallbackFontMetricsTests.ReadGlyphs(flagged.Content)
+                .Where(glyph => glyph.Code != ' ').Select(glyph => (char)glyph.Code).ToArray());
+            TestAssert.Equal("Visiblelabel", text);
+            TestAssert.Equal(baseline.Content, flagged.Content);
+        }
+    }
+
+    private static string WriteLinkedCellPictures(string textSizing, string trailingRun)
+    {
+        const string documentPart = "word/document.xml";
+        string picture = TestFixtures.DocxInlinePngRun;
+        string blue = picture.Replace("rIdImage1", "rIdBlue", StringComparison.Ordinal);
+        string table = $"""
+            <w:tbl>
+              <w:tblPr><w:tblW w:w="2200" w:type="dxa"/><w:tblLayout w:type="fixed"/></w:tblPr>
+              <w:tblGrid><w:gridCol w:w="2200"/></w:tblGrid>
+              <w:tr><w:tc><w:tcPr><w:tcW w:w="2200" w:type="dxa"/>{textSizing}</w:tcPr>
+                <w:p>{picture}{blue}{trailingRun}</w:p></w:tc></w:tr>
+            </w:tbl>
+            """;
+        byte[] green = TestFixtures.CreateRgbPng(1, 1, [0, 255, 0]);
+        string seed = TestFixtures.WriteDocxInlinePng(table, green);
+        try
+        {
+            var parts = ReadParts(seed);
+            var document = XElement.Parse(System.Text.Encoding.UTF8.GetString(parts[documentPart]));
+            AddBluePicturePart(parts, document);
+            parts[documentPart] = TestFixtures.Utf8(document.ToString(SaveOptions.DisableFormatting));
+            return TestFixtures.WriteTempPackage(".docx", parts);
+        }
+        finally { File.Delete(seed); }
+    }
+
+    private static void AssertStackedCellPictureLinks(PdfPage page)
+    {
+        var paints = DocxNoteClippingTests.ReadPhysicalPaintFrames(page).ToArray();
+        var images = page.Images.ToDictionary(ReadPictureGreenChannel, image =>
+            paints.Single(paint => paint.Block == "/" + image.ResourceName + " Do"));
+        var first = images[255];
+        var second = images[0];
+        TestAssert.True(PictureFitsViewport(first) && PictureFitsViewport(second),
+            "The automatic row retains the full paint of both 72pt pictures.");
+        TestAssert.True(second.Transform.M32 + 72f <= first.Transform.M32,
+            "The source-second picture wraps within the physical cell width.");
+        TestAssert.Equal(2, page.Annotations.Count);
+        AssertPictureLink(page, "green", first);
+        AssertPictureLink(page, "blue", second);
     }
 
     private static bool PictureFitsViewport(DocxNoteClippingTests.PhysicalPaintFrame paint) =>

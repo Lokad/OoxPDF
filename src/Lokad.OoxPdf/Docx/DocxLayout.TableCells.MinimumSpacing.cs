@@ -128,7 +128,7 @@ internal sealed partial class DocxLayoutEngine
         if (row.IsHeader ||
             table.Revisions.Count != 0 || row.Revisions.Count != 0 || cell.Revisions.Count != 0 ||
             table.CellSpacingPoints is > 0d || table.UseLegacyTableGrid || cell.GridSpan != 1 ||
-            cell.HasVerticalMerge || cell.NoWrap || cell.FitText ||
+            cell.HasVerticalMerge || cell.NoWrapAffectsLayout || cell.FitText ||
             !cell.HasHorizontalTextDirection ||
             cell.Paragraphs.Count == 0 || cell.BodyElements.Count != cell.Paragraphs.Count ||
             cell.BodyElements.Any(e => e is not DocxParagraphElement || e.Revisions.Count != 0) ||

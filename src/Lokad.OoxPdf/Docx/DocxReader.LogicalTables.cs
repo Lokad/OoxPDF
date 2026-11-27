@@ -160,8 +160,7 @@ internal sealed partial class DocxReader
         return IsFixed(firstProperties) == IsFixed(secondProperties);
 
         bool IsFixed(XElement? properties) => string.Equals(
-            (string?)properties?.Element(WordprocessingNamespace + "tblLayout")?.Attribute(WordprocessingNamespace + "type")
-                ?? style?.Table.LayoutValue, "fixed", StringComparison.OrdinalIgnoreCase);
+            ReadTableLayoutValue(properties) ?? style?.Table.LayoutValue, "fixed", StringComparison.OrdinalIgnoreCase);
 
         string? StyleId(XElement? properties)
         {

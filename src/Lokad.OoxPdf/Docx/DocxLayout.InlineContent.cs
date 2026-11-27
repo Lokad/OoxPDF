@@ -154,7 +154,7 @@ internal sealed partial class DocxLayoutEngine
 
         // Use the items that actually reach layout. Hidden runs have already
         // been discarded and cannot change the line width for visible media.
-        bool mediaOnly = (cell.NoWrap || cell.FitText) && paragraph.ListLabel is null && atoms.Fragments.Count != 0 &&
+        bool mediaOnly = (cell.NoWrapAffectsLayout || cell.FitText) && paragraph.ListLabel is null && atoms.Fragments.Count != 0 &&
             atoms.Fragments.All(fragment =>
             {
                 context.CancellationToken.ThrowIfCancellationRequested();

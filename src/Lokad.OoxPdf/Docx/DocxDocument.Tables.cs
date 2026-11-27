@@ -166,6 +166,9 @@ internal sealed record DocxTableCell(
 
     public IReadOnlyList<DocxBodyElement> BodyElements { get; init; } = [];
     public IReadOnlyList<DocxRevisionInfo> Revisions { get; init; } = [];
+    public bool UsesFixedRowLayout { get; init; }
+    // Keep the authored flag available to inspection. It affects layout only with autofit.
+    public bool NoWrapAffectsLayout => NoWrap && !UsesFixedRowLayout;
     public bool IsVerticalMergeRestart => HasVerticalMerge &&
         string.Equals(VerticalMergeValue, "restart", StringComparison.OrdinalIgnoreCase);
 

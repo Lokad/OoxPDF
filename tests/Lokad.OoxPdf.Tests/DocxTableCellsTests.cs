@@ -2230,79 +2230,34 @@ internal static class DocxTableCellsTests
         TestAssert.True(cells[1].TextDirectionValue is null, "Expected missing cell text direction to keep a null source token.");
     }
 
-    public static void DocxReaderTableCellPreservesNoWrapToken()
+    public static void DocxReaderTableCellPreservesSizingTokens()
     {
         string input = TestFixtures.WriteTempPackage(".docx", new Dictionary<string, string>
         {
-            ["[Content_Types].xml"] = """
-                <?xml version="1.0" encoding="UTF-8"?>
-                <Types xmlns="http://schemas.openxmlformats.org/package/2006/content-types">
-                  <Default Extension="rels" ContentType="application/vnd.openxmlformats-package.relationships+xml"/>
-                  <Default Extension="xml" ContentType="application/xml"/>
-                  <Override PartName="/word/document.xml" ContentType="application/vnd.openxmlformats-officedocument.wordprocessingml.document.main+xml"/>
-                </Types>
-                """,
-            ["_rels/.rels"] = """
-                <?xml version="1.0" encoding="UTF-8"?>
-                <Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">
-                  <Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/officeDocument" Target="word/document.xml"/>
-                </Relationships>
-                """,
+            ["[Content_Types].xml"] = TestFixtures.DocxContentTypes,
+            ["_rels/.rels"] = TestFixtures.DocxPackageRelationships,
             ["word/document.xml"] = """
-                <?xml version="1.0" encoding="UTF-8"?>
                 <w:document xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main">
                   <w:body>
                     <w:tbl>
-                      <w:tblGrid><w:gridCol w:w="1440"/><w:gridCol w:w="1440"/></w:tblGrid>
+                      <w:tblGrid><w:gridCol w:w="1440"/><w:gridCol w:w="1440"/><w:gridCol w:w="1440"/></w:tblGrid>
                       <w:tr>
-                        <w:tc><w:tcPr><w:noWrap/></w:tcPr><w:p><w:r><w:t>Kept</w:t></w:r></w:p></w:tc>
-                        <w:tc><w:tcPr><w:noWrap w:val="0"/></w:tcPr><w:p><w:r><w:t>Wrapped</w:t></w:r></w:p></w:tc>
-                      </w:tr>
-                    </w:tbl>
-                    <w:sectPr><w:pgSz w:w="12240" w:h="15840"/></w:sectPr>
-                  </w:body>
-                </w:document>
-                """
-        });
-
-        using FileStream stream = File.OpenRead(input);
-        OoxPackage package = OoxPackage.Open(stream, CancellationToken.None);
-        DocxDocument document = new DocxReader().Read(package, null, CancellationToken.None, OoxPdfDocxMarkupMode.Final);
-        IReadOnlyList<DocxTableCell> cells = document.Tables[0].Rows[0].Cells;
-
-        TestAssert.True(cells[0].NoWrap, "Expected implicit w:noWrap to disable automatic cell text wrapping.");
-        TestAssert.True(cells[0].NoWrapValue is null, "Expected implicit w:noWrap to preserve a null source token.");
-        TestAssert.True(!cells[1].NoWrap, "Expected w:noWrap w:val=\"0\" to allow automatic cell text wrapping.");
-        TestAssert.Equal("0", cells[1].NoWrapValue ?? string.Empty);
-    }
-
-    public static void DocxReaderTableCellPreservesFitTextToken()
-    {
-        string input = TestFixtures.WriteTempPackage(".docx", new Dictionary<string, string>
-        {
-            ["[Content_Types].xml"] = """
-                <?xml version="1.0" encoding="UTF-8"?>
-                <Types xmlns="http://schemas.openxmlformats.org/package/2006/content-types">
-                  <Default Extension="rels" ContentType="application/vnd.openxmlformats-package.relationships+xml"/>
-                  <Default Extension="xml" ContentType="application/xml"/>
-                  <Override PartName="/word/document.xml" ContentType="application/vnd.openxmlformats-officedocument.wordprocessingml.document.main+xml"/>
-                </Types>
-                """,
-            ["_rels/.rels"] = """
-                <?xml version="1.0" encoding="UTF-8"?>
-                <Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">
-                  <Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/officeDocument" Target="word/document.xml"/>
-                </Relationships>
-                """,
-            ["word/document.xml"] = """
-                <?xml version="1.0" encoding="UTF-8"?>
-                <w:document xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main">
-                  <w:body>
-                    <w:tbl>
-                      <w:tblGrid><w:gridCol w:w="1440"/><w:gridCol w:w="1440"/></w:tblGrid>
-                      <w:tr>
+                        <w:tc><w:tcPr><w:noWrap/></w:tcPr><w:p><w:r><w:t>Wrap</w:t></w:r></w:p></w:tc>
                         <w:tc><w:tcPr><w:tcFitText/></w:tcPr><w:p><w:r><w:t>Fit</w:t></w:r></w:p></w:tc>
-                        <w:tc><w:tcPr><w:tcFitText w:val="0"/></w:tcPr><w:p><w:r><w:t>Plain</w:t></w:r></w:p></w:tc>
+                        <w:tc><w:tcPr><w:noWrap w:val="0"/><w:tcFitText w:val="0"/></w:tcPr><w:p/></w:tc>
+                      </w:tr>
+                      <w:tr>
+                        <w:tblPrEx><w:tblLayout w:type="fixed"/></w:tblPrEx>
+                        <w:tc><w:tcPr><w:noWrap/></w:tcPr><w:p/></w:tc>
+                      </w:tr>
+                    </w:tbl>
+                    <w:tbl>
+                      <w:tblPr><w:tblLayout w:type="fixed"/></w:tblPr>
+                      <w:tblGrid><w:gridCol w:w="1440"/></w:tblGrid>
+                      <w:tr><w:tc><w:tcPr><w:noWrap/></w:tcPr><w:p/></w:tc></w:tr>
+                      <w:tr>
+                        <w:tblPrEx><w:tblLayout w:type="autofit"/></w:tblPrEx>
+                        <w:tc><w:tcPr><w:noWrap/></w:tcPr><w:p/></w:tc>
                       </w:tr>
                     </w:tbl>
                     <w:sectPr><w:pgSz w:w="12240" w:h="15840"/></w:sectPr>
@@ -2311,15 +2266,22 @@ internal static class DocxTableCellsTests
                 """
         });
 
-        using FileStream stream = File.OpenRead(input);
-        OoxPackage package = OoxPackage.Open(stream, CancellationToken.None);
-        DocxDocument document = new DocxReader().Read(package, null, CancellationToken.None, OoxPdfDocxMarkupMode.Final);
-        IReadOnlyList<DocxTableCell> cells = document.Tables[0].Rows[0].Cells;
+        DocxDocument document = DocxTests.ReadDocx(input, OoxPdfDocxMarkupMode.Final);
+        var auto = document.Tables[0];
+        var fixedTable = document.Tables[1];
+        IReadOnlyList<DocxTableCell> cells = auto.Rows[0].Cells;
 
-        TestAssert.True(cells[0].FitText, "Expected implicit w:tcFitText to fit cell text to its extents.");
-        TestAssert.True(cells[0].FitTextValue is null, "Expected implicit w:tcFitText to preserve a null source token.");
-        TestAssert.True(!cells[1].FitText, "Expected w:tcFitText w:val=\"0\" to disable cell text fitting.");
-        TestAssert.Equal("0", cells[1].FitTextValue ?? string.Empty);
+        TestAssert.Equal((true, (string?)null, false, (string?)null),
+            (cells[0].NoWrap, cells[0].NoWrapValue, cells[0].FitText, cells[0].FitTextValue));
+        TestAssert.Equal((false, (string?)null, true, (string?)null),
+            (cells[1].NoWrap, cells[1].NoWrapValue, cells[1].FitText, cells[1].FitTextValue));
+        TestAssert.Equal((false, "0", false, "0"),
+            (cells[2].NoWrap, cells[2].NoWrapValue, cells[2].FitText, cells[2].FitTextValue));
+
+        TestAssert.True(cells[0].NoWrapAffectsLayout, "Default autofit admits the authored flag.");
+        TestAssert.Equal((true, false), (auto.Rows[1].Cells[0].NoWrap, auto.Rows[1].Cells[0].NoWrapAffectsLayout));
+        TestAssert.Equal((true, false), (fixedTable.Rows[0].Cells[0].NoWrap, fixedTable.Rows[0].Cells[0].NoWrapAffectsLayout));
+        TestAssert.Equal((true, true), (fixedTable.Rows[1].Cells[0].NoWrap, fixedTable.Rows[1].Cells[0].NoWrapAffectsLayout));
     }
 
     public static void DocxReaderTableCellPreservesMarginTokens()

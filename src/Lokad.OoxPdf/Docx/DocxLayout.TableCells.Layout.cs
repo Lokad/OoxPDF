@@ -1028,7 +1028,7 @@ internal sealed partial class DocxLayoutEngine
 
     private static double ResolveTableCellTextWrapWidth(DocxTableCell cell, double width)
     {
-        return cell.NoWrap || cell.FitText ? TableCellNoWrapLineWidthPoints : Math.Max(1d, width);
+        return cell.NoWrapAffectsLayout || cell.FitText ? TableCellNoWrapLineWidthPoints : Math.Max(1d, width);
     }
 
     private static double? MeasureImplicitCellDecimalAdvance(IReadOnlyList<DocxWrappedTextLine> lines,

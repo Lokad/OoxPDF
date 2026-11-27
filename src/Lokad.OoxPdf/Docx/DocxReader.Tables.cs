@@ -30,9 +30,7 @@ internal sealed partial class DocxReader
         DocxRevisionInfo? inheritedRevision = fragments is null || fragments.All(fragment => fragment.Revision == source.Revision)
             ? source.Revision : null;
         XElement? tableProperties = table.Element(WordprocessingNamespace + "tblPr");
-        string? layoutValue = (string?)tableProperties
-            ?.Element(WordprocessingNamespace + "tblLayout")
-            ?.Attribute(WordprocessingNamespace + "type");
+        string? layoutValue = ReadTableLayoutValue(tableProperties);
         string? tableStyleId = (string?)tableProperties
             ?.Element(WordprocessingNamespace + "tblStyle")
             ?.Attribute(WordprocessingNamespace + "val");
@@ -111,6 +109,7 @@ internal sealed partial class DocxReader
         {
             cancellationToken.ThrowIfCancellationRequested();
             var part = parts[sourceIndex];
+            string? partLayoutValue = ReadTableLayoutValue(part.Properties) ?? tableStyle.Table.LayoutValue;
             var leadingBookmarks = part.LeadingBookmarks;
             DocxTableCellMargins partMargins = ReadTableStyleCellMargins(part.Properties);
             IReadOnlyList<DocxTableCellBorder> partBorders = ReadTableBorders(part.Properties);
@@ -122,6 +121,8 @@ internal sealed partial class DocxReader
                 var rowElement = part.Rows[partRowIndex];
                 XElement row = rowElement.Element;
                 XElement? rowExceptions = row.Element(WordprocessingNamespace + "tblPrEx");
+                bool usesFixedRowLayout = string.Equals(ReadTableLayoutValue(rowExceptions) ?? partLayoutValue,
+                    "fixed", StringComparison.OrdinalIgnoreCase);
                 DocxTableLook rowLook = ReadRowTableLook(row, part.Properties);
                 IReadOnlyList<DocxTableCellBorder> rowTableBorders = ReadTableBorders(rowExceptions);
                 XElement? rowProperties = row.Element(WordprocessingNamespace + "trPr");
@@ -282,7 +283,8 @@ internal sealed partial class DocxReader
                         pinTextToMargin)
                     {
                         BodyElements = cellBodyElements,
-                        Revisions = cellRevisions
+                        Revisions = cellRevisions,
+                        UsesFixedRowLayout = usesFixedRowLayout
                     });
                 }
 
@@ -397,6 +399,9 @@ internal sealed partial class DocxReader
             Alignment = alignment
         };
     }
+
+    private static string? ReadTableLayoutValue(XElement? properties) =>
+        (string?)properties?.Element(WordprocessingNamespace + "tblLayout")?.Attribute(WordprocessingNamespace + "type");
 
     private static Dictionary<string, int> ReadColumnBookmarkEndRows(XElement table,
         IReadOnlyList<DocxRevisionScopedElement> rows, CancellationToken cancellationToken)

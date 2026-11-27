@@ -17,7 +17,7 @@ internal sealed partial class DocxRenderer
             if (sourceRow.IsHeader || sourceRow.HeightPoints is not null || sourceRow.Revisions.Count != 0 ||
                 sourceCell.Paragraphs.Count != 2 || sourceCell.BodyElements.Count != 2 ||
                 sourceCell.BodyElements.Any(e => e is not DocxParagraphElement || e.Revisions.Count != 0) ||
-                sourceCell.GridSpan != 1 || sourceCell.HasVerticalMerge || sourceCell.NoWrap || sourceCell.FitText ||
+                sourceCell.GridSpan != 1 || sourceCell.HasVerticalMerge || sourceCell.NoWrapAffectsLayout || sourceCell.FitText ||
                 sourceCell.VerticalAlignment != DocxTableCellVerticalAlignment.Top ||
                 !sourceCell.HasHorizontalTextDirection || sourceCell.Revisions.Count != 0)
                 continue;

@@ -1362,7 +1362,7 @@ internal static class DocxTablesTests
                 <?xml version="1.0" encoding="UTF-8"?>
                 <w:styles xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main">
                   <w:style w:type="table" w:styleId="ShadedTable">
-                    <w:tblPr><w:tblCellMar><w:left w:w="240" w:type="dxa"/></w:tblCellMar></w:tblPr>
+                    <w:tblPr><w:tblLayout w:type="fixed"/><w:tblCellMar><w:left w:w="240" w:type="dxa"/></w:tblCellMar></w:tblPr>
                     <w:tcPr><w:noWrap/><w:tcFitText/><w:textDirection w:val="tbRl"/><w:shd w:val="clear" w:color="auto" w:fill="D9EAD3"/></w:tcPr>
                     <w:tblStylePr w:type="firstRow"><w:tcPr><w:shd w:val="clear" w:color="auto" w:fill="CFE2F3"/><w:tcBorders><w:top w:val="single" w:color="FF0000" w:sz="16"/></w:tcBorders></w:tcPr></w:tblStylePr>
                   </w:style>
@@ -1403,6 +1403,7 @@ internal static class DocxTablesTests
         TestAssert.Equal("240", document.Tables[0].Rows[0].Cells[0].Margins.LeftValue ?? string.Empty);
         TestAssert.Equal(12d, document.Tables[0].Rows[0].Cells[0].Margins.LeftPoints ?? 0d);
         TestAssert.True(document.Tables[0].Rows[0].Cells[0].NoWrap, "Conditional cell styles should retain base style no-wrap.");
+        TestAssert.True(!document.Tables[0].Rows[0].Cells[0].NoWrapAffectsLayout, "The inherited fixed layout uses the cell width.");
         TestAssert.True(document.Tables[0].Rows[0].Cells[0].FitText, "Conditional cell styles should retain base style fit-text.");
         TestAssert.Equal("tbRl", document.Tables[0].Rows[0].Cells[0].TextDirectionValue ?? string.Empty);
         TestAssert.Equal("FCE5CD", document.Tables[0].Rows[0].Cells[1].FillHex ?? string.Empty);

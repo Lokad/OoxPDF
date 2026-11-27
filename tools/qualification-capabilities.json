@@ -16598,7 +16598,7 @@
     "VerticalMerge",
     "DocxTableMinimum",
     "DocxUnsupportedTableCellTextDirectionEmitsDiagnostic",
-    "DocxReaderTableCellPreservesFitTextToken",
+    "DocxReaderTableCellPreservesSizingTokens",
     "DocxReaderTableCellPreservesTextDirectionToken"
   ],
   "docx-merge-cell-mark-floors": [
@@ -16646,7 +16646,7 @@
     "VerticalMerge",
     "DocxTableMinimum",
     "DocxUnsupportedTableCellTextDirectionEmitsDiagnostic",
-    "DocxReaderTableCellPreservesFitTextToken",
+    "DocxReaderTableCellPreservesSizingTokens",
     "DocxReaderTableCellPreservesTextDirectionToken",
     "DocxInlineCompositionMergeCellMarks",
     "DocxInlineCompositionMergeCellMarkFloors",
@@ -19504,6 +19504,7 @@
     "=PdfCrossReferencesAndStreamLengthsMatchFileContents"
   ],
   "docx-glyphless-anchors": [
+    "=DocxFixedCellNoWrapPreservesPicturesAndCaption",
     "=DocxGlyphlessCellPicturesUseTheCellWidthWithTextSizing",
     "=DocxGlyphlessTextBoxChildPicturesUseTheAvailableLine",
     "DocxLayoutStageConsumesEmptyParagraphLineBox",
