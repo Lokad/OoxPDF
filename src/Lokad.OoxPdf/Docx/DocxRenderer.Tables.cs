@@ -35,8 +35,7 @@ internal sealed partial class DocxRenderer
         foreach (var story in page.PlacedRelatedStories)
         {
             token.ThrowIfCancellationRequested();
-            bool hasNoteRows = story.TableRows.Count > 0 && story.StoryLayout.Story.IsNormalStoryType &&
-                story.StoryLayout.Story.Kind is DocxRelatedStoryKind.Footnote or DocxRelatedStoryKind.Endnote;
+            bool hasNoteRows = story.TableRows.Count > 0 && IsNormalNoteStory(story.StoryLayout.Story);
             if (!hasNoteRows && story.FloatingDrawings.Count == 0)
                 continue;
             var (map, boxViewport, clip) = ResolvePlacedStoryPaintFrame(story, context, page.Height);
