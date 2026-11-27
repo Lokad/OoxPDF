@@ -632,7 +632,7 @@ internal static partial class SvgTextTests
         AssertSvgPaintInBothFormats(literal, [reference, described], null, "1 0 0 rg", "0 0 1 rg");
     }
 
-    public static void SvgLocalShapeGroupsKeepPaintBesideDisplayNoneChildren()
+    public static void SvgLocalShapeGroupsKeepPaintBesideUnpaintedChildren()
     {
         const string red = """<rect width="90" height="36" fill="red"/>""";
         const string blue = """<rect x="115" width="40" height="24" fill="blue"/>""";
@@ -650,13 +650,30 @@ internal static partial class SvgTextTests
         string hiddenGroup = Reference("""
             <g display="inline" style="display:none !important;display:inline"><use href="#accent"/></g>
             """);
-        AssertSvgPaintInBothFormats(literal, [hiddenUse, hiddenGroup], null, "1 0 0 rg", "0 0 1 rg", "0 1 0 rg");
+        string transparentUse = Reference("""<use href="#accent" opacity="0"/>""");
+        string transparentGroup = Reference("""
+            <g opacity="1" style="opacity:0 !important;opacity:1"><use href="#accent"/></g>
+            """);
+        string outsideAncestor = Svg($"""
+            <defs><g opacity="0"><g id="tile">{red}{blue}</g></g></defs>
+            <use href="#tile" x="12" y="15"/>{sibling}
+            """);
+        AssertSvgPaintInBothFormats(literal, [hiddenUse, hiddenGroup, transparentUse, transparentGroup, outsideAncestor],
+            null, "1 0 0 rg", "0 0 1 rg", "0 1 0 rg");
 
-        var diagnostics = new List<OoxPdfDiagnostic>();
-        var unsupported = Paint(Reference("""<use href="#accent" display="none" style="display:inline"/>"""), diagnostics);
-        AssertEquivalentSvgPaint(Paint(Svg(sibling)), unsupported,
-            "A visible chained reference retains the diagnosed fallback.");
-        TestAssert.Contains("1 unsupported use element.", diagnostics.Single().Message);
+        var siblingPaint = Paint(Svg(sibling));
+        foreach (string child in new[]
+        {
+            """<use href="#accent" display="none" style="display:inline"/>""",
+            """<use href="#accent" opacity="0" style="opacity:.5"/>"""
+        })
+        {
+            var diagnostics = new List<OoxPdfDiagnostic>();
+            var unsupported = Paint(Reference(child), diagnostics);
+            AssertEquivalentSvgPaint(siblingPaint, unsupported,
+                "A visible chained reference retains the diagnosed fallback.");
+            TestAssert.Contains("1 unsupported use element.", diagnostics.Single().Message);
+        }
     }
 
     public static void SvgInlineTransformNonePreservesGeometryAndReferenceOffsets()

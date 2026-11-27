@@ -2035,12 +2035,16 @@ internal sealed partial class PptxRenderer
         long size = 2L * element.Name.LocalName.Length + 5;
         if (element.Name.LocalName == "defs" || IsSvgPaintServerElement(element) || IsSvgMetadataElement(element))
             return size;
-        if (!IsSvgDisplayNone(element, ReadSvgStyleDeclarations(element)))
+
+        var style = ReadSvgStyleDeclarations(element);
+        if (!IsSvgDisplayNone(element, style) &&
+            ReadSvgOpacityValue(ReadSvgPresentationAttribute(element, style, "opacity")) != 0d)
             return null;
 
-        // Cloning skips this subtree after checking its local style.
+        // Count local declarations inspected before dropping this subtree at the use site.
         return size + (element.Attribute("style")?.Value.Length ?? 0) +
-            (element.Attribute("display")?.Value.Length ?? 0);
+            (element.Attribute("display")?.Value.Length ?? 0) +
+            (element.Attribute("opacity")?.Value.Length ?? 0);
     }
 
     private static bool IsSvgPaintServerElement(XElement element) =>
