@@ -1087,6 +1087,34 @@ internal static partial class SvgTextTests
         }
     }
 
+    public static void SvgMalformedDisplayKeywordsPreserveSuppressedSubtrees()
+    {
+        AssertSvgPaintInBothFormats(Picture(false), Picture(true), pdf =>
+        {
+            TestAssert.DoesNotContain("1 0 0 rg", pdf);
+            TestAssert.DoesNotContain("0 1 0 rg", pdf);
+            TestAssert.DoesNotContain("0 1 1 rg", pdf);
+            TestAssert.Equal(2, LabelPaths(pdf));
+        }, "1 0 1 rg", "0 0 1 rg", "1 1 0 rg");
+
+        static string Picture(bool invalid)
+        {
+            string style = invalid ? """style="display:typo !important" """ : string.Empty;
+            string hide = invalid ? "display:none;DISPLAY:typo !important" : "display:none";
+            string show = invalid ? "display:typo !important;display:inline-block" : "display:inline-block";
+            return Svg($"""
+                <g display="none" {style}><rect width="36" height="36" fill="red" display="inline"/></g>
+                <rect x="52" width="35" height="35" fill="lime" style="{hide}"/>
+                <defs><g id="source"><rect x="101" width="35" height="35" fill="cyan" display="none" {style}/></g></defs>
+                <use href="#source"/>
+                <rect x="151" width="35" height="35" fill="fuchsia" display="none" style="{show}"/>
+                <rect x="201" width="35" height="35" fill="blue" display="none" style="display:inline flow"/>
+                <rect x="251" width="35" height="35" fill="yellow" display="none" style="display:-webkit-box"/>
+                <text x="12" y="106" font-size="16" fill="#112233">A<tspan display="none" {style}>B</tspan>C</text>
+                """);
+        }
+    }
+
     private static string CurveStrokeSvg(string solid, string gradient) => Svg($"""
         <defs><linearGradient id="ramp"><stop stop-color="blue"/>
           <stop offset="1" stop-color="purple"/></linearGradient></defs>

@@ -673,6 +673,7 @@
     "=SvgImportantInlinePaintMatchesExplicitPaintInBothFormats",
     "=SvgCompetingMalformedHexPaintKeepsUsableColors",
     "=SvgMalformedVisibilityKeywordsPreserveHiddenAndVisibleArtwork",
+    "=SvgMalformedDisplayKeywordsPreserveSuppressedSubtrees",
     "=SvgTransparentFillKeepsTranslucentGradientStrokeInBothFormats",
     "=SvgUserSpaceGradientsFollowTranslatedAndUniformlyScaledGroups",
     "=SvgLinearGradientResourcesPreserveTranslatedAndUniformlyScaledPaint",

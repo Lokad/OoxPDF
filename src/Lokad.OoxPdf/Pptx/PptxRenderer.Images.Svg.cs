@@ -1584,7 +1584,7 @@ internal sealed partial class PptxRenderer
                 }
             }
 
-            if (name.Equals("visibility", StringComparison.OrdinalIgnoreCase) && IsInvalidSvgVisibilityKeyword(value))
+            if (IsInvalidSvgVisibilityOrDisplayKeyword(name, value))
             {
                 continue;
             }
@@ -2409,14 +2409,24 @@ internal sealed partial class PptxRenderer
             return styleValue;
         }
         string? value = (string?)path.Attribute(name);
-        return name == "visibility" && value is not null && IsInvalidSvgVisibilityKeyword(value) ? null : value;
+        return value is not null && IsInvalidSvgVisibilityOrDisplayKeyword(name, value) ? null : value;
     }
 
-    private static bool IsInvalidSvgVisibilityKeyword(string value)
+    private static bool IsInvalidSvgVisibilityOrDisplayKeyword(string name, string value)
     {
+        bool visibility = name.Equals("visibility", StringComparison.OrdinalIgnoreCase);
+        if (!visibility && !name.Equals("display", StringComparison.OrdinalIgnoreCase))
+        {
+            return false;
+        }
+
         ReadOnlySpan<char> token = value.AsSpan().Trim();
-        // Plain unknown keywords can be ignored before the cascade. Escapes and
-        // functions retain the existing handling for values we do not interpret.
+        if (token.IsEmpty || !visibility && token[0] == '-')
+        {
+            return false;
+        }
+        // A plain unknown keyword does not enter the cascade. Leave compound
+        // values, functions, escapes and prefixed display modes to their callers.
         foreach (char character in token)
         {
             if (!char.IsAsciiLetter(character) && character != '-')
@@ -2424,12 +2434,27 @@ internal sealed partial class PptxRenderer
                 return false;
             }
         }
-        return !token.IsEmpty &&
-            !token.Equals("visible", StringComparison.OrdinalIgnoreCase) && !IsSvgVisibilityHidden(value) &&
-            !InheritsSvgPropertyValue(value) && !IsSvgInitialValue(token) &&
-            !token.Equals("revert", StringComparison.OrdinalIgnoreCase) &&
-            !token.Equals("revert-layer", StringComparison.OrdinalIgnoreCase) &&
-            !token.Equals("revert-rule", StringComparison.OrdinalIgnoreCase);
+        if (InheritsSvgPropertyValue(value) || IsSvgInitialValue(token) ||
+            token.Equals("revert", StringComparison.OrdinalIgnoreCase) ||
+            token.Equals("revert-layer", StringComparison.OrdinalIgnoreCase) ||
+            token.Equals("revert-rule", StringComparison.OrdinalIgnoreCase))
+        {
+            return false;
+        }
+
+        if (visibility)
+        {
+            return !token.Equals("visible", StringComparison.OrdinalIgnoreCase) && !IsSvgVisibilityHidden(value);
+        }
+
+        // Single-keyword CSS display values. SVG only needs the resulting
+        // suppression state, so no formatting context is established here.
+        return token.ToString().ToLowerInvariant() is not (
+            "none" or "contents" or "block" or "inline" or "run-in" or "flow" or "flow-root" or "list-item" or
+            "table" or "flex" or "grid" or "ruby" or "math" or "inline-block" or "inline-table" or "inline-flex" or "inline-grid" or
+            "table-row-group" or "table-header-group" or "table-footer-group" or "table-row" or "table-cell" or
+            "table-column-group" or "table-column" or "table-caption" or "ruby-base" or "ruby-text" or
+            "ruby-base-container" or "ruby-text-container");
     }
     private static int ReadSvgLineCap(string? value, out bool invalid)
     {
