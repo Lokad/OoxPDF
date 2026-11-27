@@ -152,21 +152,26 @@ internal sealed partial class DocxLayoutEngine
             defaultTabStopPoints: context.DefaultTabStopPoints, pageNumber: context.PageNumber, pageCount: context.PageCount,
             physicalTextBaselineInset: physicalBaseline)) return false;
 
-        // Use the items that actually reach layout. Hidden runs have already
-        // been discarded and cannot change the line width for visible media.
-        bool mediaOnly = (cell.NoWrapAffectsLayout || cell.FitText) && paragraph.ListLabel is null && atoms.Fragments.Count != 0 &&
-            atoms.Fragments.All(fragment =>
-            {
-                context.CancellationToken.ThrowIfCancellationRequested();
-                return fragment.Source is DocxInlinePicture or DocxInlineBox or DocxInlineBreak;
-            });
-        double firstWidth = mediaOnly ? Math.Max(1d, firstFrameWidth) : ResolveTableCellTextWrapWidth(cell, firstFrameWidth);
-        double nextWidth = mediaOnly ? Math.Max(1d, nextFrameWidth) : ResolveTableCellTextWrapWidth(cell, nextFrameWidth);
+        // Fitted text can change glyph advances. An intrinsic picture or box
+        // still needs a physical line slot, even when the line includes a caption.
+        // Use measured items so hidden runs cannot change width admission.
+        bool physicalWidth = cell.FitText && atoms.Fragments.Any(HasMediaFrame) ||
+            (cell.NoWrapAffectsLayout || cell.FitText) && paragraph.ListLabel is null &&
+            atoms.Fragments.Count != 0 && atoms.Fragments.All(fragment =>
+                HasMediaFrame(fragment) || fragment.Source is DocxInlineBreak);
+        double firstWidth = physicalWidth ? Math.Max(1d, firstFrameWidth) : ResolveTableCellTextWrapWidth(cell, firstFrameWidth);
+        double nextWidth = physicalWidth ? Math.Max(1d, nextFrameWidth) : ResolveTableCellTextWrapWidth(cell, nextFrameWidth);
         return TryWrapOrderedInlineAtoms(atoms, firstWidth, nextWidth, context.CancellationToken, out lines,
             physicalTextBaselineInset: physicalBaseline,
             leadingDecimalTab: context.TextMeasurer is not null &&
                 ResolveImplicitCellDecimalStop(cell, paragraph, scale, context.CancellationToken) is { } stop
                 ? (stop, firstFrameWidth) : null);
+
+        bool HasMediaFrame(DocxMeasuredInlineFragment fragment)
+        {
+            context.CancellationToken.ThrowIfCancellationRequested();
+            return fragment.Source is DocxInlinePicture or DocxInlineBox;
+        }
     }
 
     private static (DocxTextLineLayout Line, IReadOnlyList<DocxInlineImageLayout> Images,

@@ -254,21 +254,28 @@ internal static class DocxGlyphlessAnchorTests
         }
     }
 
-    public static void DocxFixedCellNoWrapPreservesPicturesAndCaption()
+    public static void DocxFixedCellTextSizingPreservesPicturesAndCaption()
     {
         const string caption = "<w:r><w:t>Visible label</w:t></w:r>";
         string ordinary = WriteLinkedCellPictures("", caption);
-        string noWrap = WriteLinkedCellPictures("<w:noWrap/>", caption);
+        string[] sources =
+        [
+            WriteLinkedCellPictures("<w:noWrap/>", caption),
+            WriteLinkedCellPictures("<w:tcFitText/>", caption)
+        ];
         foreach (var (mode, geometry) in Views())
         {
             var resolver = new EmptyProgramResolver();
             PdfPage baseline = Render(ordinary, resolver, mode, geometry).Single();
-            PdfPage flagged = Render(noWrap, resolver, mode, geometry).Single();
-            AssertStackedCellPictureLinks(flagged);
-            string text = new(FallbackFontMetricsTests.ReadGlyphs(flagged.Content)
-                .Where(glyph => glyph.Code != ' ').Select(glyph => (char)glyph.Code).ToArray());
-            TestAssert.Equal("Visiblelabel", text);
-            TestAssert.Equal(baseline.Content, flagged.Content);
+            foreach (string source in sources)
+            {
+                PdfPage flagged = Render(source, resolver, mode, geometry).Single();
+                AssertStackedCellPictureLinks(flagged);
+                string text = new(FallbackFontMetricsTests.ReadGlyphs(flagged.Content)
+                    .Where(glyph => glyph.Code != ' ').Select(glyph => (char)glyph.Code).ToArray());
+                TestAssert.Equal("Visiblelabel", text);
+                TestAssert.Equal(baseline.Content, flagged.Content);
+            }
         }
     }
 
