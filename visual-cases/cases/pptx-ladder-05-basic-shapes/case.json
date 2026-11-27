@@ -8,6 +8,7 @@
     "ladder",
     "shapes",
     "basic-shapes",
+    "smoke",
     "locked"
   ],
   "expected": {
@@ -15,9 +16,9 @@
     "pageCountMustMatch": true,
     "dimensionsMustMatch": true,
     "diagnosticsMustBeEmpty": true,
-    "maxMeanAbsoluteError": 0.05,
+    "maxMeanAbsoluteError": 0.02,
     "minForegroundRecall": 0.999,
-    "maxChangedPixelRatioAtThreshold16": 0.005,
+    "maxChangedPixelRatioAtThreshold16": 0.0008,
     "maxGraphicsOperationBoundsDelta": 1.0,
     "maxGraphicsOperationLineWidthDelta": 10.0,
     "compareGraphicsOperationKinds": [

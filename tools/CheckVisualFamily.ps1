@@ -84,14 +84,6 @@ function Convert-ToRepoPath([string] $path) {
     return (Resolve-Path -LiteralPath $path).Path.Substring($repoRoot.Length).TrimStart("\", "/").Replace("\", "/")
 }
 
-function Get-ManifestDouble($object, [string] $name, $defaultValue) {
-    if ($object -ne $null -and $object.PSObject.Properties.Name -contains $name -and $object.$name -ne $null) {
-        return [double]$object.$name
-    }
-
-    return $defaultValue
-}
-
 function Get-CaseClassification($caseManifest) {
     $tags = @($caseManifest.tags)
     if ($tags -contains "locked") {
@@ -161,11 +153,10 @@ function New-ReportRow($caseBinding, [bool]$passed, [string]$errorMessage, [stri
     $minStructuralSimilarity = if ($ssimValues.Count -eq 0) { $null } else { ($ssimValues | Measure-Object -Minimum).Minimum }
     $minForegroundColorHistogramCorrelation = if ($histValues.Count -eq 0) { $null } else { ($histValues | Measure-Object -Minimum).Minimum }
     $minForegroundRecall = if ($recallValues.Count -eq 0) { $null } else { ($recallValues | Measure-Object -Minimum).Minimum }
-    $support = $caseManifest.support
-    $familySupport = $familyManifest.support
-    $requiredStructuralSimilarity = Get-ManifestDouble $support "minStructuralSimilarity" (Get-ManifestDouble $familySupport "minStructuralSimilarity" 0.995)
-    $requiredColorHistogram = Get-ManifestDouble $support "minForegroundColorHistogramCorrelation" (Get-ManifestDouble $familySupport "minForegroundColorHistogramCorrelation" 0.98)
-    $requiredForegroundRecall = Get-ManifestDouble $support "minForegroundRecall" (Get-ManifestDouble $familySupport "minForegroundRecall" $null)
+    $thresholds = Get-VisualSupportThresholds $caseManifest.support $familyManifest.support
+    $requiredStructuralSimilarity = $thresholds.StructuralSimilarity
+    $requiredColorHistogram = $thresholds.ForegroundColorHistogramCorrelation
+    $requiredForegroundRecall = $thresholds.ForegroundRecall
     $status = if (-not $passed) {
         "unsupported"
     }

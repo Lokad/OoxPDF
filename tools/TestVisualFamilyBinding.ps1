@@ -422,7 +422,21 @@ try {
         @(Get-Content $buildLog).Count -ne $beforeBuilds) { throw 'Incomplete chart gates started work before rejection' }
     $chart.expected.maxChartGraphicsStructureBoundsDelta = 0
     $chart | ConvertTo-Json -Depth 6 | Set-Content -LiteralPath $realManifest
+    $sharedPath = Join-Path $repo 'visual-cases/families/probe-shared.json'
+    $shared = @{id='probe-shared';kind='docx';casePatterns=@('probe-a');support=@{minStructuralSimilarity=0.995}}
+    $shared | ConvertTo-Json -Depth 4 | Set-Content -LiteralPath $sharedPath
     & $validator | Out-Null
+    $shared.support.minStructuralSimilarity = 0.999
+    $shared | ConvertTo-Json -Depth 4 | Set-Content -LiteralPath $sharedPath
+    $failure = $null
+    try { & $validator | Out-Null } catch { $failure = $_.Exception.Message }
+    finally {
+        $shared.support.minStructuralSimilarity = 0.995
+        $shared | ConvertTo-Json -Depth 4 | Set-Content -LiteralPath $sharedPath
+    }
+    if ($failure -cnotmatch "Case 'probe-a' has conflicting support thresholds") {
+        throw 'An overlapping family with a different effective threshold was accepted'
+    }
     & $realCase -Case $realManifest -CliPath $frozenCli -SkipBuild -RunId 'real-chart-zero' | Out-Null
     $chart.expected.Remove('maxChartGraphicsStructureBoundsDelta')
     $chart.expected.maxChartGraphicsStructureBoundsDeltaByKind = @{HorizontalLine=2}

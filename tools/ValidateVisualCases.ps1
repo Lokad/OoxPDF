@@ -98,6 +98,10 @@ $families = @()
 foreach ($caseDirectory in $caseDirectories) {
     $manifestPath = Join-Path $caseDirectory.FullName "case.json"
     if (-not (Test-Path -LiteralPath $manifestPath)) {
+        if (-not ($caseDirectory.Attributes -band [IO.FileAttributes]::ReparsePoint) -and
+            -not (Get-ChildItem -LiteralPath $caseDirectory.FullName -Force | Select-Object -First 1)) {
+            continue
+        }
         Add-Issue $issues "Case '$($caseDirectory.Name)' is missing case.json."
         continue
     }
@@ -230,10 +234,10 @@ foreach ($familyFile in $familyFiles) {
         Path = $familyFile.FullName
         Patterns = $patterns
         ExcludePatterns = $excludePatterns
+        Support = $family.support
     }
 }
 
-$ownership = @{}
 foreach ($case in $caseById.Values) {
     $matches = @()
     foreach ($family in $families) {
@@ -245,7 +249,7 @@ foreach ($case in $caseById.Values) {
             if ($case.Id -like $pattern) {
                 $excluded = @($family.ExcludePatterns | Where-Object { $case.Id -like $_ }).Count -ne 0
                 if (-not $excluded) {
-                    $matches += $family.Id
+                    $matches += $family
                 }
 
                 break
@@ -253,12 +257,18 @@ foreach ($case in $caseById.Values) {
         }
     }
 
-    $ownership[$case.Id] = $matches
     if ($matches.Count -eq 0 -and -not $AllowUncovered) {
         Add-Issue $issues "Case '$($case.Id)' is not covered by any visual family."
     }
     elseif ($matches.Count -gt 1) {
-        Add-Issue $issues "Case '$($case.Id)' is covered by multiple visual families: $($matches -join ', ')."
+        # The support catalog stores one verdict per case. Families can share
+        # that case when their effective support thresholds agree.
+        $thresholds = @($matches | ForEach-Object {
+            Get-VisualSupportThresholds $case.Manifest.support $_.Support | ConvertTo-Json -Compress
+        } | Select-Object -Unique)
+        if ($thresholds.Count -gt 1) {
+            Add-Issue $issues "Case '$($case.Id)' has conflicting support thresholds across visual families: $($matches.Id -join ', ')."
+        }
     }
 }
 

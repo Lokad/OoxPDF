@@ -8,6 +8,7 @@
     "ladder",
     "tables",
     "basic-table",
+    "smoke",
     "locked"
   ],
   "expected": {
@@ -16,8 +17,8 @@
     "dimensionsMustMatch": true,
     "diagnosticsMustBeEmpty": true,
     "minForegroundRecall": 0.999,
-    "maxChangedPixelRatioAtThreshold16": 0.003,
-    "maxMeanAbsoluteError": 0.15
+    "maxChangedPixelRatioAtThreshold16": 0.002,
+    "maxMeanAbsoluteError": 0.1
   },
   "allowedUnsupportedFeatures": []
 }

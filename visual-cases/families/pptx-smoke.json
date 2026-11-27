@@ -1,7 +1,7 @@
 {
   "id": "pptx-smoke",
   "kind": "pptx",
-  "description": "Broad PPTX smoke cases that predate the ladder families and cover basic slides, text, shapes, tables, images, and corporate theme composition.",
+  "description": "Basic slides, text, shapes, tables, images, and corporate theme composition.",
   "support": {
     "minStructuralSimilarity": 0.995,
     "minForegroundColorHistogramCorrelation": 0.98
@@ -9,9 +9,9 @@
   "casePatterns": [
     "pptx-blank",
     "pptx-corporate-theme",
-    "pptx-images",
-    "pptx-shapes",
-    "pptx-table",
+    "pptx-ladder-05-basic-shapes",
+    "pptx-ladder-07-basic-image",
+    "pptx-ladder-10-basic-table",
     "pptx-text"
   ]
 }

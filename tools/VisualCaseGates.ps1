@@ -10,6 +10,21 @@ function Read-VisualCaseManifest([string] $Path) {
     }
 }
 
+function Get-ManifestDouble($object, [string] $name, $defaultValue) {
+    if ($null -ne $object -and $object.PSObject.Properties.Name -contains $name -and $null -ne $object.$name) {
+        return [double]$object.$name
+    }
+    return $defaultValue
+}
+
+function Get-VisualSupportThresholds($CaseSupport, $FamilySupport) {
+    [pscustomobject]@{
+        StructuralSimilarity = Get-ManifestDouble $CaseSupport "minStructuralSimilarity" (Get-ManifestDouble $FamilySupport "minStructuralSimilarity" 0.995)
+        ForegroundColorHistogramCorrelation = Get-ManifestDouble $CaseSupport "minForegroundColorHistogramCorrelation" (Get-ManifestDouble $FamilySupport "minForegroundColorHistogramCorrelation" 0.98)
+        ForegroundRecall = Get-ManifestDouble $CaseSupport "minForegroundRecall" (Get-ManifestDouble $FamilySupport "minForegroundRecall" $null)
+    }
+}
+
 function Test-VisualChartGraphicsGate($Expected) {
     $null -ne $Expected.maxChartGraphicsStructureBoundsDelta -or
         $null -ne $Expected.maxChartGraphicsStructureBoundsDeltaByKind
