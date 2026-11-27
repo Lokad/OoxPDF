@@ -1026,7 +1026,15 @@ internal static partial class SvgTextTests
             """style="fill:#f00;FILL:#nothex !important;stroke:#badhex !important;stroke:#0000ff" """,
             """style="color:#00ff00 !important;color:#zzzzzz !important" """,
             """style="stop-color:#ff0;stop-color:#12345 !important" """);
-        AssertSvgPaintInBothFormats(literal, competing, "1 0 0 rg", "0 0 1 RG", "0 1 0 rg", "1 1 0 rg");
+        string presentation = Picture(
+            """fill="#f00" stroke="#00f" style="fill:#nothex !important;stroke:#badhex" """,
+            """color="#0f0" style="color:#badhex" """, """stop-color="#ff0" """);
+        string inherited = Picture(
+            """fill="#badhex" style="stroke:#nothex !important" """,
+            """style="color:#badhex" """, """stop-color="#ff0" """,
+            """fill="#f00" stroke="#00f" color="#0f0" """);
+        AssertSvgPaintInBothFormats(literal, [competing, presentation, inherited], null,
+            "1 0 0 rg", "0 0 1 RG", "0 1 0 rg", "1 1 0 rg");
 
         foreach (string style in new[] { "fill:#nothex", """fill:red;fill:lab(50% 40 30)""", """fill:red;fill:#\66 00""" })
         {
@@ -1038,11 +1046,13 @@ internal static partial class SvgTextTests
             TestAssert.Equal("SVG_UNSUPPORTED_CONTENT", diagnostics.Single().Id);
         }
 
-        static string Picture(string pathPaint, string inheritedColor, string stopPaint) => Svg($"""
+        static string Picture(string pathPaint, string inheritedColor, string stopPaint, string ancestorPaint = "") => Svg($"""
             <defs><linearGradient id="tone"><stop offset="0" {stopPaint}/>
               <stop offset="1" stop-color="yellow"/></linearGradient></defs>
-            <path d="M12 12 H75 V40 H12 Z" stroke-width="3" {pathPaint}/>
-            <g {inheritedColor}><circle cx="110" cy="27" r="14" fill="currentColor"/></g>
+            <g {ancestorPaint}>
+              <path d="M12 12 H75 V40 H12 Z" stroke-width="3" {pathPaint}/>
+              <g {inheritedColor}><circle cx="110" cy="27" r="14" fill="currentColor"/></g>
+            </g>
             <rect x="145" y="13" width="52" height="24" fill="url(#tone)"/>
             """);
     }

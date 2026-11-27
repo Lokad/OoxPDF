@@ -1620,10 +1620,19 @@ internal sealed partial class PptxRenderer
             return !TryReadSvgGeometryValue(element, property, value, percentageBasis: null, out _);
         }
 
-        // A plain CSS hash color has a fixed grammar. Escaped tokens and other
-        // paint forms keep the existing paint reader's diagnostics.
-        return property is ("fill" or "stroke" or "color" or "stop-color") &&
-            value.StartsWith('#') && !value.Contains('\\') &&
+        return IsMalformedSvgHexPaintValue(property, value);
+    }
+
+    private static bool IsMalformedSvgHexPaintValue(string property, string value)
+    {
+        if (property is not ("fill" or "stroke" or "color" or "stop-color"))
+        {
+            return false;
+        }
+
+        // Escaped tokens and other paint forms keep the paint reader's diagnostics.
+        ReadOnlySpan<char> token = value.AsSpan().Trim();
+        return !token.IsEmpty && token[0] == '#' && !token.Contains('\\') &&
             !RgbColor.TryParseCssColor(value, out _, out _);
     }
 
@@ -2321,17 +2330,37 @@ internal sealed partial class PptxRenderer
     // Whole-element opacity stays with the element or its compositing group.
     private static string? ReadSvgInheritedAttribute(XElement path, IReadOnlyDictionary<string, string> style, string name)
     {
+        string? malformedPaint = null;
         foreach (XElement source in path.AncestorsAndSelf())
         {
             IReadOnlyDictionary<string, string> declarations = ReferenceEquals(source, path) ? style : ReadSvgStyleDeclarations(source);
             string? value = ReadSvgPresentationAttribute(source, declarations, name);
-            if (!string.IsNullOrWhiteSpace(value) && !InheritsSvgPropertyValue(value) &&
-                (name != "color" || !IsSvgCurrentColor(value)))
+            if (string.IsNullOrWhiteSpace(value))
             {
-                return IsSvgInitialValue(value) ? null : value;
+                continue;
             }
+
+            if (IsMalformedSvgHexPaintValue(name, value))
+            {
+                // An invalid declaration cannot displace a usable presentation or inherited value.
+                string? attributeValue = (string?)source.Attribute(name);
+                if (string.IsNullOrWhiteSpace(attributeValue) || attributeValue == value ||
+                    IsMalformedSvgHexPaintValue(name, attributeValue))
+                {
+                    malformedPaint ??= value;
+                    continue;
+                }
+                value = attributeValue;
+            }
+
+            if (InheritsSvgPropertyValue(value) || name == "color" && IsSvgCurrentColor(value))
+            {
+                continue;
+            }
+
+            return IsSvgInitialValue(value) ? null : value;
         }
-        return null;
+        return malformedPaint;
     }
 
     private static bool InheritsSvgPropertyValue(string value)
