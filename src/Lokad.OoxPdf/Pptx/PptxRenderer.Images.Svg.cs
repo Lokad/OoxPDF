@@ -2060,7 +2060,7 @@ internal sealed partial class PptxRenderer
         IsNeutralSvgTextStyle("clip-path", ReadSvgPresentationAttribute(element, style, "clip-path")) &&
         IsNeutralSvgTextStyle("mask", ReadSvgPresentationAttribute(element, style, "mask")) &&
         IsNeutralSvgTextStyle("filter", ReadSvgPresentationAttribute(element, style, "filter")) &&
-        (!style.TryGetValue("transform", out string? transform) || transform.Equals("none", StringComparison.OrdinalIgnoreCase));
+        (!style.TryGetValue("transform", out string? transform) || IsSvgInlineIdentityTransform(transform));
 
     private static long? MeasureSvgReferenceSource(XElement source, CancellationToken cancellationToken)
     {
@@ -3951,11 +3951,13 @@ internal sealed partial class PptxRenderer
         if (element.Parent?.Name.LocalName == "use") return transform;
 
         style ??= ReadSvgStyleDeclarations(element);
-        return style.TryGetValue("transform", out string? inline) &&
-            (IsSvgTransformNone(inline) || IsSvgNonInheritedDefault(inline))
+        return style.TryGetValue("transform", out string? inline) && IsSvgInlineIdentityTransform(inline)
             ? null
             : transform;
     }
+
+    private static bool IsSvgInlineIdentityTransform(ReadOnlySpan<char> text) =>
+        IsSvgTransformNone(text) || IsSvgNonInheritedDefault(text);
 
     private static bool IsSvgTransformNone(ReadOnlySpan<char> text) =>
         text.Trim().Equals("none", StringComparison.OrdinalIgnoreCase);

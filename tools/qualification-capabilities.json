@@ -707,7 +707,7 @@
     "=SvgLocalShapeGroupsKeepPaintBesideUnpaintedChildren",
     "=SvgLocalShapeGroupsResolveNestedPaintServersFromTheirSource",
     "=SvgLocalShapeReferencesKeepLinkArtworkAndDiagnoseTheAction",
-    "=SvgInlineTransformNonePreservesGeometryAndReferenceOffsets",
+    "=SvgInlineIdentityTransformsPreserveGeometryAndReferenceOffsets",
     "=SvgIdentityTransformsPreserveArtworkAndGradientPaint",
     "=SvgZeroOpacityReferencesPreserveSurroundingPaintAndDiagnostics",
     "=SvgDecreasingStopsKeepNativePaintAndOpacityInBothFormats",

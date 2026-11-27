@@ -740,25 +740,36 @@ internal static partial class SvgTextTests
             "The unsupported text-path markup keeps its diagnostic.");
     }
 
-    public static void SvgInlineTransformNonePreservesGeometryAndReferenceOffsets()
+    public static void SvgInlineIdentityTransformsPreserveGeometryAndReferenceOffsets()
     {
         const string red = """<rect x="12" y="15" width="35" height="25" fill="red"/>""";
         const string green = """<circle cx="85" cy="40" r="12" fill="lime"/>""";
         const string blue = """<rect width="20" height="12" fill="blue"/>""";
         const string label = """<text x="200" y="65" font-size="16" fill="#112233">NORTH</text>""";
         const string reset = """transform="translate(1500 0)" style="transform:NoNe !important;transform:translate(10px)" """;
+        const string initial = """transform="translate(-900)" style="transform:initial" """;
+        const string unset = """transform="translate(-900)" style="transform:UnSeT" """;
+        const string yellow = """<rect width="24" height="24" fill="yellow"/>""";
+        const string cyan = """<circle cx="38" cy="12" r="10" fill="cyan"/>""";
         string resetUse = reset.Replace("transform:translate(10px)", "transform:translate(10px);x:120px;x:nonsense !important",
             StringComparison.Ordinal);
-        string literal = Svg($"""{red}{green}<g transform="translate(120 18)">{blue}</g>{label}""");
+        string literal = Svg($"""
+            {red}{green}<g transform="translate(120 18)">{blue}</g>{label}
+            <g transform="translate(240 95)">{yellow}{cyan}</g>
+            """);
         string variant = Svg($"""
             {red.Insert(6, reset)}
             <g {reset}>{green}</g>
-            <defs>{blue.Insert(6, """id="tile" """)}</defs>
+            <defs>
+              {blue.Insert(6, """id="tile" """)}
+              <g id="badge" {unset}>{yellow.Insert(6, initial)}{cyan}</g>
+            </defs>
             <use href="#tile" y="18" {resetUse}/>
             {label.Insert(6, reset)}
+            <use href="#badge" x="240" y="95" {initial}/>
             """);
         AssertSvgPaintInBothFormats(literal, variant, pdf => TestAssert.Equal(5, LabelPaths(pdf)),
-            "1 0 0 rg", "0 1 0 rg", "0 0 1 rg", LabelColor);
+            "1 0 0 rg", "0 1 0 rg", "0 0 1 rg", LabelColor, "1 1 0 rg", "0 1 1 rg");
     }
 
     public static void SvgIdentityTransformsPreserveArtworkAndGradientPaint()
