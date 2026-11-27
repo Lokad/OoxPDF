@@ -5,6 +5,45 @@ namespace Lokad.OoxPdf.Tests;
 
 internal static partial class DocxInlineCompositionTests
 {
+    public static void DocxKeepRulesPreserveStyleInheritanceAndExplicitFalse()
+    {
+        using var input = TestFixtures.CreateZipPackage(new Dictionary<string, string>
+        {
+            ["[Content_Types].xml"] = TestFixtures.DocxContentTypes,
+            ["_rels/.rels"] = TestFixtures.DocxPackageRelationships,
+            ["word/_rels/document.xml.rels"] = """
+                <Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">
+                  <Relationship Id="styles" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/styles" Target="styles.xml"/>
+                </Relationships>
+                """,
+            ["word/styles.xml"] = """
+                <w:styles xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main">
+                  <w:style w:type="paragraph" w:styleId="KeepBase">
+                    <w:pPr><w:keepNext/><w:keepLines w:val="on"/><w:widowControl w:val="1"/></w:pPr>
+                  </w:style>
+                  <w:style w:type="paragraph" w:styleId="KeepDerived">
+                    <w:basedOn w:val="KeepBase"/><w:pPr><w:keepLines w:val="false"/></w:pPr>
+                  </w:style>
+                </w:styles>
+                """,
+            ["word/document.xml"] = """
+                <w:document xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main"><w:body>
+                  <w:p><w:r><w:t>Absent</w:t></w:r></w:p>
+                  <w:p><w:pPr><w:pStyle w:val="KeepBase"/></w:pPr><w:r><w:t>Inherited</w:t></w:r></w:p>
+                  <w:p><w:pPr><w:pStyle w:val="KeepDerived"/></w:pPr><w:r><w:t>Derived</w:t></w:r></w:p>
+                  <w:p><w:pPr><w:pStyle w:val="KeepBase"/><w:keepNext w:val="off"/>
+                    <w:keepLines w:val="0"/><w:widowControl w:val="false"/></w:pPr><w:r><w:t>Off</w:t></w:r></w:p>
+                </w:body></w:document>
+                """
+        });
+        DocxDocument document = DocxTests.ReadDocx(input, OoxPdfDocxMarkupMode.Final);
+        (bool? KeepNext, bool? KeepLines, bool? WidowControl)[] expected =
+            [(null, null, null), (true, true, true), (true, false, true), (false, false, false)];
+        TestAssert.True(document.Paragraphs.Select(p => p.EffectiveProperties.KeepRules)
+            .Select(keep => (keep.KeepNext, keep.KeepLines, keep.WidowControl)).SequenceEqual(expected),
+            "Each keep property retains its independently inherited or explicitly disabled state.");
+    }
+
     public static void DocxKeepNextOverflowAdmitsTheWholeSourceChainOnce()
     {
         foreach (bool mixed in new[] { false, true })

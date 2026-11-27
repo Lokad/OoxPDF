@@ -790,7 +790,7 @@ internal static class DocxTextSpacingTests
                 1d,
                 10d,
                 contextualSpacing,
-                keepNext ? new DocxParagraphKeepRules(true, null, null, null, null, null) : DocxParagraphKeepRules.Empty,
+                keepNext ? DocxParagraphKeepRules.Empty with { KeepNext = true } : DocxParagraphKeepRules.Empty,
                 null);
         }
 

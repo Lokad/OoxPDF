@@ -254,7 +254,7 @@ internal static partial class DocxFootnotesTests
                 {
                     BodyElements = s.Paragraphs.Select(p => (DocxBodyElement)new DocxParagraphElement(p with
                     {
-                        KeepRules = p.KeepRules with { WidowControl = widow, WidowControlValue = widow ? "1" : "0" },
+                        KeepRules = p.KeepRules with { WidowControl = widow },
                     })).ToArray(),
                 } : s).ToArray() };
             DocxLayout layout = engine.Create(source, measurer, default);

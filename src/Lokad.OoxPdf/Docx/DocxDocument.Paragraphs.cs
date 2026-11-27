@@ -398,23 +398,17 @@ internal sealed record DocxParagraphSpacing(
 
 internal sealed record DocxParagraphKeepRules(
     bool? KeepNext,
-    string? KeepNextValue,
     bool? KeepLines,
-    string? KeepLinesValue,
-    bool? WidowControl,
-    string? WidowControlValue)
+    bool? WidowControl)
 {
-    public static DocxParagraphKeepRules Empty { get; } = new(null, null, null, null, null, null);
+    public static DocxParagraphKeepRules Empty { get; } = new(null, null, null);
 
     public DocxParagraphKeepRules Merge(DocxParagraphKeepRules other)
     {
         return new DocxParagraphKeepRules(
             other.KeepNext ?? KeepNext,
-            other.KeepNextValue ?? KeepNextValue,
             other.KeepLines ?? KeepLines,
-            other.KeepLinesValue ?? KeepLinesValue,
-            other.WidowControl ?? WidowControl,
-            other.WidowControlValue ?? WidowControlValue);
+            other.WidowControl ?? WidowControl);
     }
 }
 

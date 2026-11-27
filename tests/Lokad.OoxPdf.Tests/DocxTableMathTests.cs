@@ -514,7 +514,7 @@ internal static class DocxTableMathTests
         DocxDocument source = TableDocument(new DocxTableRow([cell], null));
         DocxParagraph filler = DocxTests.CreateDocxLayoutParagraph("Fill", 10d, 30d);
         DocxParagraph keep = DocxTests.CreateDocxLayoutParagraph("Keep", 10d, 10d,
-            new DocxParagraphKeepRules(true, null, null, null, null, null));
+            DocxParagraphKeepRules.Empty with { KeepNext = true });
         var table = source.BodyElements.OfType<DocxTableElement>().Single();
         DocxDocument document = source with { PageHeightPoints = 80d,
             BodyElements = [new DocxParagraphElement(filler), new DocxParagraphElement(keep), table] };

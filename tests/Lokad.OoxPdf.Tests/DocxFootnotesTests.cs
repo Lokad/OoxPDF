@@ -896,8 +896,7 @@ internal static partial class DocxFootnotesTests
                     {
                         BodyElements = s.Paragraphs.Select(p => (DocxBodyElement)new DocxParagraphElement(p with
                         {
-                            KeepRules = p.KeepRules with { WidowControl = widow,
-                                WidowControlValue = widow is null ? null : widow.Value ? "1" : "0" },
+                            KeepRules = p.KeepRules with { WidowControl = widow },
                         })).ToArray(),
                     } : s).ToArray(),
             };
@@ -1666,7 +1665,7 @@ internal static partial class DocxFootnotesTests
         {
             BodyElements = s.Paragraphs.Select(p => (DocxBodyElement)new DocxParagraphElement(p with
             {
-                KeepRules = p.KeepRules with { WidowControl = widow, WidowControlValue = widow is null ? null : widow.Value ? "1" : "0" },
+                KeepRules = p.KeepRules with { WidowControl = widow },
             })).ToArray(),
         } : s).ToArray(),
     };
@@ -3494,7 +3493,7 @@ internal static partial class DocxFootnotesTests
     {
         DocxParagraph Keep(string text)
         {
-            return DocxTests.CreateDocxLayoutParagraph(text, 10d, 12d, keepRules: new DocxParagraphKeepRules(true, null, null, null, null, null));
+            return DocxTests.CreateDocxLayoutParagraph(text, 10d, 12d, keepRules: DocxParagraphKeepRules.Empty with { KeepNext = true });
         }
 
         DocxParagraph plain = DocxTests.CreateDocxLayoutParagraph("Plain", 10d, 12d);

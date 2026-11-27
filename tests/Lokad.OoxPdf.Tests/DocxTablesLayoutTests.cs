@@ -172,7 +172,7 @@ internal static class DocxTablesLayoutTests
             "Heading",
             10d,
             20d,
-            new DocxParagraphKeepRules(true, "1", null, null, null, null));
+            DocxParagraphKeepRules.Empty with { KeepNext = true });
         var table = new DocxTable(
             null,
             [60d],
@@ -205,7 +205,7 @@ internal static class DocxTablesLayoutTests
             "Heading",
             10d,
             10d,
-            new DocxParagraphKeepRules(true, "1", null, null, null, null));
+            DocxParagraphKeepRules.Empty with { KeepNext = true });
         var table = new DocxTable(
             null,
             [100d],

@@ -2259,6 +2259,7 @@
     "DocxColumnAdmissionKeepsRunSplitsAndNavigation"
   ],
   "docx-keep-chain-admission": [
+    "=DocxKeepRulesPreserveStyleInheritanceAndExplicitFalse",
     "DocxMarkerRowsRetainLocalMetricsVisibleContentAndNoteTargets",
     "DocxMarkerRowsShareKeepWidowAndCompleteNoteAdmission",
     "DocxMarkerRowsKeepActualLargeStrutsDeclaredSlotsAndUnknownFallbacks",

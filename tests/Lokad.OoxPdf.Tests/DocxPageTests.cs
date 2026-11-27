@@ -563,7 +563,7 @@ internal static class DocxPageTests
             "A {PAGE} B",
             10d,
             10d,
-            keepRules: new DocxParagraphKeepRules(null, null, true, null, null, null));
+            keepRules: DocxParagraphKeepRules.Empty with { KeepLines = true });
         var document = new DocxDocument(
             45d,
             60d,
@@ -2082,7 +2082,7 @@ internal static class DocxPageTests
             "First Second",
             fontSize: 11d,
             lineSpacingPoints: 11d,
-            keepRules: new DocxParagraphKeepRules(null, null, true, null, null, null));
+            keepRules: DocxParagraphKeepRules.Empty with { KeepLines = true });
         DocxParagraph[] fillers =
         [
             DocxTests.CreateDocxLayoutParagraph("Fill", fontSize: 15d, lineSpacingPoints: 15d),
@@ -2130,7 +2130,7 @@ internal static class DocxPageTests
             "Keep",
             fontSize: 11d,
             lineSpacingPoints: 11d,
-            keepRules: new DocxParagraphKeepRules(true, null, null, null, null, null));
+            keepRules: DocxParagraphKeepRules.Empty with { KeepNext = true });
         DocxParagraph next = DocxTests.CreateDocxLayoutParagraph("Next", fontSize: 11d, lineSpacingPoints: 11d);
         DocxParagraph[] fillers =
         [
@@ -2169,7 +2169,7 @@ internal static class DocxPageTests
             "Keep",
             fontSize: 10d,
             lineSpacingPoints: 10d,
-            keepRules: new DocxParagraphKeepRules(true, null, null, null, null, null));
+            keepRules: DocxParagraphKeepRules.Empty with { KeepNext = true });
         DocxParagraph tableParagraph = DocxTests.CreateDocxLayoutParagraph("One Two Three Four Five", fontSize: 10d, lineSpacingPoints: 10d);
         var table = new DocxTable(
             null,
@@ -2221,12 +2221,12 @@ internal static class DocxPageTests
             "Keep",
             fontSize: 11d,
             lineSpacingPoints: 11d,
-            keepRules: new DocxParagraphKeepRules(true, null, null, null, null, null));
+            keepRules: DocxParagraphKeepRules.Empty with { KeepNext = true });
         DocxParagraph keepSecond = DocxTests.CreateDocxLayoutParagraph(
             "Chain",
             fontSize: 11d,
             lineSpacingPoints: 11d,
-            keepRules: new DocxParagraphKeepRules(true, null, null, null, null, null));
+            keepRules: DocxParagraphKeepRules.Empty with { KeepNext = true });
         DocxParagraph end = DocxTests.CreateDocxLayoutParagraph("End", fontSize: 11d, lineSpacingPoints: 11d);
         DocxParagraph[] fillers =
         [

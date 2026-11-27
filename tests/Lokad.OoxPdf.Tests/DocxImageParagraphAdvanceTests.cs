@@ -33,7 +33,7 @@ internal static class DocxImageParagraphAdvanceTests
             DocxParagraph filler = DocxTests.CreateDocxLayoutParagraph("Fill", 10d, 10d);
             DocxParagraph image = ImageParagraph(24d, "image/png") with
             {
-                KeepRules = new DocxParagraphKeepRules(true, null, null, null, null, null)
+                KeepRules = DocxParagraphKeepRules.Empty with { KeepNext = true }
             };
             DocxParagraph next = DocxTests.CreateDocxLayoutParagraph("Next", 10d, nextHeight);
             DocxDocument document = DocxTests.CreateLayoutTestDocument(

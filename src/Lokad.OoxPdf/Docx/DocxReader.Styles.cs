@@ -288,11 +288,8 @@ internal sealed partial class DocxReader
             ReadOnOff(properties?.Element(WordprocessingNamespace + "contextualSpacing")));
         DocxParagraphKeepRules keepRules = new(
             ReadOnOff(properties?.Element(WordprocessingNamespace + "keepNext")),
-            (string?)properties?.Element(WordprocessingNamespace + "keepNext")?.Attribute(WordprocessingNamespace + "val"),
             ReadOnOff(properties?.Element(WordprocessingNamespace + "keepLines")),
-            (string?)properties?.Element(WordprocessingNamespace + "keepLines")?.Attribute(WordprocessingNamespace + "val"),
-            ReadOnOff(properties?.Element(WordprocessingNamespace + "widowControl")),
-            (string?)properties?.Element(WordprocessingNamespace + "widowControl")?.Attribute(WordprocessingNamespace + "val"));
+            ReadOnOff(properties?.Element(WordprocessingNamespace + "widowControl")));
         DocxParagraphIndent indent = ReadParagraphIndent(properties);
         IReadOnlyList<DocxTabStop> tabStops = ReadParagraphTabStops(properties);
         XElement? snapToGrid = properties?.Element(WordprocessingNamespace + "snapToGrid");
