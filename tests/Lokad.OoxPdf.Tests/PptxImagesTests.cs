@@ -16,43 +16,38 @@ namespace Lokad.OoxPdf.Tests;
 
 internal static partial class PptxImagesTests
 {
-    public static void PptxImageRecolorPreservesRawOoxmlTokens()
+    public static void PptxImageRecolorResolvesAuthoredPercentages()
     {
-        XElement luminancePicture = XElement.Parse("""
-            <p:pic xmlns:p="http://schemas.openxmlformats.org/presentationml/2006/main"
-                   xmlns:a="http://schemas.openxmlformats.org/drawingml/2006/main">
-              <p:blipFill>
-                <a:blip>
-                  <a:lum bright="25000" contrast="-15000"/>
-                </a:blip>
-              </p:blipFill>
-            </p:pic>
-            """);
-        XElement luminanceBlip = luminancePicture.Descendants(OoxNamespaces.DrawingNamespace + "blip").Single();
-        PptxSceneImageRecolor luminance = PptxSceneBuilder.ReadImageRecolor(luminanceBlip, PptxTheme.Empty, PptxColorMap.Default);
-        TestAssert.Equal(PptxSceneImageRecolorKind.Luminance, luminance.Kind);
-        TestAssert.Equal("lum", luminance.KindValue ?? string.Empty);
-        TestAssert.Equal("25000", luminance.BrightnessValue ?? string.Empty);
-        TestAssert.Equal("-15000", luminance.ContrastValue ?? string.Empty);
-        TestAssert.Equal(0.25d, luminance.Brightness);
-        TestAssert.Equal(-0.15d, luminance.Contrast);
+        foreach (var (effect, brightness, contrast) in new[]
+        {
+            ("""<a:lum bright="25000" contrast="-15%"/>""", .25d, -.15d),
+            ("""<a:lum bright="120%" contrast="-130000"/>""", 1d, -1d),
+            ("<a:lum/>", 0d, 0d)
+        })
+        {
+            PptxSceneImageRecolor recolor = Read(effect);
+            TestAssert.Equal(PptxSceneImageRecolorKind.Luminance, recolor.Kind);
+            TestAssert.Equal(brightness, recolor.Brightness);
+            TestAssert.Equal(contrast, recolor.Contrast);
+        }
 
-        XElement biLevelPicture = XElement.Parse("""
-            <p:pic xmlns:p="http://schemas.openxmlformats.org/presentationml/2006/main"
-                   xmlns:a="http://schemas.openxmlformats.org/drawingml/2006/main">
-              <p:blipFill>
-                <a:blip>
-                  <a:biLevel thresh="62500"/>
-                </a:blip>
-              </p:blipFill>
-            </p:pic>
-            """);
-        XElement biLevelBlip = biLevelPicture.Descendants(OoxNamespaces.DrawingNamespace + "blip").Single();
-        PptxSceneImageRecolor biLevel = PptxSceneBuilder.ReadImageRecolor(biLevelBlip, PptxTheme.Empty, PptxColorMap.Default);
-        TestAssert.Equal(PptxSceneImageRecolorKind.BiLevel, biLevel.Kind);
-        TestAssert.Equal("biLevel", biLevel.KindValue ?? string.Empty);
-        TestAssert.Equal("62500", biLevel.ThresholdValue ?? string.Empty);
-        TestAssert.Equal(0.625d, biLevel.Threshold);
+        foreach (var (effect, threshold) in new[]
+        {
+            ("""<a:biLevel thresh="62500"/>""", .625d),
+            ("""<a:biLevel thresh="125%"/>""", 1d),
+            ("""<a:biLevel thresh="-5000"/>""", 0d),
+            ("<a:biLevel/>", .5d)
+        })
+        {
+            PptxSceneImageRecolor recolor = Read(effect);
+            TestAssert.Equal(PptxSceneImageRecolorKind.BiLevel, recolor.Kind);
+            TestAssert.Equal(threshold, recolor.Threshold);
+        }
+
+        static PptxSceneImageRecolor Read(string effect) =>
+            PptxSceneBuilder.ReadImageRecolor(
+                XElement.Parse($"""<a:blip xmlns:a="{OoxNamespaces.DrawingNamespace}">{effect}</a:blip>"""),
+                PptxTheme.Empty, PptxColorMap.Default);
     }
 
     public static void PptxImageTileModeFollowsDrawingMlFill()

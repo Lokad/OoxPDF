@@ -16,53 +16,11 @@ internal enum PptxSceneImageRecolorKind
 
 internal readonly record struct PptxSceneImageRecolor(
     PptxSceneImageRecolorKind Kind,
-    double Brightness,
-    double Contrast,
-    RgbColor Dark,
-    RgbColor Light,
-    double Threshold,
-    string? KindValue,
-    string? BrightnessValue,
-    string? ContrastValue,
-    string? ThresholdValue)
-{
-    public static PptxSceneImageRecolor None { get; } = new(PptxSceneImageRecolorKind.None, 0d, 0d, default, default, 0d, null, null, null, null);
-
-    public static PptxSceneImageRecolor Luminance(
-        double brightness,
-        double contrast,
-        string? kindValue,
-        string? brightnessValue,
-        string? contrastValue)
-    {
-        return new PptxSceneImageRecolor(
-            PptxSceneImageRecolorKind.Luminance,
-            Math.Clamp(brightness, -1d, 1d),
-            Math.Clamp(contrast, -1d, 1d),
-            default,
-            default,
-            0d,
-            kindValue,
-            brightnessValue,
-            contrastValue,
-            null);
-    }
-
-    public static PptxSceneImageRecolor Duotone(RgbColor dark, RgbColor light, string? kindValue)
-    {
-        return new PptxSceneImageRecolor(PptxSceneImageRecolorKind.Duotone, 0d, 0d, dark, light, 0d, kindValue, null, null, null);
-    }
-
-    public static PptxSceneImageRecolor Grayscale(string? kindValue)
-    {
-        return new PptxSceneImageRecolor(PptxSceneImageRecolorKind.Grayscale, 0d, 0d, default, default, 0d, kindValue, null, null, null);
-    }
-
-    public static PptxSceneImageRecolor BiLevel(double threshold, string? kindValue, string? thresholdValue)
-    {
-        return new PptxSceneImageRecolor(PptxSceneImageRecolorKind.BiLevel, 0d, 0d, default, default, Math.Clamp(threshold, 0d, 1d), kindValue, null, null, thresholdValue);
-    }
-}
+    double Brightness = 0d,
+    double Contrast = 0d,
+    RgbColor Dark = default,
+    RgbColor Light = default,
+    double Threshold = 0d);
 
 internal sealed record PptxSceneTextBody(
     bool HasUnsupportedTextOrientation,

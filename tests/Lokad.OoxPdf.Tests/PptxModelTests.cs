@@ -371,13 +371,10 @@ internal static class PptxModelTests
         TestAssert.Equal(0.05d, slide.SlideNodes[1].Picture?.Fill.Left ?? 0d);
         TestAssert.Equal(0.1d, slide.SlideNodes[1].Picture?.Fill.Right ?? 0d);
         TestAssert.Equal(0.5d, slide.SlideNodes[1].Picture?.Alpha ?? 0d);
-        TestAssert.Equal(PptxSceneImageRecolorKind.Luminance, slide.SlideNodes[1].Picture?.Recolor.Kind ?? PptxSceneImageRecolorKind.None);
-        TestAssert.Equal("lum", slide.SlideNodes[1].Picture?.Recolor.KindValue ?? string.Empty);
         var recolor = TestAssert.NotNull(slide.SlideNodes[1].Picture).Recolor;
+        TestAssert.Equal(PptxSceneImageRecolorKind.Luminance, recolor.Kind);
         TestAssert.Equal(0.25d, recolor.Brightness);
         TestAssert.Equal(-0.15d, recolor.Contrast);
-        TestAssert.Equal("25000", recolor.BrightnessValue);
-        TestAssert.Equal("-15000", recolor.ContrastValue);
         TestAssert.Equal(PptxSceneNodeKind.Table, slide.SlideNodes[2].Kind);
         TestAssert.Equal(2, slide.SlideNodes[2].Table?.ColumnWidths.Count ?? 0);
         TestAssert.Equal(914400d, slide.SlideNodes[2].Table?.ColumnWidths[0] ?? 0d);

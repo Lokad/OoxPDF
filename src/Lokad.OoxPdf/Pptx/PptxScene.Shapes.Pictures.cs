@@ -80,13 +80,12 @@ internal sealed partial class PptxSceneBuilder
     {
         if (blip is null)
         {
-            return PptxSceneImageRecolor.None;
+            return default;
         }
 
-        XElement? grayscale = blip.Element(DrawingNamespace + "grayscl");
-        if (grayscale is not null)
+        if (blip.Element(DrawingNamespace + "grayscl") is not null)
         {
-            return PptxSceneImageRecolor.Grayscale(grayscale.Name.LocalName);
+            return new(PptxSceneImageRecolorKind.Grayscale);
         }
 
         XElement? biLevel = blip.Element(DrawingNamespace + "biLevel");
@@ -96,7 +95,7 @@ internal sealed partial class PptxSceneBuilder
             double threshold = thresholdValue is not null
                 ? Math.Clamp(OoxXml.ParsePercentage(thresholdValue), 0d, 1d)
                 : 0.5d;
-            return PptxSceneImageRecolor.BiLevel(threshold, biLevel.Name.LocalName, thresholdValue);
+            return new(PptxSceneImageRecolorKind.BiLevel, Threshold: threshold);
         }
 
         XElement? luminance = blip.Element(DrawingNamespace + "lum");
@@ -110,7 +109,7 @@ internal sealed partial class PptxSceneBuilder
             double contrast = contrastValue is not null
                 ? Math.Clamp(OoxXml.ParsePercentage(contrastValue), -1d, 1d)
                 : 0d;
-            return PptxSceneImageRecolor.Luminance(brightness, contrast, luminance.Name.LocalName, brightnessValue, contrastValue);
+            return new(PptxSceneImageRecolorKind.Luminance, brightness, contrast);
         }
 
         XElement? duotone = blip.Element(DrawingNamespace + "duotone");
@@ -121,11 +120,11 @@ internal sealed partial class PptxSceneBuilder
                 PptxColorResolver.TryReadColorDeclarationWithAlpha(colors[0], theme, colorMap, out RgbColor dark, out _) &&
                 PptxColorResolver.TryReadColorDeclarationWithAlpha(colors[1], theme, colorMap, out RgbColor light, out _))
             {
-                return PptxSceneImageRecolor.Duotone(dark, light, duotone.Name.LocalName);
+                return new(PptxSceneImageRecolorKind.Duotone, Dark: dark, Light: light);
             }
         }
 
-        return PptxSceneImageRecolor.None;
+        return default;
     }
 
     private static PptxSceneRect ReadPercentageRectangle(XElement element) => new(
