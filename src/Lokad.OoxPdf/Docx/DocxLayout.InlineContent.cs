@@ -145,8 +145,17 @@ internal sealed partial class DocxLayoutEngine
         double right = GetParagraphRightInset(paragraph, scale);
         double firstFrameWidth = textWidth - right -
             GetParagraphFirstLineTextStartOffset(paragraph, fontSize, context.TextMeasurer, scale, context.DefaultTabStopPoints);
-        double firstWidth = ResolveTableCellTextWrapWidth(cell, firstFrameWidth);
-        double nextWidth = ResolveTableCellTextWrapWidth(cell, textWidth - right - GetParagraphTextStartOffset(paragraph, scale));
+        double nextFrameWidth = textWidth - right - GetParagraphTextStartOffset(paragraph, scale);
+        // Text fitting can change glyph advances. Pictures and boxes still
+        // wrap against the resolved cell frame and keep their authored extents.
+        bool mediaOnly = (cell.NoWrap || cell.FitText) && paragraph.ListLabel is null &&
+            paragraph.InlineContent is { Count: > 0 } items && items.All(item =>
+            {
+                context.CancellationToken.ThrowIfCancellationRequested();
+                return item is DocxInlinePicture or DocxInlineBox or DocxInlineBreak;
+            });
+        double firstWidth = mediaOnly ? Math.Max(1d, firstFrameWidth) : ResolveTableCellTextWrapWidth(cell, firstFrameWidth);
+        double nextWidth = mediaOnly ? Math.Max(1d, nextFrameWidth) : ResolveTableCellTextWrapWidth(cell, nextFrameWidth);
         return TryMeasureOrderedInlineContent(paragraph, context.MathEquations, context.TextMeasurer, fontSize,
             firstWidth, nextWidth, baselineInset, lineHeight, scale, context.CancellationToken, out lines,
             physicalTextBaselineInset: DocxPlainBodyFrame.HasFixedLineFlow(paragraph) ? baselineInset : null,

@@ -219,27 +219,63 @@ internal static class DocxGlyphlessAnchorTests
                     paints.Single(paint => paint.Block == "/" + image.ResourceName + " Do"));
                 var first = images[blueFirst ? 0 : 255];
                 var second = images[blueFirst ? 255 : 0];
-                TestAssert.True(FitsViewport(first), "The first 72pt picture retains its full paint.");
+                TestAssert.True(PictureFitsViewport(first), "The first 72pt picture retains its full paint.");
                 if (width == 180)
                 {
-                    TestAssert.True(FitsViewport(second), "The second 72pt picture fits inside the same viewport.");
+                    TestAssert.True(PictureFitsViewport(second), "The second 72pt picture fits inside the same viewport.");
                     TestAssert.Equal(first.Transform.M32, second.Transform.M32);
                     TestAssert.Equal(first.Transform.M31 + 72f, second.Transform.M31);
                 }
                 else
                 {
-                    TestAssert.True(second.Transform.M32 + 72f <= first.Transform.M32 && !FitsViewport(second),
+                    TestAssert.True(second.Transform.M32 + 72f <= first.Transform.M32 && !PictureFitsViewport(second),
                         "The narrow viewport wraps and clips the second picture.");
                 }
             }
         }
 
-        static bool FitsViewport(DocxNoteClippingTests.PhysicalPaintFrame paint) =>
-            paint.Transform.M11 == 72f && paint.Transform.M22 == 72f &&
-            paint.Transform.M31 >= paint.Clip.X && paint.Transform.M32 >= paint.Clip.Y &&
-            paint.Transform.M31 + 72f <= paint.Clip.X + paint.Clip.Width &&
-            paint.Transform.M32 + 72f <= paint.Clip.Y + paint.Clip.Height;
     }
+
+    public static void DocxGlyphlessCellPicturesUseTheCellWidthWithTextSizing()
+    {
+        byte[] green = TestFixtures.CreateRgbPng(1, 1, [0, 255, 0]);
+        string picture = TestFixtures.DocxInlinePngRun;
+        string blue = picture.Replace("rIdImage1", "rIdBlue", StringComparison.Ordinal);
+        foreach (string textSizing in new[] { "", "<w:noWrap/>", "<w:tcFitText/>" })
+        {
+            string table = $"""
+                <w:tbl>
+                  <w:tblPr><w:tblW w:w="2200" w:type="dxa"/><w:tblLayout w:type="fixed"/></w:tblPr>
+                  <w:tblGrid><w:gridCol w:w="2200"/></w:tblGrid>
+                  <w:tr><w:tc><w:tcPr><w:tcW w:w="2200" w:type="dxa"/>{textSizing}</w:tcPr>
+                    <w:p>{picture}{blue}</w:p></w:tc></w:tr>
+                </w:tbl>
+                """;
+            var parts = ReadParts(TestFixtures.WriteDocxInlinePng(table, green));
+            AddBluePicturePart(parts);
+            string input = TestFixtures.WriteTempPackage(".docx", parts);
+            foreach (var (mode, geometry) in Views())
+            {
+                PdfPage page = Render(input, new EmptyProgramResolver(), mode, geometry).Single();
+                TestAssert.Equal(0, page.Fonts.Count);
+                var paints = DocxNoteClippingTests.ReadPhysicalPaintFrames(page).ToArray();
+                var images = page.Images.ToDictionary(ReadPictureGreenChannel, image =>
+                    paints.Single(paint => paint.Block == "/" + image.ResourceName + " Do"));
+                var first = images[255];
+                var second = images[0];
+                TestAssert.True(PictureFitsViewport(first) && PictureFitsViewport(second),
+                    "The automatic row retains the full paint of both 72pt pictures.");
+                TestAssert.True(second.Transform.M32 + 72f <= first.Transform.M32,
+                    "The source-second picture wraps within the physical cell width.");
+            }
+        }
+    }
+
+    private static bool PictureFitsViewport(DocxNoteClippingTests.PhysicalPaintFrame paint) =>
+        paint.Transform.M11 == 72f && paint.Transform.M22 == 72f &&
+        paint.Transform.M31 >= paint.Clip.X && paint.Transform.M32 >= paint.Clip.Y &&
+        paint.Transform.M31 + 72f <= paint.Clip.X + paint.Clip.Width &&
+        paint.Transform.M32 + 72f <= paint.Clip.Y + paint.Clip.Height;
 
     private static void AddBluePicturePart(Dictionary<string, byte[]> parts)
     {
