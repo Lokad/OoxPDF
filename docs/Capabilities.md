@@ -187,6 +187,7 @@ An explicit `font-stretch` of `100%` preserves the label at its normal width.
 Equivalent numeric spellings of integer SVG font weights from 100 through 900 keep the same face.
 Basic shape geometry, stroke widths, dash lengths and dash offsets accept viewport percentages.
 These lengths and fixed viewport dimensions also accept absolute CSS units.
+Rectangle, circle and ellipse geometry accepts these lengths in inline styles.
 Supported SVG labels accept viewport percentages, em and absolute units in
 single-value x, y, dx and dy attributes. A dx or dy list can supply one initial
 offset followed by zeros. Later absolute positions or nonzero relative offsets

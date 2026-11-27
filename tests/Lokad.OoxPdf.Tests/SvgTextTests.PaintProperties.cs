@@ -292,12 +292,18 @@ internal static partial class SvgTextTests
             <ellipse cx="65%" cy="40%" rx="8%" ry="15%" fill="lime"/>
             <line x1="75%" y1="60%" x2="90%" y2="80%" stroke="fuchsia" stroke-width="4"/>
             """;
+        const string inline = """
+            <rect x="900" style="x:10% !important;x:95%;y:20%;width:20%;height:40%;rx:4%;ry:8%" fill="red"/>
+            <circle style="cx:40%;cy:40%;r:10%" fill="blue"/>
+            <ellipse cx="110.5" style="cx:invalid;cy:40%;rx:8%;ry:15%" fill="lime"/>
+            <line x1="75%" y1="60%" x2="90%" y2="80%" stroke="fuchsia" stroke-width="4"/>
+            """;
         foreach (string frame in new[] { "width=\"340\" height=\"140\" viewBox=\"-10 -5 170 70\"",
             "width=\"170px\" height=\"70px\"" })
         {
             string Picture(string shapes) =>
                 $"""<svg xmlns="http://www.w3.org/2000/svg" {frame}><g transform="translate(2 3)">{shapes}</g></svg>""";
-            AssertSvgPaintInBothFormats(Picture(absolute), Picture(percent),
+            AssertSvgPaintInBothFormats(Picture(absolute), [Picture(percent), Picture(inline)], null,
                 "1 0 0 rg", "0 0 1 rg", "0 1 0 rg", "1 0 1 RG");
         }
     }
@@ -315,7 +321,8 @@ internal static partial class SvgTextTests
 
         AssertSvgPaintInBothFormats(
             Picture("ry=\"17\"", "rx=\"14\"", "rx=\"14\""),
-            Picture("", "rx=\"auto\"", "rx=\"auto\""),
+            [Picture("", "rx=\"auto\"", "rx=\"auto\""),
+             Picture("style=\"ry:auto\"", "rx=\"6\" style=\"rx:auto\"", "style=\"rx:auto\"")], null,
             "1 0 0 rg", "0 0 1 rg", "0 0.502 0 rg");
 
         const string square = """<rect x="20" y="10" width="30" height="25" fill="green"/>""";

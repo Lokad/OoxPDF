@@ -244,7 +244,7 @@ internal sealed partial class PptxRenderer
                     admittedElements.Add(element);
                 continue;
             }
-            string? data = ConvertSvgShapeToPathData(element, viewWidth, viewHeight);
+            string? data = ConvertSvgShapeToPathData(element, style, viewWidth, viewHeight);
             if (string.IsNullOrWhiteSpace(data))
             {
                 continue;
@@ -3354,13 +3354,14 @@ internal sealed partial class PptxRenderer
     {
         return element.Name.LocalName is "path" or "rect" or "circle" or "ellipse" or "line" or "polyline" or "polygon";
     }
-    private static string? ConvertSvgShapeToPathData(XElement element, double viewWidth, double viewHeight)
+    private static string? ConvertSvgShapeToPathData(XElement element, IReadOnlyDictionary<string, string> style,
+        double viewWidth, double viewHeight)
     {
         return element.Name.LocalName switch
         {
-            "rect" => ConvertSvgRectToPathData(element, viewWidth, viewHeight),
-            "circle" => ConvertSvgCircleToPathData(element, viewWidth, viewHeight),
-            "ellipse" => ConvertSvgEllipseToPathData(element, viewWidth, viewHeight),
+            "rect" => ConvertSvgRectToPathData(element, style, viewWidth, viewHeight),
+            "circle" => ConvertSvgCircleToPathData(element, style, viewWidth, viewHeight),
+            "ellipse" => ConvertSvgEllipseToPathData(element, style, viewWidth, viewHeight),
             "line" => ConvertSvgLineToPathData(element, viewWidth, viewHeight),
             "polyline" => ConvertSvgPointsToPathData(element, false),
             "polygon" => ConvertSvgPointsToPathData(element, true),
@@ -3370,13 +3371,34 @@ internal sealed partial class PptxRenderer
     private static bool TryReadSvgShapeCoordinate(XElement element, string name, double percentageBasis, out double value,
         IReadOnlyDictionary<string, string>? style = null)
     {
-        string? text = style is null ? (string?)element.Attribute(name) : ReadSvgPresentationAttribute(element, style, name);
-        if (string.IsNullOrWhiteSpace(text))
+        bool valid = TryReadSvgGeometryLength(element, name, percentageBasis, style, out double? length);
+        value = length.GetValueOrDefault();
+        return valid;
+    }
+
+    private static bool TryReadSvgGeometryLength(XElement element, string name, double percentageBasis,
+        IReadOnlyDictionary<string, string>? style, out double? length)
+    {
+        bool pairedRadius = name is "rx" or "ry";
+        bool allowsAuto = pairedRadius || name is "width" or "height";
+        if (style is not null && style.TryGetValue(name, out string? declaration) && TryRead(declaration, out length) &&
+            (!(allowsAuto || name == "r") || length.GetValueOrDefault() >= 0d))
         {
-            value = 0d;
             return true;
         }
-        return TryReadSvgViewportLength(element, text, percentageBasis, out value);
+
+        string? attribute = (string?)element.Attribute(name);
+        length = null;
+        return attribute is null || (!pairedRadius && string.IsNullOrWhiteSpace(attribute)) || TryRead(attribute, out length);
+
+        bool TryRead(string text, out double? value)
+        {
+            value = null;
+            if (allowsAuto && text.AsSpan().Trim().Equals("auto", StringComparison.OrdinalIgnoreCase)) return true;
+            if (!TryReadSvgViewportLength(element, text, percentageBasis, out double number)) return false;
+            value = number;
+            return true;
+        }
     }
 
     private static bool TryReadSvgViewportLength(XElement element, ReadOnlySpan<char> text, double percentageBasis, out double value)
@@ -3402,32 +3424,30 @@ internal sealed partial class PptxRenderer
         return value.ToString(CultureInfo.InvariantCulture);
     }
 
-    private static bool TryReadSvgPairedRadii(XElement element, double viewWidth, double viewHeight, out double rx, out double ry)
+    private static bool TryReadSvgPairedRadii(XElement element, IReadOnlyDictionary<string, string> style,
+        double viewWidth, double viewHeight, out double rx, out double ry)
     {
-        string? horizontal = (string?)element.Attribute("rx");
-        string? vertical = (string?)element.Attribute("ry");
-        bool autoX = horizontal is null || horizontal.AsSpan().Trim().Equals("auto", StringComparison.OrdinalIgnoreCase);
-        bool autoY = vertical is null || vertical.AsSpan().Trim().Equals("auto", StringComparison.OrdinalIgnoreCase);
         rx = 0d;
         ry = 0d;
-        if (!autoX && (!TryReadSvgViewportLength(element, horizontal, viewWidth, out rx) || rx < 0d) ||
-            !autoY && (!TryReadSvgViewportLength(element, vertical, viewHeight, out ry) || ry < 0d))
+        if (!TryReadSvgGeometryLength(element, "rx", viewWidth, style, out double? horizontal) || horizontal is < 0d ||
+            !TryReadSvgGeometryLength(element, "ry", viewHeight, style, out double? vertical) || vertical is < 0d)
         {
             return false;
         }
 
         // Resolve before the rectangle's own per-axis clamps.
-        if (autoX) rx = ry;
-        if (autoY) ry = rx;
+        rx = horizontal ?? vertical ?? 0d;
+        ry = vertical ?? horizontal ?? 0d;
         return true;
     }
 
-    private static string? ConvertSvgRectToPathData(XElement element, double viewWidth, double viewHeight)
+    private static string? ConvertSvgRectToPathData(XElement element, IReadOnlyDictionary<string, string> style,
+        double viewWidth, double viewHeight)
     {
-        if (!TryReadSvgShapeCoordinate(element, "x", viewWidth, out double x)
-            || !TryReadSvgShapeCoordinate(element, "y", viewHeight, out double y)
-            || !TryReadSvgShapeCoordinate(element, "width", viewWidth, out double width)
-            || !TryReadSvgShapeCoordinate(element, "height", viewHeight, out double height))
+        if (!TryReadSvgShapeCoordinate(element, "x", viewWidth, out double x, style)
+            || !TryReadSvgShapeCoordinate(element, "y", viewHeight, out double y, style)
+            || !TryReadSvgShapeCoordinate(element, "width", viewWidth, out double width, style)
+            || !TryReadSvgShapeCoordinate(element, "height", viewHeight, out double height, style))
         {
             return null;
         }
@@ -3435,7 +3455,7 @@ internal sealed partial class PptxRenderer
         {
             return null;
         }
-        if (!TryReadSvgPairedRadii(element, viewWidth, viewHeight, out double rx, out double ry))
+        if (!TryReadSvgPairedRadii(element, style, viewWidth, viewHeight, out double rx, out double ry))
         {
             return null;
         }
@@ -3458,22 +3478,24 @@ internal sealed partial class PptxRenderer
             + "C" + SvgPathNumber(x) + " " + SvgPathNumber(y + ry - ky) + " " + SvgPathNumber(x + rx - kx) + " " + SvgPathNumber(y) + " " + SvgPathNumber(x + rx) + " " + SvgPathNumber(y)
             + "Z";
     }
-    private static string? ConvertSvgCircleToPathData(XElement element, double viewWidth, double viewHeight)
+    private static string? ConvertSvgCircleToPathData(XElement element, IReadOnlyDictionary<string, string> style,
+        double viewWidth, double viewHeight)
     {
-        if (!TryReadSvgShapeCoordinate(element, "cx", viewWidth, out double cx)
-            || !TryReadSvgShapeCoordinate(element, "cy", viewHeight, out double cy)
-            || !TryReadSvgShapeCoordinate(element, "r", GetSvgNormalizedDiagonal(viewWidth, viewHeight), out double radius)
+        if (!TryReadSvgShapeCoordinate(element, "cx", viewWidth, out double cx, style)
+            || !TryReadSvgShapeCoordinate(element, "cy", viewHeight, out double cy, style)
+            || !TryReadSvgShapeCoordinate(element, "r", GetSvgNormalizedDiagonal(viewWidth, viewHeight), out double radius, style)
             || radius <= 0d)
         {
             return null;
         }
         return ConvertSvgEllipseBody(cx, cy, radius, radius);
     }
-    private static string? ConvertSvgEllipseToPathData(XElement element, double viewWidth, double viewHeight)
+    private static string? ConvertSvgEllipseToPathData(XElement element, IReadOnlyDictionary<string, string> style,
+        double viewWidth, double viewHeight)
     {
-        if (!TryReadSvgShapeCoordinate(element, "cx", viewWidth, out double cx)
-            || !TryReadSvgShapeCoordinate(element, "cy", viewHeight, out double cy)
-            || !TryReadSvgPairedRadii(element, viewWidth, viewHeight, out double rx, out double ry)
+        if (!TryReadSvgShapeCoordinate(element, "cx", viewWidth, out double cx, style)
+            || !TryReadSvgShapeCoordinate(element, "cy", viewHeight, out double cy, style)
+            || !TryReadSvgPairedRadii(element, style, viewWidth, viewHeight, out double rx, out double ry)
             || rx <= 0d || ry <= 0d)
         {
             return null;
