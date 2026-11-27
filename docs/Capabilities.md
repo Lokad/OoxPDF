@@ -76,6 +76,8 @@ nondecimal numbering and zero-numbered title pages remain outside this support.
 - Uses authored slide dimensions and absolute shape/group transforms, supported
   slide/layout/master inheritance, themes, text, bullets, tables, pictures,
   fills, strokes, transparency and external/internal hyperlinks.
+- Reports `PPTX_TABLE_CELL_TEXT_CLIPPED` when row clipping omits every visible
+  line in a table cell.
 - Solid fills and uniform-alpha linear gradients use slide, layout and
   master background precedence, including theme fill references.
   Other referenced paints, mixed-alpha gradients and title-relative

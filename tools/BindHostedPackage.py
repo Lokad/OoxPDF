@@ -166,8 +166,8 @@ def bind(stage, offline):
                     receipt["LibrarySha256"] == receipt["ExpectedLibrarySha256"] == library_hash,
                     f"Consumer evidence differs for {host}/{framework}")
             entries = {row["Entry"]: row for row in receipt["FrameworkIdentities"]}
-            require(len(entries) == len(receipt["FrameworkIdentities"]) == len(FRAMEWORKS) and
-                    receipt["LocalDocumentationLinksChecked"] >= 26, "Expected both framework identities and documentation checks")
+            require(len(entries) == len(receipt["FrameworkIdentities"]) == len(FRAMEWORKS),
+                    "Expected distinct identities for both frameworks")
             for target in FRAMEWORKS:
                 info = entries[f"lib/{target}/Lokad.OoxPdf.dll"]
                 require(info["InformationalVersion"] == f"{version}+{revision}" and

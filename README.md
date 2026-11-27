@@ -53,7 +53,6 @@ dotnet run --project src/Lokad.OoxPdf.Cli -f net11.0 -- convert input.docx outpu
 ```
 
 With `--strict`, exit code `3` means the PDF was produced with warnings or errors.
-See [API, markup modes and diagnostics](docs/Usage.md).
 
 ## Documentation
 
