@@ -130,7 +130,9 @@ internal static class FontRecoveryTests
                 TestAssert.Equal(expected, diagnostics.Diagnostics.Count(d => d.Id == "FONT_NO_USABLE_FACE"));
                 TestAssert.Equal(expected, diagnostics.Diagnostics.Count(d => d.Id == "COMPLEX_SCRIPT_APPROXIMATION"));
                 TestAssert.Equal(visible, diagnostics.HasWarningsOrErrors);
-                TestAssert.Equal(expected, page.FallbackFonts.Count);
+                bool emitsGlyphs = page.Content.Contains(" Tj", StringComparison.Ordinal) ||
+                    page.Content.Contains(" TJ", StringComparison.Ordinal);
+                TestAssert.Equal(visible, emitsGlyphs);
             }
             finally { File.Delete(path); }
         }
