@@ -2590,8 +2590,10 @@ internal sealed partial class DocxLayoutEngine
                     if (mathEquations.ContainsKey(equation)) { hasPreparedMath = true; break; }
                 }
             bool ordinaryBoxParagraph = textBoxParagraph && !hasPreparedMath;
-            if (textMeasurer is not null && (textBoxParagraph || paragraph.Equations.Count != 0 &&
-                story.IsNormalStoryType && story.Kind is DocxRelatedStoryKind.Footnote or DocxRelatedStoryKind.Endnote))
+            if (textBoxParagraph
+                ? textMeasurer is not null || HasFontlessMediaComposition(paragraph, includeInlineTextBoxes: false)
+                : textMeasurer is not null && paragraph.Equations.Count != 0 &&
+                    story.IsNormalStoryType && story.Kind is DocxRelatedStoryKind.Footnote or DocxRelatedStoryKind.Endnote)
             {
                 double size = GetParagraphFontSize(paragraph);
                 double lineHeight = ResolveLineHeightProfile(paragraph, size, textMeasurer, selectMaxAcrossRuns: !ordinaryBoxParagraph).LineHeight;

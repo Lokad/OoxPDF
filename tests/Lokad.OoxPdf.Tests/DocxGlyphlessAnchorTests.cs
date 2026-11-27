@@ -132,15 +132,8 @@ internal static class DocxGlyphlessAnchorTests
         XNamespace wp = "http://schemas.openxmlformats.org/drawingml/2006/wordprocessingDrawing";
         XNamespace a = OoxNamespaces.DrawingNamespace;
         XNamespace r = OoxNamespaces.RelationshipsNamespace;
-        XNamespace rel = OoxNamespaces.PackageRelationshipsNamespace;
         const string documentPart = "word/document.xml";
-        const string relationshipsPart = "word/_rels/document.xml.rels";
-        XElement relationships = XElement.Parse(System.Text.Encoding.UTF8.GetString(parts[relationshipsPart]));
-        relationships.Add(new XElement(rel + "Relationship",
-            new XAttribute("Id", "rIdBlue"), new XAttribute("Type", r.NamespaceName + "/image"),
-            new XAttribute("Target", "media/blue.png")));
-        parts[relationshipsPart] = TestFixtures.Utf8(relationships.ToString(SaveOptions.DisableFormatting));
-        parts["word/media/blue.png"] = TestFixtures.CreateRgbPng(1, 1, [0, 0, 255]);
+        AddBluePicturePart(parts);
         XElement seed = XElement.Parse(System.Text.Encoding.UTF8.GetString(parts[documentPart]));
         var cases = new[]
         {
@@ -175,12 +168,7 @@ internal static class DocxGlyphlessAnchorTests
                 var frames = new Dictionary<int, double[]>();
                 foreach (PdfImageResource image in page.Images)
                 {
-                    using var compressed = new MemoryStream(image.Image.Bytes);
-                    using var rgb = new ZLibStream(compressed, CompressionMode.Decompress);
-                    TestAssert.Equal(0, rgb.ReadByte());
-                    int green = rgb.ReadByte(), blue = rgb.ReadByte();
-                    TestAssert.True((green, blue) is (255, 0) or (0, 255), "Each authored picture color is distinct.");
-                    frames.Add(green, PaintedFrame(page, image));
+                    frames.Add(ReadPictureGreenChannel(image), PaintedFrame(page, image));
                 }
                 double[] boxed = frames[255], direct = frames[0];
                 TestAssert.Equal(72d, boxed[0]);
@@ -199,6 +187,81 @@ internal static class DocxGlyphlessAnchorTests
                 }
             }
         }
+    }
+
+    public static void DocxGlyphlessTextBoxChildPicturesUseTheAvailableLine()
+    {
+        XNamespace w = OoxNamespaces.WordprocessingNamespace;
+        XNamespace wp = "http://schemas.openxmlformats.org/drawingml/2006/wordprocessingDrawing";
+        XNamespace a = OoxNamespaces.DrawingNamespace;
+        XNamespace r = OoxNamespaces.RelationshipsNamespace;
+        const string documentPart = "word/document.xml";
+        byte[] png = TestFixtures.CreateRgbPng(1, 1, [0, 255, 0]);
+        foreach (var (floating, width, blueFirst) in new[] { (true, 180, false), (true, 180, true), (false, 180, false), (true, 110, false) })
+        {
+            var parts = ReadParts(TestFixtures.WriteDocxInlinePng(PictureBoxParagraph(floating, height: 78), png));
+            AddBluePicturePart(parts);
+            var document = XElement.Parse(System.Text.Encoding.UTF8.GetString(parts[documentPart]));
+            document.Descendants(wp + "extent").First().SetAttributeValue("cx", width * 12700);
+            var green = document.Descendants(w + "txbxContent").Single().Element(w + "p")!.Element(w + "r")!;
+            var blue = new XElement(green);
+            blue.Descendants(a + "blip").Single().SetAttributeValue(r + "embed", "rIdBlue");
+            if (blueFirst) green.AddBeforeSelf(blue);
+            else green.AddAfterSelf(blue);
+            parts[documentPart] = TestFixtures.Utf8(document.ToString(SaveOptions.DisableFormatting));
+            string input = TestFixtures.WriteTempPackage(".docx", parts);
+            foreach (var (mode, geometry) in Views())
+            {
+                PdfPage page = Render(input, new EmptyProgramResolver(), mode, geometry).Single();
+                TestAssert.Equal(0, page.Fonts.Count);
+                var paints = DocxNoteClippingTests.ReadPhysicalPaintFrames(page).ToArray();
+                var images = page.Images.ToDictionary(ReadPictureGreenChannel, image =>
+                    paints.Single(paint => paint.Block == "/" + image.ResourceName + " Do"));
+                var first = images[blueFirst ? 0 : 255];
+                var second = images[blueFirst ? 255 : 0];
+                TestAssert.True(FitsViewport(first), "The first 72pt picture retains its full paint.");
+                if (width == 180)
+                {
+                    TestAssert.True(FitsViewport(second), "The second 72pt picture fits inside the same viewport.");
+                    TestAssert.Equal(first.Transform.M32, second.Transform.M32);
+                    TestAssert.Equal(first.Transform.M31 + 72f, second.Transform.M31);
+                }
+                else
+                {
+                    TestAssert.True(second.Transform.M32 + 72f <= first.Transform.M32 && !FitsViewport(second),
+                        "The narrow viewport wraps and clips the second picture.");
+                }
+            }
+        }
+
+        static bool FitsViewport(DocxNoteClippingTests.PhysicalPaintFrame paint) =>
+            paint.Transform.M11 == 72f && paint.Transform.M22 == 72f &&
+            paint.Transform.M31 >= paint.Clip.X && paint.Transform.M32 >= paint.Clip.Y &&
+            paint.Transform.M31 + 72f <= paint.Clip.X + paint.Clip.Width &&
+            paint.Transform.M32 + 72f <= paint.Clip.Y + paint.Clip.Height;
+    }
+
+    private static void AddBluePicturePart(Dictionary<string, byte[]> parts)
+    {
+        const string relationshipsPart = "word/_rels/document.xml.rels";
+        XNamespace rel = OoxNamespaces.PackageRelationshipsNamespace;
+        XElement relationships = XElement.Parse(System.Text.Encoding.UTF8.GetString(parts[relationshipsPart]));
+        relationships.Add(new XElement(rel + "Relationship",
+            new XAttribute("Id", "rIdBlue"), new XAttribute("Type", OoxNamespaces.RelationshipsNamespace + "/image"),
+            new XAttribute("Target", "media/blue.png")));
+        parts[relationshipsPart] = TestFixtures.Utf8(relationships.ToString(SaveOptions.DisableFormatting));
+        parts["word/media/blue.png"] = TestFixtures.CreateRgbPng(1, 1, [0, 0, 255]);
+    }
+
+    private static int ReadPictureGreenChannel(PdfImageResource image)
+    {
+        using var compressed = new MemoryStream(image.Image.Bytes);
+        using var rgb = new ZLibStream(compressed, CompressionMode.Decompress);
+        TestAssert.Equal(0, rgb.ReadByte());
+        int green = rgb.ReadByte(), blue = rgb.ReadByte();
+        TestAssert.True((green, blue) is (255, 0) or (0, 255), "Each authored picture color is distinct.");
+        TestAssert.Equal(-1, rgb.ReadByte());
+        return green;
     }
 
     private static string PictureBoxParagraph(bool floating, int height)

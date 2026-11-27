@@ -208,7 +208,7 @@ internal sealed partial class DocxLayoutEngine
         run.IsAutomaticNoteStoryMarker && run.VerticalAlignment == DocxRunVerticalAlignment.Superscript;
 
     private static double ResolveRelatedStoryBaselineOffset(DocxParagraph paragraph, double fontSize,
-        double lineHeight, IDocxTextMeasurer textMeasurer, DocxStoryKind? kind)
+        double lineHeight, IDocxTextMeasurer? textMeasurer, DocxStoryKind? kind)
     {
         double? hheaAscender = kind is DocxStoryKind.Footnote or DocxStoryKind.Endnote
             ? DocxLineMetrics.ResolveHheaAscenderPoints(paragraph, textMeasurer as IDocxLineMetricsProvider, selectMaxHhea: false) : null;

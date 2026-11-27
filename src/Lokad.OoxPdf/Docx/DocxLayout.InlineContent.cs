@@ -52,9 +52,9 @@ internal sealed partial class DocxLayoutEngine
     private static bool HasCapturedOrdinaryInlineContent(DocxParagraph paragraph) =>
         paragraph.InlineContent is not null && paragraph.Equations.Count == 0 && paragraph.InlineTextBoxes.Count == 0;
 
-    private static bool HasFontlessMediaComposition(DocxParagraph paragraph) =>
+    private static bool HasFontlessMediaComposition(DocxParagraph paragraph, bool includeInlineTextBoxes = true) =>
         paragraph.InlineContent is not null && paragraph.ListLabel is null &&
-        paragraph.Images.Count + paragraph.InlineTextBoxes.Count > 1;
+        paragraph.Images.Count + (includeInlineTextBoxes ? paragraph.InlineTextBoxes.Count : 0) > 1;
 
     private static double ResolveOrderedInlineAlignment(DocxMeasuredInlineLine line,
         DocxTextAlignment alignment, double available) =>
@@ -287,7 +287,7 @@ internal sealed partial class DocxLayoutEngine
         bool allowStaticFallback = false, double? physicalTextBaselineInset = null, bool includeInlineTextBoxes = true)
     {
         atoms = null;
-        if (measurer is null && !HasFontlessMediaComposition(paragraph)) return false;
+        if (measurer is null && !HasFontlessMediaComposition(paragraph, includeInlineTextBoxes)) return false;
         bool hasActualFieldInputs = (pageNumber is not null || pageCount is not null) &&
             paragraph.FieldReferences.All(field => !field.UsesPlaceholder || !field.Kind.IsDynamic() ||
                 DocxFieldText.CanResolve(field.Kind, pageNumber, pageCount)) &&
