@@ -708,6 +708,7 @@
     "=SvgLocalShapeGroupsResolveNestedPaintServersFromTheirSource",
     "=SvgLocalShapeReferencesKeepLinkArtworkAndDiagnoseTheAction",
     "=SvgInlineTransformNonePreservesGeometryAndReferenceOffsets",
+    "=SvgIdentityTransformsPreserveArtworkAndGradientPaint",
     "=SvgZeroOpacityReferencesPreserveSurroundingPaintAndDiagnostics",
     "=SvgDecreasingStopsKeepNativePaintAndOpacityInBothFormats",
     "=SvgGradientTemplatesMatchExpandedPaintInBothFormats",

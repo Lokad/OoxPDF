@@ -761,6 +761,36 @@ internal static partial class SvgTextTests
             "1 0 0 rg", "0 1 0 rg", "0 0 1 rg", LabelColor);
     }
 
+    public static void SvgIdentityTransformsPreserveArtworkAndGradientPaint()
+    {
+        AssertSvgPaintInBothFormats(Picture(false), Picture(true),
+            "1 0 0 rg", "0 1 0 rg", "1 1 0 rg", "1 0 1 rg", "0 1 1 rg", "/ShadingType 2");
+
+        static string Picture(bool useKeywords)
+        {
+            string identity = useKeywords ? """transform="none" """ : string.Empty;
+            string mixedCase = useKeywords ? """transform=" NoNe " """ : string.Empty;
+            string initial = useKeywords ? """transform="translate(-900)" style="transform:initial" """ : string.Empty;
+            string unset = useKeywords ? """transform="translate(-900)" style="transform:unset" """ : string.Empty;
+            string gradient = useKeywords ? "none" : "matrix(1 0 0 1 0 0)";
+            return Svg($"""
+                <rect x="10" y="14" width="35" height="35" fill="red" {identity}/>
+                <g {mixedCase}><circle cx="78" cy="32" r="16" fill="lime"/></g>
+                <defs>
+                  <rect id="tile" width="34" height="34" fill="yellow"/>
+                  <linearGradient id="base" gradientTransform="translate(1)">
+                    <stop stop-color="#1c2cdb"/><stop offset="1" stop-color="#22ddf5"/>
+                  </linearGradient>
+                  <linearGradient id="tone" href="#base" gradientTransform="{gradient}"/>
+                </defs>
+                <use href="#tile" x="111" y="15" {identity}/>
+                <rect x="161" y="15" width="36" height="34" fill="url(#tone)"/>
+                <rect x="217" y="15" width="34" height="34" fill="fuchsia" {initial}/>
+                <g {unset}><rect x="271" y="15" width="34" height="34" fill="cyan"/></g>
+                """);
+        }
+    }
+
     public static void SvgLocalShapeGroupsResolveNestedPaintServersFromTheirSource()
     {
         const string gradient = """

@@ -3773,7 +3773,7 @@ internal sealed partial class PptxRenderer
     private static bool TryParseSvgTransformList(string? text, out SvgTransform transform)
     {
         transform = SvgTransform.Identity;
-        if (string.IsNullOrWhiteSpace(text))
+        if (string.IsNullOrWhiteSpace(text) || IsSvgTransformNone(text))
         {
             return true;
         }
@@ -3945,14 +3945,20 @@ internal sealed partial class PptxRenderer
     private static string? ReadSvgGeometryTransform(XElement element, IReadOnlyDictionary<string, string>? style = null)
     {
         string? transform = (string?)element.Attribute("transform");
+        if (transform is null || IsSvgTransformNone(transform)) return null;
+
         // A synthesized group carries the resolved reference transform and x/y translation.
-        if (transform is null || element.Parent?.Name.LocalName == "use") return transform;
+        if (element.Parent?.Name.LocalName == "use") return transform;
 
         style ??= ReadSvgStyleDeclarations(element);
-        return style.TryGetValue("transform", out string? inline) && inline.Equals("none", StringComparison.OrdinalIgnoreCase)
+        return style.TryGetValue("transform", out string? inline) &&
+            (IsSvgTransformNone(inline) || IsSvgNonInheritedDefault(inline))
             ? null
             : transform;
     }
+
+    private static bool IsSvgTransformNone(ReadOnlySpan<char> text) =>
+        text.Trim().Equals("none", StringComparison.OrdinalIgnoreCase);
 
     private static bool TryReadSvgPathTransform(XElement path, IReadOnlyDictionary<string, string> style, out SvgTransform transform)
     {
