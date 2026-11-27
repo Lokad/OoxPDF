@@ -96,7 +96,8 @@ internal static class DocxGlyphlessAnchorTests
         string merged = WriteTable(merge: true);
         string samePage = WriteTable(merge: true, pageHeight: 6300);
         string tooTall = WriteTable(merge: true, pictureHeight: 1397000);
-        string clipped = WriteTable(merge: true, columnWidth: 840);
+        string fitted = WriteTable(merge: true, columnWidth: 840);
+        string pageClipped = WriteTable(merge: true, pageWidth: 1800);
 
         var resolver = new EmptyProgramResolver();
         foreach (var (mode, geometry) in Views())
@@ -117,13 +118,19 @@ internal static class DocxGlyphlessAnchorTests
             TestAssert.True(pages.Skip(1).All(page => page.Annotations.Count == 0),
                 "Continuations do not create additional source links.");
             AssertLinkMatchesPicture(Render(samePage, resolver, mode, geometry).Single());
-            foreach (string partial in new[] { tooTall, clipped })
-            {
-                var partialPages = Render(partial, resolver, mode, geometry);
-                PaintedFrame(partialPages[0]);
-                TestAssert.True(partialPages.All(page => page.Annotations.Count == 0),
-                    "A visible fragment without complete frame ownership remains unlinked.");
-            }
+            var fittedLink = AssertLinkMatchesPicture(Render(fitted, resolver, mode, geometry)[0]);
+            TestAssert.True(fittedLink.Width < controlLink.Width, "The link follows the complete fitted picture.");
+
+            PdfPage[] cropped = Render(pageClipped, resolver, mode, geometry);
+            double[] croppedFrame = PaintedFrame(cropped[0]);
+            TestAssert.True(croppedFrame[2] < cropped[0].Width && croppedFrame[2] + croppedFrame[0] > cropped[0].Width,
+                "The paper edge must cross the painted picture.");
+            TestAssert.True(cropped.All(page => page.Annotations.Count == 0),
+                "A partially visible picture has no complete link rectangle.");
+            PdfPage[] oversized = Render(tooTall, resolver, mode, geometry);
+            PaintedFrame(oversized[0]);
+            TestAssert.True(oversized.All(page => page.Annotations.Count == 0),
+                "An oversized source without complete frame ownership remains unlinked.");
         }
 
         static PdfLinkAnnotation AssertLinkMatchesPicture(PdfPage page)
@@ -137,7 +144,7 @@ internal static class DocxGlyphlessAnchorTests
             return link;
         }
 
-        string WriteTable(bool merge, int pageHeight = 3160, int pictureHeight = 457200, int columnWidth = 2400)
+        string WriteTable(bool merge, int pageHeight = 3160, int pictureHeight = 457200, int columnWidth = 2400, int pageWidth = 12240)
         {
             string picture = TestFixtures.DocxInlinePngRun.Replace(
                 "cy=\"914400\"", FormattableString.Invariant($"cy=\"{pictureHeight}\""), StringComparison.Ordinal);
@@ -149,7 +156,7 @@ internal static class DocxGlyphlessAnchorTests
                 </w:tr>
                 """));
             var parts = ReadParts(TestFixtures.WriteDocxInlinePng($"""
-                <w:tbl><w:tblPr><w:tblLayout w:type="fixed"/></w:tblPr>
+                <w:tbl><w:tblPr><w:tblW w:type="dxa" w:w="{columnWidth}"/><w:tblLayout w:type="fixed"/></w:tblPr>
                   <w:tblGrid><w:gridCol w:w="{columnWidth}"/></w:tblGrid>{rows}
                 </w:tbl>
                 """, png));
@@ -162,8 +169,11 @@ internal static class DocxGlyphlessAnchorTests
                 new XElement(wp + "docPr", new XAttribute("id", 1), new XAttribute("name", "Linked picture"),
                     new XElement(a + "hlinkClick", new XAttribute(r + "id", "rIdPictureLink"))));
             XElement section = document.Descendants(w + "sectPr").Single();
-            section.Element(w + "pgSz")!.SetAttributeValue(w + "h", pageHeight);
-            section.Add(new XElement(w + "pgMar", new XAttribute(w + "top", 480), new XAttribute(w + "bottom", 480)));
+            XElement size = section.Element(w + "pgSz")!;
+            size.SetAttributeValue(w + "h", pageHeight);
+            size.SetAttributeValue(w + "w", pageWidth);
+            section.Add(new XElement(w + "pgMar", new XAttribute(w + "top", 480), new XAttribute(w + "bottom", 480),
+                new XAttribute(w + "left", 720), new XAttribute(w + "right", 720)));
             parts["word/document.xml"] = TestFixtures.Utf8(document.ToString(SaveOptions.DisableFormatting));
             const string relationshipPart = "word/_rels/document.xml.rels";
             XElement relationships = XElement.Parse(System.Text.Encoding.UTF8.GetString(parts[relationshipPart]));
