@@ -1901,10 +1901,7 @@ internal sealed partial class PptxRenderer
                 double categoryStart = categoryOrigin + category * categoryPitch + (categoryPitch - barThickness) / 2d;
                 double value = NormalizeStackedValue(rawValue, positiveTotals[category], percentStacked);
                 ChartSeriesFill fill = ResolveBarPointFill(theme, colorMap, chartPalette, seriesIndex, category, series.Count, varyColors, seriesFills, pointFills, values.Count, value, barOptions.InvertsNegativePoint(seriesIndex, category));
-                double[] stack = value >= 0d ? positiveValues : negativeValues;
-                double startValue = stack[category];
-                double endValue = startValue + value;
-                stack[category] = endValue;
+                (double startValue, double endValue) = ResolveStackedBarSegmentValues(positiveValues, negativeValues, category, value);
 
                 double start = ChartValueToPlotCoordinate(valueExtents, startValue, valueOrigin, valueLength, valueAxisReversed);
                 double end = ChartValueToPlotCoordinate(valueExtents, endValue, valueOrigin, valueLength, valueAxisReversed);

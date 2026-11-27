@@ -124,4 +124,14 @@ internal sealed partial class PptxRenderer
     {
         return percentStacked && value > 0d ? value / positiveTotal : value;
     }
+
+    private static (double Start, double End) ResolveStackedBarSegmentValues(
+        double[] positiveValues, double[] negativeValues, int category, double value)
+    {
+        double[] stack = value >= 0d ? positiveValues : negativeValues;
+        double start = stack[category];
+        double end = start + value;
+        stack[category] = end;
+        return (start, end);
+    }
 }

@@ -56,20 +56,6 @@ internal sealed partial class PptxRenderer
             : position;
     }
 
-    private static (double Start, double End) ResolveStackedBarSegmentValues(double[] positiveValues, double[] negativeValues, int category, double value)
-    {
-        if (value >= 0d)
-        {
-            double start = positiveValues[category];
-            positiveValues[category] += value;
-            return (start, positiveValues[category]);
-        }
-
-        double negativeStart = negativeValues[category];
-        negativeValues[category] += value;
-        return (negativeStart, negativeValues[category]);
-    }
-
     private static (double X, double Y, TextAlignment Alignment) ResolveCategoryPointLabelPosition(
         PptxSceneChartDataLabelPosition position, double pointX, double pointY, double labelWidth,
         double ascent, double height, double markerRadius, double verticalExpansion)
