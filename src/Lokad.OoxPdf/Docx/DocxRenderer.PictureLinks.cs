@@ -5,10 +5,11 @@ namespace Lokad.OoxPdf.Docx;
 internal sealed partial class DocxRenderer
 {
     // Carry the active paint viewport to links whose geometry depends on
-    // painting, including pictures in boxes and rotated inline pictures.
+    // painting, including pictures in boxes, rotated inline pictures and
+    // complete pictures owned by a merged cell's restart.
     private readonly record struct PictureNavigation(
         PdfRectangle Viewport, HashSet<DocxInlineImage> InlinePictures, List<PdfLinkAnnotation> DrawingUris,
-        bool InsideTextBox = false, bool AllowsRotatedInlineUris = true)
+        bool InsideTextBox = false, bool AllowsRotatedInlineUris = true, bool OwnsAdmittedMergeSource = false)
     {
         public PictureNavigation ClipTo(PdfRectangle clip) => this with
         {
@@ -22,7 +23,8 @@ internal sealed partial class DocxRenderer
             if (!InsideTextBox)
                 InlinePictures.Add(image.Image);
 
-            if ((InsideTextBox || AllowsRotatedInlineUris && usesRotatedLineFrame) &&
+            if ((InsideTextBox || AllowsRotatedInlineUris && usesRotatedLineFrame ||
+                    OwnsAdmittedMergeSource && image.Image.RotationDegrees == 0d) &&
                 frame is { } painted && ContainsInlinePictureFrame(image, painted, usesImageClip))
                 RecordUri(image.Image, painted);
         }

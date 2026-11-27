@@ -90,10 +90,13 @@ internal static class DocxGlyphlessAnchorTests
 
     public static void DocxGlyphlessMergedPictureAppearsOnceAcrossPages()
     {
-        string picture = TestFixtures.DocxInlinePngRun.Replace("cy=\"914400\"", "cy=\"457200\"", StringComparison.Ordinal);
+        const string uri = "https://example.invalid/merged-picture";
         byte[] png = TestFixtures.CreateRgbPng(1, 1, [0, 255, 0]);
         string plain = WriteTable(merge: false);
         string merged = WriteTable(merge: true);
+        string samePage = WriteTable(merge: true, pageHeight: 6300);
+        string tooTall = WriteTable(merge: true, pictureHeight: 1397000);
+        string clipped = WriteTable(merge: true, columnWidth: 840);
 
         var resolver = new EmptyProgramResolver();
         foreach (var (mode, geometry) in Views())
@@ -108,28 +111,66 @@ internal static class DocxGlyphlessAnchorTests
             TestAssert.Equal(1, pages[0].Images.Count);
             TestAssert.True(pages.Skip(1).All(page => page.Images.Count == 0),
                 "Following pages keep the merge continuation without replaying the source picture.");
+
+            PdfLinkAnnotation controlLink = AssertLinkMatchesPicture(control[0]);
+            TestAssert.Equal(controlLink, AssertLinkMatchesPicture(pages[0]));
+            TestAssert.True(pages.Skip(1).All(page => page.Annotations.Count == 0),
+                "Continuations do not create additional source links.");
+            AssertLinkMatchesPicture(Render(samePage, resolver, mode, geometry).Single());
+            foreach (string partial in new[] { tooTall, clipped })
+            {
+                var partialPages = Render(partial, resolver, mode, geometry);
+                PaintedFrame(partialPages[0]);
+                TestAssert.True(partialPages.All(page => page.Annotations.Count == 0),
+                    "A visible fragment without complete frame ownership remains unlinked.");
+            }
         }
 
-        string WriteTable(bool merge)
+        static PdfLinkAnnotation AssertLinkMatchesPicture(PdfPage page)
         {
+            double[] image = PaintedFrame(page);
+            PdfLinkAnnotation link = page.Annotations.Single();
+            TestAssert.Equal(uri, link.Uri);
+            TestAssert.True(new[] { link.Width, link.Height, link.X, link.Y }.Zip(image)
+                .All(pair => Math.Abs(pair.First - pair.Second) < .002d),
+                "The authored URI covers the physical outline of the painted source image.");
+            return link;
+        }
+
+        string WriteTable(bool merge, int pageHeight = 3160, int pictureHeight = 457200, int columnWidth = 2400)
+        {
+            string picture = TestFixtures.DocxInlinePngRun.Replace(
+                "cy=\"914400\"", FormattableString.Invariant($"cy=\"{pictureHeight}\""), StringComparison.Ordinal);
             string rows = string.Concat(Enumerable.Range(0, 3).Select(index => $$"""
                 <w:tr><w:trPr><w:cantSplit/><w:trHeight w:val="1600" w:hRule="exact"/></w:trPr>
-                  <w:tc><w:tcPr>{{(merge ? index == 0 ? "<w:vMerge w:val=\"restart\"/>" : "<w:vMerge/>" : "")}}</w:tcPr>
+                  <w:tc><w:tcPr><w:tcW w:type="dxa" w:w="{{columnWidth}}"/>{{(merge ? index == 0 ? "<w:vMerge w:val=\"restart\"/>" : "<w:vMerge/>" : "")}}</w:tcPr>
                     <w:p>{{(index == 0 ? picture : "")}}</w:p>
                   </w:tc>
                 </w:tr>
                 """));
             var parts = ReadParts(TestFixtures.WriteDocxInlinePng($"""
                 <w:tbl><w:tblPr><w:tblLayout w:type="fixed"/></w:tblPr>
-                  <w:tblGrid><w:gridCol w:w="2400"/></w:tblGrid>{rows}
+                  <w:tblGrid><w:gridCol w:w="{columnWidth}"/></w:tblGrid>{rows}
                 </w:tbl>
                 """, png));
             XNamespace w = OoxNamespaces.WordprocessingNamespace;
+            XNamespace wp = OoxNamespaces.WordprocessingDrawingNamespace;
+            XNamespace a = "http://schemas.openxmlformats.org/drawingml/2006/main";
+            XNamespace r = "http://schemas.openxmlformats.org/officeDocument/2006/relationships";
             XElement document = XElement.Parse(System.Text.Encoding.UTF8.GetString(parts["word/document.xml"]));
+            document.Descendants(wp + "extent").Single().AddAfterSelf(
+                new XElement(wp + "docPr", new XAttribute("id", 1), new XAttribute("name", "Linked picture"),
+                    new XElement(a + "hlinkClick", new XAttribute(r + "id", "rIdPictureLink"))));
             XElement section = document.Descendants(w + "sectPr").Single();
-            section.Element(w + "pgSz")!.SetAttributeValue(w + "h", "3160");
+            section.Element(w + "pgSz")!.SetAttributeValue(w + "h", pageHeight);
             section.Add(new XElement(w + "pgMar", new XAttribute(w + "top", 480), new XAttribute(w + "bottom", 480)));
             parts["word/document.xml"] = TestFixtures.Utf8(document.ToString(SaveOptions.DisableFormatting));
+            const string relationshipPart = "word/_rels/document.xml.rels";
+            XElement relationships = XElement.Parse(System.Text.Encoding.UTF8.GetString(parts[relationshipPart]));
+            relationships.Add(new XElement(relationships.Name.Namespace + "Relationship",
+                new XAttribute("Id", "rIdPictureLink"), new XAttribute("Type", r.NamespaceName + "/hyperlink"),
+                new XAttribute("Target", uri), new XAttribute("TargetMode", "External")));
+            parts[relationshipPart] = TestFixtures.Utf8(relationships.ToString(SaveOptions.DisableFormatting));
             return TestFixtures.WriteTempPackage(".docx", parts);
         }
     }

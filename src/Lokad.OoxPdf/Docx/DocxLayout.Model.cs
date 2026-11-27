@@ -356,6 +356,7 @@ internal sealed record DocxTableCellLayout(
 {
     public IReadOnlyList<DocxInlineTextBoxLayout> InlineTextBoxes { get; init; } = [];
     public IReadOnlyList<DocxPlacedDrawingAnchor> DrawingAnchors { get; init; } = [];
+    public bool OwnsAdmittedMergeSource { get; init; }
     public IReadOnlyList<DocxTableRowLayout> NestedRows => NestedTableRows ?? [];
 
     public DocxTableCell VisualCell =>

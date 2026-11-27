@@ -261,7 +261,9 @@ internal sealed partial class DocxRenderer
                 bool ownsCompleteCell = row.FragmentCount == 1 && OwnsUnmergedPictureCell(cellLayout);
                 var cellNavigation = navigation.ClipTo(new PdfRectangle(clip.X, clip.Y, clip.Width, clip.Height)) with
                 {
-                    AllowsRotatedInlineUris = navigation.AllowsRotatedInlineUris && ownsCompleteCell
+                    AllowsRotatedInlineUris = navigation.AllowsRotatedInlineUris && ownsCompleteCell,
+                    // A fragmented or merged ancestor may replay an inner restart.
+                    OwnsAdmittedMergeSource = navigation.AllowsRotatedInlineUris && cellLayout.OwnsAdmittedMergeSource
                 };
                 RenderParagraphBackgrounds(cellLayout.TextLines.Cast<DocxLayoutItem>().Concat(cellLayout.InlineImages), graphics, markupContext, cancellationToken);
                 foreach (DocxTextLineLayout line in cellLayout.TextLines)

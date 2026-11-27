@@ -2506,12 +2506,14 @@ internal sealed partial class DocxLayoutEngine
             // Complete measured source content already admitted by its restart
             // row is consumed once. Continuations retain the visual cell for
             // shading/borders, without resetting that source at another origin.
-            if (verticalMergeOwner is { } sourceOwner &&
+            bool ownsMergeSource = cell.IsVerticalMergeRestart && FragmentCount == 1;
+            bool admittedMergeSource = (verticalMergeOwner is not null || ownsMergeSource) &&
                 (cellTextLines.Count != 0 || cellPlacedImages.Count != 0) &&
                 IsStaticTopAlignedMergeSource(contentCell) &&
                 cellPlacedBoxes.Count == 0 &&
-                HasAdmittedMergeSourceFrame(table, tableContext, sourceOwner, rowHeights,
-                    cellTextLines, cellPlacedImages, contentY + contentHeight))
+                HasAdmittedMergeSourceFrame(table, tableContext, contentCell, verticalMergeOwner?.RowIndex ?? rowIndex,
+                    rowHeights, cellTextLines, cellPlacedImages, contentY + contentHeight);
+            if (isVerticalMergeContinuation && admittedMergeSource)
             {
                 textLines = [];
                 inlineImages = [];
@@ -2533,7 +2535,12 @@ internal sealed partial class DocxLayoutEngine
                 isVerticalMergeContinuation,
                 verticalMergeOwner,
                 visualOwnership,
-                nestedTableRows) with { InlineTextBoxes = inlineTextBoxes, DrawingAnchors = drawingAnchors });
+                nestedTableRows)
+            {
+                InlineTextBoxes = inlineTextBoxes,
+                DrawingAnchors = drawingAnchors,
+                OwnsAdmittedMergeSource = ownsMergeSource && admittedMergeSource
+            });
             cellX += cellWidth + (table.CellSpacingPoints ?? 0d) * paragraphSpacingScale;
             gridColumnIndex += Math.Max(1, cell.GridSpan);
         }

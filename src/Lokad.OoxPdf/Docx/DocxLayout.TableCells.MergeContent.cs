@@ -3,18 +3,18 @@ namespace Lokad.OoxPdf.Docx;
 internal sealed partial class DocxLayoutEngine
 {
     private static bool HasAdmittedMergeSourceFrame(DocxTable table, DocxTableLayoutContext context,
-        DocxVerticalMergeOwner source, IReadOnlyList<double> rowHeights, IReadOnlyList<DocxTextLineLayout> lines,
+        DocxTableCell source, int sourceRow, IReadOnlyList<double> rowHeights, IReadOnlyList<DocxTextLineLayout> lines,
         IEnumerable<DocxInlineImageLayout> images, double top)
     {
         double capacity = context.PageContentHeight;
         for (int index = 0; index < table.Rows.Count && table.Rows[index].IsHeader; index++)
         {
             context.CancellationToken.ThrowIfCancellationRequested();
-            if (index == source.RowIndex) return false;
+            if (index == sourceRow) return false;
             capacity -= rowHeights[index];
         }
-        double height = context.AdmittedMergeSpanHeights.TryGetValue(source.Cell, out double admittedHeight)
-            ? admittedHeight : rowHeights[source.RowIndex];
+        double height = context.AdmittedMergeSpanHeights.TryGetValue(source, out double admittedHeight)
+            ? admittedHeight : rowHeights[sourceRow];
         return double.IsFinite(capacity) && double.IsFinite(height) && height > 0d && height <= capacity &&
             HasContainedInlineFrames(lines, images, top - height, top, context.CancellationToken);
     }
