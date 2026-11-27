@@ -242,13 +242,14 @@ internal static class DocxGlyphlessAnchorTests
         string picture = TestFixtures.DocxInlinePngRun;
         string blue = picture.Replace("rIdImage1", "rIdBlue", StringComparison.Ordinal);
         foreach (string textSizing in new[] { "", "<w:noWrap/>", "<w:tcFitText/>" })
+        foreach (string hidden in new[] { "", "<w:r><w:rPr><w:vanish/></w:rPr><w:t>Hidden annotation source</w:t></w:r>" })
         {
             string table = $"""
                 <w:tbl>
                   <w:tblPr><w:tblW w:w="2200" w:type="dxa"/><w:tblLayout w:type="fixed"/></w:tblPr>
                   <w:tblGrid><w:gridCol w:w="2200"/></w:tblGrid>
                   <w:tr><w:tc><w:tcPr><w:tcW w:w="2200" w:type="dxa"/>{textSizing}</w:tcPr>
-                    <w:p>{picture}{blue}</w:p></w:tc></w:tr>
+                    <w:p>{picture}{blue}{hidden}</w:p></w:tc></w:tr>
                 </w:tbl>
                 """;
             var parts = ReadParts(TestFixtures.WriteDocxInlinePng(table, green));

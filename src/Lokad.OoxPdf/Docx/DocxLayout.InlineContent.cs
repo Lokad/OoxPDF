@@ -146,20 +146,24 @@ internal sealed partial class DocxLayoutEngine
         double firstFrameWidth = textWidth - right -
             GetParagraphFirstLineTextStartOffset(paragraph, fontSize, context.TextMeasurer, scale, context.DefaultTabStopPoints);
         double nextFrameWidth = textWidth - right - GetParagraphTextStartOffset(paragraph, scale);
-        // Text fitting can change glyph advances. Pictures and boxes still
-        // wrap against the resolved cell frame and keep their authored extents.
-        bool mediaOnly = (cell.NoWrap || cell.FitText) && paragraph.ListLabel is null &&
-            paragraph.InlineContent is { Count: > 0 } items && items.All(item =>
+        double? physicalBaseline = DocxPlainBodyFrame.HasFixedLineFlow(paragraph) ? baselineInset : null;
+        if (!TryMeasureOrderedInlineAtoms(paragraph, context.MathEquations, context.TextMeasurer, fontSize,
+            baselineInset, lineHeight, scale, context.CancellationToken, out var atoms,
+            defaultTabStopPoints: context.DefaultTabStopPoints, pageNumber: context.PageNumber, pageCount: context.PageCount,
+            physicalTextBaselineInset: physicalBaseline)) return false;
+
+        // Use the items that actually reach layout. Hidden runs have already
+        // been discarded and cannot change the line width for visible media.
+        bool mediaOnly = (cell.NoWrap || cell.FitText) && paragraph.ListLabel is null && atoms.Fragments.Count != 0 &&
+            atoms.Fragments.All(fragment =>
             {
                 context.CancellationToken.ThrowIfCancellationRequested();
-                return item is DocxInlinePicture or DocxInlineBox or DocxInlineBreak;
+                return fragment.Source is DocxInlinePicture or DocxInlineBox or DocxInlineBreak;
             });
         double firstWidth = mediaOnly ? Math.Max(1d, firstFrameWidth) : ResolveTableCellTextWrapWidth(cell, firstFrameWidth);
         double nextWidth = mediaOnly ? Math.Max(1d, nextFrameWidth) : ResolveTableCellTextWrapWidth(cell, nextFrameWidth);
-        return TryMeasureOrderedInlineContent(paragraph, context.MathEquations, context.TextMeasurer, fontSize,
-            firstWidth, nextWidth, baselineInset, lineHeight, scale, context.CancellationToken, out lines,
-            physicalTextBaselineInset: DocxPlainBodyFrame.HasFixedLineFlow(paragraph) ? baselineInset : null,
-            defaultTabStopPoints: context.DefaultTabStopPoints, pageNumber: context.PageNumber, pageCount: context.PageCount,
+        return TryWrapOrderedInlineAtoms(atoms, firstWidth, nextWidth, context.CancellationToken, out lines,
+            physicalTextBaselineInset: physicalBaseline,
             leadingDecimalTab: context.TextMeasurer is not null &&
                 ResolveImplicitCellDecimalStop(cell, paragraph, scale, context.CancellationToken) is { } stop
                 ? (stop, firstFrameWidth) : null);
