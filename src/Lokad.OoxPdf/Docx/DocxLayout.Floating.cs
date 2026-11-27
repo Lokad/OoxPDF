@@ -729,9 +729,8 @@ internal sealed partial class DocxLayoutEngine
             null,
             textBox.BodyElements,
             null);
-        DocxRelatedStoryLayout storyLayout = CreateRelatedStoryLayout(
+        DocxRelatedStoryLayout? storyLayout = CreateTextBoxStoryLayout(
             story,
-            storyIndex: -1,
             contentWidth,
             textMeasurer,
             defaultTabStopPoints,
@@ -740,7 +739,7 @@ internal sealed partial class DocxLayoutEngine
             pageCount: pageCount,
             cancellationToken: cancellationToken,
             mathEquations: mathEquations);
-        if (textMeasurer is null && storyLayout is { InlineImages.Count: 0, TableRows.Count: 0 })
+        if (storyLayout is null)
         {
             return null;
         }
@@ -852,8 +851,7 @@ internal sealed partial class DocxLayoutEngine
 
         DocxRelatedStoryLayout? CreateFloatingTextBoxLayout(DocxPageNumber? pageNumber)
         {
-            if (textMeasurer is null ||
-                drawing.TextBoxBodyElements.Count == 0 ||
+            if (drawing.TextBoxBodyElements.Count == 0 ||
                 extentWidth is not { } width ||
                 width <= 0d)
             {
@@ -866,8 +864,8 @@ internal sealed partial class DocxLayoutEngine
             // renderer maps design coordinates uniformly to emission space
             // (FloatingTextBoxEmissionMap); unit-scale pages keep the single-measurer path.
             // Frames stay unscaled in every mode.
-            IDocxTextMeasurer contentMeasurer = textMeasurer;
-            double contentSpacingScale = paragraphSpacingScale;
+            IDocxTextMeasurer? contentMeasurer = textMeasurer;
+            double contentSpacingScale = textMeasurer is null ? 1d : paragraphSpacingScale;
             if (unscaledTextMeasurer is not null &&
                 Math.Abs(paragraphSpacingScale - 1d) >= 0.000000001d)
             {
@@ -882,9 +880,8 @@ internal sealed partial class DocxLayoutEngine
                 drawing.ImageRelationshipId,
                 drawing.TextBoxBodyElements,
                 null);
-            return CreateRelatedStoryLayout(
+            return CreateTextBoxStoryLayout(
                 story,
-                storyIndex: -1,
                 Math.Max(1d, width - insetLeft - insetRight),
                 contentMeasurer,
                 defaultTabStopPoints,

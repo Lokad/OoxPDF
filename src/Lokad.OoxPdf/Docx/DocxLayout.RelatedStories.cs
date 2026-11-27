@@ -2466,6 +2466,22 @@ internal sealed partial class DocxLayoutEngine
         return layouts;
     }
 
+    private static DocxRelatedStoryLayout? CreateTextBoxStoryLayout(
+        DocxRelatedStory story,
+        double width,
+        IDocxTextMeasurer? textMeasurer,
+        double defaultTabStopPoints,
+        double paragraphSpacingScale,
+        DocxPageNumber? pageNumber,
+        int? pageCount,
+        CancellationToken cancellationToken,
+        IReadOnlyDictionary<DocxEquation, DocxPreparedMathParagraph>? mathEquations)
+    {
+        var layout = CreateRelatedStoryLayout(story, -1, width, textMeasurer, defaultTabStopPoints,
+            paragraphSpacingScale, pageNumber, pageCount, cancellationToken, mathEquations: mathEquations);
+        return textMeasurer is null && layout is { InlineImages.Count: 0, TableRows.Count: 0 } ? null : layout;
+    }
+
     private static DocxRelatedStoryLayout CreateRelatedStoryLayout(
         DocxRelatedStory story,
         int storyIndex,

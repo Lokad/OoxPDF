@@ -19505,6 +19505,7 @@
     "DocxLayoutStageConsumesEmptyParagraphLineBox",
     "=DocxGlyphlessTablePicturesSurviveNestedCellsAndHeaders",
     "=DocxGlyphlessInlineBoxPicturesSurviveWithoutFontPrograms",
+    "=DocxGlyphlessFloatingBoxPicturesKeepTheirViewport",
     "DocxGlyphlessFloatingImagePaintsWithoutFontPrograms",
     "DocxGlyphlessFloatingFramesMatchAnExplicitFontControl",
     "DocxGlyphlessAnchorsFollowBlankSlotsAndPageBreaks",

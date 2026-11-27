@@ -91,17 +91,7 @@ internal static class DocxGlyphlessAnchorTests
     public static void DocxGlyphlessInlineBoxPicturesSurviveWithoutFontPrograms()
     {
         byte[] png = TestFixtures.CreateRgbPng(1, 1, [0, 255, 0]);
-        string box = $"""
-            <w:p><w:r><w:drawing><wp:inline>
-              <wp:extent cx="1143000" cy="1143000"/><wp:docPr id="1" name="Picture box"/>
-              <a:graphic><a:graphicData uri="http://schemas.microsoft.com/office/word/2010/wordprocessingShape">
-                <wps:wsp xmlns:wps="http://schemas.microsoft.com/office/word/2010/wordprocessingShape">
-                  <wps:txbx><w:txbxContent><w:p>{TestFixtures.DocxInlinePngRun}</w:p></w:txbxContent></wps:txbx>
-                  <wps:bodyPr lIns="12700" tIns="12700" rIns="12700" bIns="12700"/>
-                </wps:wsp>
-              </a:graphicData></a:graphic>
-            </wp:inline></w:drawing></w:r></w:p>
-            """;
+        string box = PictureBoxParagraph(floating: false, height: 90);
         string body = TestFixtures.WriteDocxInlinePng(box, png);
         string cell = TestFixtures.WriteDocxInlinePng($"""
             <w:tbl>
@@ -112,18 +102,63 @@ internal static class DocxGlyphlessAnchorTests
         foreach (var (mode, geometry) in Views())
         foreach (string input in new[] { body, cell })
         {
-            PdfPage page = Render(input, new EmptyProgramResolver(), mode, geometry).Single();
-            TestAssert.Equal(0, page.Fonts.Count);
-            double[] frame = PaintedFrame(page);
-            TestAssert.Equal(72d, frame[0]);
-            TestAssert.Equal(72d, frame[1]);
-            using var compressed = new MemoryStream(page.Images.Single().Image.Bytes);
-            using var rgb = new ZLibStream(compressed, CompressionMode.Decompress);
-            TestAssert.Equal(0, rgb.ReadByte());
-            TestAssert.Equal(255, rgb.ReadByte());
-            TestAssert.Equal(0, rgb.ReadByte());
-            TestAssert.Equal(-1, rgb.ReadByte());
+            ReadGreenPictureFrame(Render(input, new EmptyProgramResolver(), mode, geometry).Single());
         }
+    }
+
+    public static void DocxGlyphlessFloatingBoxPicturesKeepTheirViewport()
+    {
+        byte[] png = TestFixtures.CreateRgbPng(1, 1, [0, 255, 0]);
+        var controls = new[] { 96, 24 }.Select(height =>
+            (Input: TestFixtures.WriteDocxInlinePng(PictureBoxParagraph(floating: true, height), png), Height: height)).ToArray();
+        foreach (var (mode, geometry) in Views())
+        foreach (var (input, height) in controls)
+        {
+            PdfPage page = Render(input, new EmptyProgramResolver(), mode, geometry).Single();
+            double[] frame = ReadGreenPictureFrame(page);
+            TestAssert.Equal(145d, frame[2]);
+            TestAssert.Equal(page.Height - 217d, frame[3]);
+            string clip = FormattableString.Invariant($"145 {page.Height - 143d - height} 94 {height - 2} re W n");
+            TestAssert.Contains(clip, page.Content);
+        }
+    }
+
+    private static string PictureBoxParagraph(bool floating, int height)
+    {
+        string placement = floating ? "anchor" : "inline";
+        string attributes = floating ? """ simplePos="0" relativeHeight="1" behindDoc="0" locked="0" layoutInCell="1" allowOverlap="1" """ : "";
+        string position = floating ? """
+            <wp:simplePos x="0" y="0"/>
+            <wp:positionH relativeFrom="page"><wp:posOffset>1828800</wp:posOffset></wp:positionH>
+            <wp:positionV relativeFrom="page"><wp:posOffset>1828800</wp:posOffset></wp:positionV>
+            """ : "";
+        return $"""
+            <w:p><w:r><w:drawing><wp:{placement}{attributes}>
+              {position}<wp:extent cx="1219200" cy="{height * 12700}"/>
+              {(floating ? "<wp:wrapNone/>" : "")}<wp:docPr id="1" name="Picture box"/>
+              <a:graphic><a:graphicData uri="http://schemas.microsoft.com/office/word/2010/wordprocessingShape">
+                <wps:wsp xmlns:wps="http://schemas.microsoft.com/office/word/2010/wordprocessingShape">
+                  <wps:txbx><w:txbxContent><w:p>{TestFixtures.DocxInlinePngRun}</w:p></w:txbxContent></wps:txbx>
+                  <wps:bodyPr lIns="12700" tIns="12700" rIns="12700" bIns="12700"/>
+                </wps:wsp>
+              </a:graphicData></a:graphic>
+            </wp:{placement}></w:drawing></w:r></w:p>
+            """;
+    }
+
+    private static double[] ReadGreenPictureFrame(PdfPage page)
+    {
+        TestAssert.Equal(0, page.Fonts.Count);
+        double[] frame = PaintedFrame(page);
+        TestAssert.Equal(72d, frame[0]);
+        TestAssert.Equal(72d, frame[1]);
+        using var compressed = new MemoryStream(page.Images.Single().Image.Bytes);
+        using var rgb = new ZLibStream(compressed, CompressionMode.Decompress);
+        TestAssert.Equal(0, rgb.ReadByte());
+        TestAssert.Equal(255, rgb.ReadByte());
+        TestAssert.Equal(0, rgb.ReadByte());
+        TestAssert.Equal(-1, rgb.ReadByte());
+        return frame;
     }
 
     public static void DocxGlyphlessAnchorsFollowBlankSlotsAndPageBreaks()
