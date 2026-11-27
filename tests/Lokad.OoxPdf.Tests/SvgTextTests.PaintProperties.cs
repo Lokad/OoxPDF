@@ -1051,7 +1051,7 @@ internal static partial class SvgTextTests
               <stop offset="1" stop-color="yellow"/></linearGradient></defs>
             <g {ancestorPaint}>
               <path d="M12 12 H75 V40 H12 Z" stroke-width="3" {pathPaint}/>
-              <g {inheritedColor}><circle cx="110" cy="27" r="14" fill="currentColor"/></g>
+              <g {inheritedColor}><circle cx="110" cy="27" r="14" fill="currentColor" stroke="none"/></g>
             </g>
             <rect x="145" y="13" width="52" height="24" fill="url(#tone)"/>
             """);
